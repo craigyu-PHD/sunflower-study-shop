@@ -2,6 +2,7 @@
 <html lang="zh-TW"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>向日葵國小伴學誌｜客製化生字練習本 ＆ 評量測驗卷線上訂購</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head><body>
 <header class="noprint">
@@ -289,10 +290,10 @@
               <label>評量科目 <select id="stExamSubj"></select></label>
               <label>難度設定
                 <select id="stExamDiff">
-                  <option value="easy">基礎熟練</option>
-                  <option value="mid" selected>標準評量</option>
-                  <option value="hard">素養挑戰</option>
-                  <option value="mix">混合難度（由簡入深）</option>
+                  <option value="easy">基礎熟練（鼎甲風）</option>
+                  <option value="mid" selected>標準評量（良品風）</option>
+                  <option value="hard">素養挑戰（奇鼎風）</option>
+                  <option value="mix">混合難度（由淺入深）</option>
                 </select>
               </label>
               <label>版面配置
@@ -339,16 +340,7 @@
             <select id="stPreviewSheetSel"></select>
             <button type="button" id="btnNextSheet" class="btn pager-nav-btn">下張 ▶</button>
           </div>
-          <div id="stPreviewSideStack" class="preview-side-stack" role="radiogroup" aria-label="預覽面數切換">
-            <label class="side-opt"><input type="radio" name="stSideRadio" value="0"> <span>📄 僅看正面（第 1 面放大檢視）</span></label>
-            <label class="side-opt"><input type="radio" name="stSideRadio" value="1"> <span>📄 僅看背面（第 2 面放大檢視）</span></label>
-            <label class="side-opt active"><input type="radio" name="stSideRadio" value="both" checked> <span>📑 正反雙面（同時上下完整檢視正＋背面）</span></label>
-          </div>
-          <select id="stPreviewSideSel" style="display:none" aria-hidden="true">
-            <option value="0">僅看正面</option>
-            <option value="1">僅看背面</option>
-            <option value="both" selected>正反雙面上下並列</option>
-          </select>
+          <div class="preview-dual-hint">📑 正反雙面同時檢視（第 1 面正面 ＋ 第 2 面背面）</div>
         </div>
         <div id="stPreviewViewport" class="preview-viewport">
           <div id="stPreviewScale" class="preview-scale"></div>
@@ -356,7 +348,7 @@
             <span>🔒 線上樣本預覽（核對版型範圍・核帳後印製完整 20 張）</span>
           </div>
         </div>
-        <p id="stPreviewCatalogNote" class="hint" style="margin-top:6px;line-height:1.45">※ 可切換預覽各張主題與<b>正面／背面</b>（每張考卷皆為正反兩面滿滿題目・核帳後 20 張全數展開印製）。</p>
+        <p id="stPreviewCatalogNote" class="hint" style="margin-top:6px;line-height:1.45">※ 可切換預覽各張張次與主題（每張考卷皆為<b>正反兩面滿滿題目</b>・核帳後全數展開印製）。</p>
       </div>
     </div>
   </section>
@@ -527,7 +519,7 @@
 <section class="card noprint">
   <h2><span class="step">2</span> 客製化題型、難度與版面控制</h2>
   <div class="row">
-    <label>難度 <select id="exDiff"><option value="easy">基礎熟練</option><option value="mid" selected>標準評量</option><option value="hard">素養挑戰</option><option value="mix">混合難度</option></select></label>
+    <label>難度 <select id="exDiff"><option value="easy">基礎熟練（鼎甲風）</option><option value="mid" selected>標準評量（良品風）</option><option value="hard">素養挑戰（奇鼎風）</option><option value="mix">混合難度（由淺入深）</option></select></label>
     <label>版面 <select id="exLayout"><option value="1col">單欄（字大好寫）</option><option value="2col" selected>雙欄（緊湊省紙）</option></select></label>
     <label class="chk"><input type="checkbox" id="exTwoPage" checked> 兩頁一張（正反雙面）</label>
     <label class="chk"><input type="checkbox" id="exAns" checked> 附解答頁</label>
@@ -535,11 +527,11 @@
     <button id="btnExDice" class="btn pri" type="button">🎲 混合式隨機配題</button>
   </div>
   <div class="qtype-grid">
-    <label class="chk"><input type="checkbox" id="chkMc" checked> 選擇題 <input type="number" id="numMc" value="5" min="0" max="12"> <small>上限12</small></label>
-    <label class="chk"><input type="checkbox" id="chkTf" checked> 是非題 <input type="number" id="numTf" value="4" min="0" max="10"> <small>上限10</small></label>
-    <label class="chk"><input type="checkbox" id="chkFill" checked> 填空題 <input type="number" id="numFill" value="4" min="0" max="10"> <small>上限10</small></label>
+    <label class="chk"><input type="checkbox" id="chkMc" checked> 選擇題 <input type="number" id="numMc" value="7" min="0" max="18"> <small>上限18</small></label>
+    <label class="chk"><input type="checkbox" id="chkTf" checked> 是非題 <input type="number" id="numTf" value="6" min="0" max="16"> <small>上限16</small></label>
+    <label class="chk"><input type="checkbox" id="chkFill" checked> 填空題 <input type="number" id="numFill" value="5" min="0" max="16"> <small>上限16</small></label>
     <label class="chk"><input type="checkbox" id="chkMatch" checked> 配對題 <input type="number" id="numMatch" value="1" min="0" max="3"> <small>上限3組</small></label>
-    <label class="chk"><input type="checkbox" id="chkCalc" checked> 計算／實作 <input type="number" id="numCalc" value="3" min="0" max="8"> <small>上限8</small></label>
+    <label class="chk"><input type="checkbox" id="chkCalc" checked> 計算／實作 <input type="number" id="numCalc" value="3" min="0" max="10"> <small>上限10</small></label>
     <label class="chk"><input type="checkbox" id="chkWord" checked> 應用／素養 <input type="number" id="numWord" value="2" min="0" max="6"> <small>上限6</small></label>
   </div>
   <div id="exMsg" class="msg"></div>
@@ -570,17 +562,40 @@
   <!-- 即時對帳統計看板 -->
   <div id="recStatsBar" class="rec-stats-bar"></div>
 
+  <!-- 週次與批次管理篩選列（支援依週次切換、自動隱藏上週已完成、隨時調閱歷史紀錄） -->
+  <div class="batch-filter-bar">
+    <label class="bf-item">📅 <b>週次批次：</b>
+      <select id="batchWeekFilter">
+        <option value="__CURRENT__" selected>本週進行中批次（隱藏上週已完成）</option>
+        <option value="__ALL__">📚 全部歷史訂單（含所有週次）</option>
+      </select>
+    </label>
+    <label class="bf-item">🏷️ <b>對帳／列印狀態：</b>
+      <select id="batchStatusFilter">
+        <option value="all" selected>全部狀態</option>
+        <option value="pend">⏳ 待核帳</option>
+        <option value="unprinted">🖨️ 已入帳・尚未列印</option>
+        <option value="printed">✅ 已經列印</option>
+        <option value="invalid">❌ 無效單</option>
+      </select>
+    </label>
+    <label class="bf-item bf-search">🔍
+      <input type="text" id="batchSearchInput" placeholder="搜尋取貨編號 / 家長稱呼 / 末五碼...">
+    </label>
+  </div>
+
   <!-- 批次選擇與對帳匯出工具列 -->
   <div class="row" style="justify-content:space-between;background:#fffaf2;padding:8px 12px;border-radius:9px;border:1px solid #f0dec0">
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
       <b style="color:#7a3b00;font-size:.9rem">🖨️ 列印對象勾選：</b>
-      <button type="button" class="btn pri" id="btnSelPaid">☑️ 僅勾選已入帳（推薦）</button>
-      <button type="button" class="btn" id="btnSelAll">☑️ 全選</button>
+      <button type="button" class="btn pri" id="btnSelPaid">☑️ 僅勾選已入帳且未列印（推薦）</button>
+      <button type="button" class="btn" id="btnSelAll">☑️ 全選目前清單</button>
       <button type="button" class="btn" id="btnSelNone">⬜ 全取消</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
       <button type="button" class="btn ok" id="btnExportRecCsv">💾 匯出對帳紀錄 CSV</button>
-      <button type="button" class="btn" id="btnClearLocalOrders" style="font-size:.82rem;color:#a71d2a">🗑️ 清空測試單</button>
+      <button type="button" class="btn" id="btnUndoClearOrders" style="display:none;font-size:.82rem;color:#0d5220;background:#e7f8ee;border:1px solid #28a745">↩️ 復原清空</button>
+      <button type="button" class="btn" id="btnClearLocalOrders" style="font-size:.82rem;color:#a71d2a;background:#fdeaea;border:1px solid #f5c2c7">🗑️ 清空全部訂單</button>
     </div>
   </div>
 
@@ -603,7 +618,7 @@
         <button id="btnBatchTpl" class="btn" type="button">⬇️ 下載空白 CSV 範本</button>
         <button id="btnBatchParse" class="btn ok" type="button">🔍 解析下方 CSV 內容</button>
       </div>
-      <textarea id="batchCsvInput" rows="4" style="font-size:.82rem;letter-spacing:.01em;font-family:monospace;margin-top:6px" placeholder="CSV 欄位：order_id,parent_label,plan,grade,sem,pub,subj,scope,diff,ruby,custom_words,custom_units,paid_status,amount,sheets,packType,remit_last5,contact,reconcile_note"></textarea>
+      <textarea id="batchCsvInput" rows="4" style="font-size:.82rem;letter-spacing:.01em;font-family:monospace;margin-top:6px" placeholder="CSV 欄位：order_id,created_at,batch_week,parent_label,plan,grade,sem,pub,subj,scope,diff,ruby,custom_words,custom_units,paid_status,amount,sheets,packType,remit_last5,contact,reconcile_note,print_status,print_count,printed_at"></textarea>
     </div>
   </details>
 </section>

@@ -273,3 +273,79 @@ window.PROC_BANK = {
     }
   }
 };
+
+/* 鼎甲(easy)／良品(mid)／奇鼎(hard) 動態母體擴充（英語／生活／自然科學／社會） */
+(function(){
+  const PB = window.PROC_BANK;
+  if(!PB) return;
+  const pushV = (g, arr) => { PB.eng.vocab[g] = (PB.eng.vocab[g] || []).concat(arr); };
+  const pushS = (g, arr) => { PB.eng.sentences[g] = (PB.eng.sentences[g] || []).concat(arr); };
+  pushV(1, [['eraser','橡皮擦'],['bag','書包'],['desk','書桌'],['chair','椅子'],['orange','橘色'],['pink','粉色']]);
+  pushV(2, [['sister','姊姊/妹妹'],['brother','哥哥/弟弟'],['fish','魚'],['turtle','烏龜'],['happy','開心的'],['sad','難過的']]);
+  pushV(3, [['singer','歌手'],['driver','司機'],['rabbit','兔子'],['lion','獅子'],['pencil box','鉛筆盒'],['marker','彩色筆']]);
+  pushV(4, [['sandwich','三明治'],['milk','牛奶'],['hot','炎熱的'],['warm','溫暖的'],['cool','涼爽的'],['Sunday','星期日']]);
+  pushV(5, [['hospital','醫院'],['museum','博物館'],['subway','地下鐵'],['bicycle','腳踏車'],['seldom','很少'],['often','經常']]);
+  pushV(6, [['bought','買(過去式)'],['wrote','寫(過去式)'],['read','讀(過去式)'],['better','更好的'],['best','最好的'],['astronaut','太空人']]);
+
+  pushS(1, [
+    {diff:'easy',q:'"Good (　)!" （晚安！）',a:'night',opts:['night','morning','hello','yes']},
+    {diff:'mid',q:'"Is it (　) ruler?" "Yes, it is."',a:'a',opts:['a','an','two','am']},
+    {diff:'hard',q:'"What (　) is it?" "It is yellow."',a:'color',opts:['color','name','number','old']}
+  ]);
+  pushS(2, [
+    {diff:'easy',q:'"I (　) apples." （我喜歡蘋果。）',a:'like',opts:['like','am','is','are']},
+    {diff:'mid',q:'"How many (　)?" "Five cats."',a:'cats',opts:['cats','cat','dog','book']},
+    {diff:'hard',q:'"It is (　) elephant. It is big."',a:'an',opts:['an','a','am','are']}
+  ]);
+  pushS(3, [
+    {diff:'easy',q:'"Who is (　)?" "She is my nurse."',a:'she',opts:['she','he','it','you']},
+    {diff:'mid',q:'"Where is the dog?" "It is (　) the desk." （在書桌下）',a:'under',opts:['under','in','at','to']},
+    {diff:'hard',q:'"Does he (　) a blue pen?" "Yes, he does."',a:'have',opts:['have','has','is','are']}
+  ]);
+  pushS(4, [
+    {diff:'easy',q:'"It\'s (　) today." （今天是多雲的。）',a:'cloudy',opts:['cloudy','sunny','rainy','windy']},
+    {diff:'mid',q:'"What time do you get (　)?" "At 6:30."',a:'up',opts:['up','in','on','at']},
+    {diff:'hard',q:'"How much (　) the noodles?" "Sixty dollars."',a:'are',opts:['are','is','am','do']}
+  ]);
+  pushS(5, [
+    {diff:'easy',q:'"How does Tom go to the park?" "He goes there (　) bike."',a:'by',opts:['by','on','in','take']},
+    {diff:'mid',q:'"Turn (　) at the bookstore." （在書店右轉。）',a:'right',opts:['right','straight','near','next']},
+    {diff:'hard',q:'"What (　) your sister usually do after school?"',a:'does',opts:['does','do','is','are']}
+  ]);
+  pushS(6, [
+    {diff:'easy',q:'"I (　) a movie last Sunday."',a:'saw',opts:['saw','see','sees','seeing']},
+    {diff:'mid',q:'"The cheetah is (　) than the horse."',a:'faster',opts:['faster','fast','fastest','more fast']},
+    {diff:'hard',q:'"Are you going to (　) a scientist in the future?"',a:'be',opts:['be','is','are','was']}
+  ]);
+
+  PB.life.facts = PB.life.facts.concat([
+    {diff:'easy',q:'在圖書館看書要輕聲細語，看完後要把書放回原本的書架上。',ok:1},
+    {diff:'mid',q:'用各種不同形狀的吹泡泡器吹出來的泡泡，在空中都是圓球形的。',ok:1},
+    {diff:'hard',q:'用筷子輕敲五個裝不同水量的玻璃杯，水量越多的杯子聲音通常越低沉。',ok:1},
+    {diff:'hard',q:'隔著一張薄紙片時，磁鐵就完全吸不住桌面上的鐵製迴紋針了。',ok:0,exp:'磁力可以穿透薄紙與塑膠等非磁性物質。'}
+  ]);
+  PB.sci.mid.facts = PB.sci.mid.facts.concat([
+    {diff:'easy',q:'將一條長條形磁鐵從中間折斷成兩半，每一小段都會各自擁有 N 極和 S 極。',ok:1},
+    {diff:'mid',q:'測量室外氣溫時，溫度計應放在通風有遮蔭（如百葉箱）的地方，不能直曬太陽。',ok:1},
+    {diff:'hard',q:'裝滿冰塊的杯子外壁出現小水珠，是因為空氣中的水蒸氣遇冷凝結而成的。',ok:1},
+    {diff:'hard',q:'兩個相同的電池「並聯」接燈泡時，燈泡會比單用 1 個電池時亮兩倍。',ok:0,exp:'電池並聯亮度約與 1 個電池相同，但電力可使用更久；串聯才會更亮。'}
+  ]);
+  PB.sci.high.facts = PB.sci.high.facts.concat([
+    {diff:'easy',q:'紫色高麗菜汁遇到小蘇打水等鹼性水溶液時，顏色會變成藍綠色或綠色。',ok:1},
+    {diff:'mid',q:'在食物鏈中，綠色植物扮演生產者，細菌和真菌則屬於分解者。',ok:1},
+    {diff:'hard',q:'油鍋起火時可以直接潑大量冷水降溫滅火。',ok:0,exp:'油鍋起火絕對不可潑水，會造成油火四濺；應蓋上鍋蓋隔絕氧氣並關火。'},
+    {diff:'hard',q:'改變電磁鐵的電流方向（正負極反接），會讓電磁鐵的 N 極和 S 極位置互換。',ok:1}
+  ]);
+  PB.soc.mid.facts = PB.soc.mid.facts.concat([
+    {diff:'easy',q:'便利商店店員、郵局人員和公車司機，都屬於提供服務的服務業。',ok:1},
+    {diff:'mid',q:'地震發生時「趴下、掩護、穩住」中的穩住，是指雙手抓緊桌腳保護頭頸。',ok:1},
+    {diff:'hard',q:'因為台灣東西窄、山地高聳，所以台灣大多數河川水流急促、長度較短。',ok:1},
+    {diff:'hard',q:'在比例尺 1：10000 的地圖上，圖上 1 公分代表實際距離 10 公里。',ok:0,exp:'10000 公分＝100 公尺，非 10 公里。'}
+  ]);
+  PB.soc.high.facts = PB.soc.high.facts.concat([
+    {diff:'easy',q:'「一府二鹿三艋舺」中的「一府」指的是今天的台南市。',ok:1},
+    {diff:'mid',q:'日治時期由八田與一主持興建的重要灌溉工程是嘉南大圳。',ok:1},
+    {diff:'hard',q:'我國五院中，負責三讀制定與修改全國性法律、審查中央預算的是立法院。',ok:1},
+    {diff:'hard',q:'「公平貿易」標章旨在確保開發中國家的農民獲得合理報酬並保護環境。',ok:1}
+  ]);
+})();

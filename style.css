@@ -297,11 +297,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .preview-pager-row1{display:flex;align-items:center;gap:6px;width:100%;flex-wrap:nowrap}
 .pager-nav-btn{padding:4px 10px!important;font-size:.82rem!important;font-weight:700;white-space:nowrap;flex:none}
 #stPreviewSheetSel{flex:1;min-width:0;font-size:.83rem;padding:4px 6px}
-.preview-side-stack{display:flex;flex-direction:column;gap:4px;width:100%}
-.side-opt{display:flex;align-items:center;gap:6px;padding:4px 9px;background:#fff;border:1.5px solid #e6d3b5;border-radius:7px;font-size:.82rem;font-weight:600;color:#4a2b00;cursor:pointer;transition:.12s}
-.side-opt:hover{background:#fff8eb}
-.side-opt.active,.side-opt:has(input:checked){background:#ffeccf;border-color:#ff8a1f;color:#7a3300;font-weight:700}
-.side-opt input{margin:0;flex:none}
+.preview-dual-hint{font-size:.8rem;font-weight:700;color:#7a3b00;text-align:center;background:#fff;border:1px solid #eed2a8;border-radius:7px;padding:3px 8px}
 .preview-viewport{position:relative;width:100%;min-height:440px;max-height:760px;background:#e6dfd3;border:1.5px solid #cbbba0;border-radius:9px;overflow-y:auto;overflow-x:hidden;padding:12px 10px 14px;display:flex;flex-direction:column;align-items:center}
 @media(max-width:720px){.preview-viewport{max-height:580px;min-height:360px;padding:10px 6px}}
 .preview-scale{position:relative;width:100%;pointer-events:none}
@@ -358,3 +354,27 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .rec-status-sel.st-paid{background:#e7f8ee;color:#136529;border-color:#28a745}
 .rec-status-sel.st-pend{background:#fff8e6;color:#92400e;border-color:#f59e0b}
 .rec-status-sel.st-inv{background:#fdeaea;color:#a71d2a;border-color:#dc3545}
+
+/* 週次篩選、列印狀態標籤與單筆重印／刪除操作 */
+.batch-filter-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:9px 12px;margin:8px 0 10px}
+.bf-item{display:flex;align-items:center;gap:6px;font-size:.86rem;color:#334155;min-width:0}
+.bf-item select,.bf-item input{font:inherit;font-size:.84rem;padding:4px 8px;border:1.5px solid #cbd5e1;border-radius:7px;background:#fff;max-width:100%}
+.bf-search{flex:1;min-width:190px}
+.bf-search input{width:100%;min-width:0}
+.week-pill{display:inline-block;background:#eef4ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:5px;font-size:.71rem;font-weight:700;padding:0 5px;margin-top:2px}
+.week-pill.is-past-open{background:#fff3cd;color:#856404;border-color:#ffc107}
+.prt-badge{display:inline-block;padding:2px 7px;border-radius:99px;font-weight:800;font-size:.75rem;white-space:nowrap}
+.prt-badge.is-done{background:#e0f2fe;color:#075985;border:1px solid #38bdf8}
+.prt-badge.is-todo{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+.ord-actions{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ord-action-row{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.btn-mini{padding:3px 7px!important;font-size:.74rem!important;font-weight:700;border-radius:6px!important;white-space:nowrap}
+.btn-mini.reprint{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc}
+.btn-mini.reprint:hover{background:#bae6fd}
+.btn-mini.del{background:#fdeaea;color:#a71d2a;border:1px solid #f5c2c7}
+.btn-mini.del:hover{background:#f8d7da}
+@media(max-width:720px){
+  .batch-filter-bar{flex-direction:column;align-items:stretch}
+  .bf-item{width:100%;justify-content:space-between}
+  .bf-item select{flex:1;min-width:0}
+}

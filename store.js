@@ -34,6 +34,22 @@ function computePickupSchedule(nowDate){
 }
 window.computePickupSchedule = computePickupSchedule;
 
+function computeBatchWeekFromTimeStr(timeStr, fallbackDate){
+  const m = String(timeStr||'').match(/(\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?/);
+  if(m){
+    const now = fallbackDate ? new Date(fallbackDate) : new Date();
+    let yr = now.getFullYear();
+    const mo = +m[1], dy = +m[2], hr = m[3]!=null ? +m[3] : 12, mn = m[4]!=null ? +m[4] : 0;
+    // 跨年邊界防呆（例如 1 月檢視 12 月訂單）
+    if(mo - (now.getMonth()+1) > 6) yr--;
+    else if((now.getMonth()+1) - mo > 6) yr++;
+    const d = new Date(yr, mo - 1, dy, hr, mn, 0, 0);
+    if(!isNaN(d.getTime())) return computePickupSchedule(d).batchLabel;
+  }
+  return computePickupSchedule(fallbackDate).batchLabel;
+}
+window.computeBatchWeekFromTimeStr = computeBatchWeekFromTimeStr;
+
 function computeDefaultBatchLabel(){
   return computePickupSchedule().batchLabel;
 }
@@ -110,7 +126,7 @@ function getStoreScopeName(sc){
   return {mid:'期中複習卷', final:'期末複習卷', all:'全冊總複習', unit:'自選單元'}[sc] || '期中複習卷';
 }
 function getStoreDiffName(d){
-  return {easy:'基礎熟練', mid:'標準評量', hard:'素養挑戰', mix:'混合難度'}[d] || '標準評量';
+  return {easy:'基礎熟練（鼎甲風）', mid:'標準評量（良品風）', hard:'素養挑戰（奇鼎風）', mix:'混合難度（由淺入深）'}[d] || '標準評量（良品風）';
 }
 
 function fillStoreSubjects(){
@@ -356,7 +372,7 @@ function scheduleStorePreview(){
 let _lastCustomStrokeKey = '';
 let _customStrokeMinSheets = 1;
 
-function renderPreviewPagesDualOrSingle(scaleBox, pagesArr, sideMode, isLand){
+function renderPreviewPagesDualOrSingle(scaleBox, pagesArr, isLand){
   if(!pagesArr || !pagesArr.length) return;
   const vp = $('stPreviewViewport');
   const vpW = Math.max(250, (vp ? vp.clientWidth : 580) - 28);
@@ -383,31 +399,20 @@ function renderPreviewPagesDualOrSingle(scaleBox, pagesArr, sideMode, isLand){
 
   const p0 = pagesArr[0];
   const p1 = pagesArr[1] || null;
-  if(sideMode === 'both' && p1){
-    const dual = document.createElement('div');
-    dual.className = 'preview-dual-grid';
-    [['📄 正面（第 1 面）', p0], ['📄 背面（第 2 面）', p1]].forEach(([lbl, pgEl]) => {
-      const col = document.createElement('div');
-      col.className = 'preview-side-col';
-      const tag = document.createElement('div');
-      tag.className = 'preview-side-tag';
-      tag.textContent = lbl;
-      col.appendChild(tag);
-      col.appendChild(wrapPageFrame(pgEl));
-      dual.appendChild(col);
-    });
-    scaleBox.appendChild(dual);
-  } else {
-    const picked = (sideMode === '1' && p1) ? p1 : p0;
+  const dual = document.createElement('div');
+  dual.className = 'preview-dual-grid';
+  const sides = p1 ? [['📄 正面（第 1 面）', p0], ['📄 背面（第 2 面）', p1]] : [['📄 正面（第 1 面）', p0]];
+  sides.forEach(([lbl, pgEl]) => {
     const col = document.createElement('div');
     col.className = 'preview-side-col';
     const tag = document.createElement('div');
     tag.className = 'preview-side-tag';
-    tag.textContent = (sideMode === '1' && p1) ? '📄 背面（第 2 面・放大檢視）' : '📄 正面（第 1 面・放大檢視）';
+    tag.textContent = lbl;
     col.appendChild(tag);
-    col.appendChild(wrapPageFrame(picked));
-    scaleBox.appendChild(col);
-  }
+    col.appendChild(wrapPageFrame(pgEl));
+    dual.appendChild(col);
+  });
+  scaleBox.appendChild(dual);
 }
 
 async function updateStorePreview(){
@@ -480,8 +485,6 @@ async function updateStorePreview(){
     }
   }
 
-  const sideMode = $('stPreviewSideSel')?.value || 'both';
-
   scaleBox.innerHTML = '';
   if(previewType === 'stroke' && window.buildStrokePagesForOrder){
     let res = await window.buildStrokePagesForOrder(orderCfg, '向日葵國小伴學誌・線上樣本預覽請勿截圖');
@@ -536,7 +539,7 @@ async function updateStorePreview(){
     }
 
     if(res.pages && res.pages.length){
-      renderPreviewPagesDualOrSingle(scaleBox, res.pages, sideMode, false);
+      renderPreviewPagesDualOrSingle(scaleBox, res.pages, false);
       const totSheetsShow = orderCfg.sheets || 1;
       if(badge) badge.textContent = packMode==='stroke_pack'
         ? `✍️ 第 ${curIdx+1}/${totSheetsShow} 張正反雙面（${orderCfg.strokeMode==='B'?'教育部格':'筆順引導'}・${orderCfg.cols}~8欄）`
@@ -546,11 +549,10 @@ async function updateStorePreview(){
     const pagesArr = window.buildExamPreviewPagesForStore(orderCfg);
     if(pagesArr && pagesArr.length){
       const isLand = pagesArr[0].classList.contains('ex-land');
-      renderPreviewPagesDualOrSingle(scaleBox, pagesArr, sideMode, isLand);
-      const sideLabel = sideMode==='both' ? '正反雙面' : (sideMode==='1' ? '背面第2頁' : '正面第1頁');
+      renderPreviewPagesDualOrSingle(scaleBox, pagesArr, isLand);
       if(badge) badge.textContent = packMode==='lazy'
-        ? `📝 第 ${curIdx+1}/20 張・${sideLabel}（${orderCfg.subj}）`
-        : `📝 ${orderCfg.subj}・${sideLabel}（${g}年級${sem}）`;
+        ? `📝 第 ${curIdx+1}/20 張・正反雙面（${orderCfg.subj}）`
+        : `📝 ${orderCfg.subj}・正反雙面（${g}年級${sem}）`;
     }
   }
 }
@@ -846,9 +848,12 @@ async function submitStoreOrder(){
     }
   });
 
+  const sched = computePickupSchedule(now);
   const orderRows = expandedItems.map((it, idx) => ({
     order_id: expandedItems.length > 1 ? `${pickupBase}-${idx+1}` : pickupBase,
     created_at: timeStr,
+    created_ts: now.getTime(),
+    batch_week: sched.batchLabel,
     parent_label,
     contact,
     remit_last5,
@@ -871,6 +876,10 @@ async function submitStoreOrder(){
     paid_status: '待核帳',
     reconcile_status: '待核帳',
     reconcile_note: '',
+    print_status: '未列印',
+    isPrinted: false,
+    print_count: 0,
+    printed_at: '',
     amount: String(it.amount),
     selectedForPrint: false
   }));
@@ -879,8 +888,6 @@ async function submitStoreOrder(){
   if(typeof window.receiveFrontendOrders === 'function'){
     window.receiveFrontendOrders(orderRows);
   }
-
-  const sched = computePickupSchedule(now);
   const succ = $('stSuccessCard');
   if(succ){
     succ.style.display = 'block';
@@ -978,11 +985,6 @@ function initStore(){
       $('lblPackCustom').classList.toggle('active', val === 'custom');
       if($('stQty')) $('stQty').value = '1';
       if($('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
-      if($('stPreviewSideSel')) $('stPreviewSideSel').value = 'both';
-      document.querySelectorAll('input[name=stSideRadio]').forEach(sr => {
-        sr.checked = sr.value === 'both';
-        if(sr.parentElement) sr.parentElement.classList.toggle('active', sr.checked);
-      });
       scheduleStorePreview();
     };
   });
@@ -1019,28 +1021,10 @@ function initStore(){
     if(el.tagName === 'INPUT') el.oninput = scheduleStorePreview;
   });
 
-  // 右側預覽翻頁器＆正反面切換綁定
+  // 右側預覽翻頁器綁定（直接正反雙面同時檢視）
   if($('stPreviewSheetSel')){
     $('stPreviewSheetSel').onchange = updateStorePreview;
   }
-  if($('stPreviewSideSel')){
-    $('stPreviewSideSel').onchange = () => {
-      const v = $('stPreviewSideSel').value;
-      document.querySelectorAll('input[name=stSideRadio]').forEach(sr => {
-        sr.checked = sr.value === v;
-        if(sr.parentElement) sr.parentElement.classList.toggle('active', sr.checked);
-      });
-      updateStorePreview();
-    };
-  }
-  document.querySelectorAll('input[name=stSideRadio]').forEach(sr => {
-    sr.onchange = () => {
-      if(!sr.checked) return;
-      if($('stPreviewSideSel')) $('stPreviewSideSel').value = sr.value;
-      document.querySelectorAll('.side-opt').forEach(lbl => lbl.classList.toggle('active', lbl.querySelector('input')?.checked));
-      updateStorePreview();
-    };
-  });
   if($('btnPrevSheet')){
     $('btnPrevSheet').onclick = () => {
       const sel = $('stPreviewSheetSel'); if(!sel || sel.options.length <= 1) return;
