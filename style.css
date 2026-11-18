@@ -37,12 +37,15 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 @media(max-width:700px){.modes{grid-template-columns:1fr}}
 @media print{
   @page{size:A4 portrait;margin:0}
-  html,body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html,body{background:#fff;font-size:12px;margin:0!important;padding:0!important;height:auto!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .noprint,.pcap{display:none!important}
-  main{max-width:none;padding:0}.wrap{padding:0}
-  #sheet,#batchSheet{display:block;padding:0;gap:0}
-  .a4{box-shadow:none;break-after:page;page-break-after:always}
-  .a4 .edge{display:none}
+  main{max-width:none;padding:0!important;margin:0!important}.wrap{padding:0!important;margin:0!important}
+  #sheet,#batchSheet,#examSheet{display:block;padding:0!important;margin:0!important;gap:0!important}
+  .a4{width:210mm!important;height:296.5mm!important;margin:0 auto!important;box-shadow:none!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important;break-after:page;page-break-after:always}
+  .a4.ex-land{width:296.5mm!important;height:209.5mm!important}
+  .a4.batch-land-holder{width:210mm!important;height:296.5mm!important}
+  .a4:last-child{break-after:auto!important;page-break-after:auto!important}
+  .a4 .edge{display:none!important}
   .a4 .cap{display:block!important;bottom:3.5mm;font-size:9.5px;color:#666}
 }
 
@@ -100,16 +103,17 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 
 /* 隱藏式格子系統（一字一格、一符一格、一空一格，橫書與直書零重疊） */
 /* 1. 橫書科目（數學、生活、自然、社會、英語） */
-.hcell-han{display:inline-block;width:1.75em;height:1.26em;vertical-align:-.22em;margin:0 .02em;overflow:visible}
-.hcell-zy{display:inline-block;width:1.25em;height:1.32em;vertical-align:-.25em;margin:0 .03em;overflow:visible}
-.h-blank{display:inline-block;min-width:2.6em;text-align:center;font-weight:600;margin:0 .08em;white-space:nowrap}
+.hcell-han{display:inline-block;width:1.75em;height:1.26em;vertical-align:-.25em;margin:0 .02em;overflow:visible}
+.hcell-zy{display:inline-block;width:1.25em;height:1.32em;vertical-align:-.26em;margin:0 .03em;overflow:visible}
+.h-num{display:inline-block;vertical-align:-.02em;line-height:1.25;margin:0 .04em;font-variant-numeric:tabular-nums}
+.h-blank{display:inline-block;min-width:4.4em;padding:0 .16em;text-align:center;font-weight:600;margin:0 .1em;white-space:nowrap;letter-spacing:.04em}
 
 /* 2. 直書國語科（全部統一為寬 42 單位之隱藏式格子，主軸 x=14，注音軌 x=31） */
 .gcell{display:block;width:1.85em;margin:0 auto;overflow:visible}
 .g-han{height:1.24em}
 .g-zy{height:1.38em}
 .g-punc{height:.95em}
-.g-blank{height:2.2em}
+.g-blank{height:2.9em}
 .g-badge{height:1.8em}
 
 /* 直式 A4（數學／生活／自然／社會／英語） */
@@ -151,13 +155,14 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-hd h3{margin:0;font-size:.96rem;letter-spacing:.03em;line-height:1.2}
 .ex-zh-hd .ex-sub{font-size:.72rem;color:#444;margin-right:3px;line-height:1.2}
 .ex-zh-hd .ex-zh-info{display:flex;justify-content:space-between;gap:4px;font-size:.78rem;font-weight:600;padding-bottom:2px}
-.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:6px 4px;border-top:4px solid #ff7a1a;margin:0 3px;height:100%;flex:none;font-size:.92em}
+.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:5px 4px;border-top:4px solid #ff7a1a;margin:0 3px;height:100%;flex:none;font-size:.86em;letter-spacing:-.02em;white-space:nowrap}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 var(--zh-q-gap,3px);flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:var(--zh-box-calc,2.2em);height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:var(--zh-box-word,3.2em)}
-.tcy{display:inline-block;width:1.45em;text-align:center;writing-mode:horizontal-tb;text-orientation:mixed;vertical-align:middle;line-height:1.1;margin:1px 0}
-.qend-glue{white-space:nowrap;display:inline-block}
+.tcy{display:inline-block;text-combine-upright:all;-webkit-text-combine:horizontal;width:1.38em;text-align:center;writing-mode:horizontal-tb;vertical-align:middle;line-height:1.08;margin:1px auto}
+.qend-glue{white-space:nowrap;display:inline}
+.qblank-glue{white-space:nowrap;display:inline}
 
 @media print{
   #examSheet{display:block;padding:0;gap:0}
@@ -363,9 +368,14 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .bf-search input{width:100%;min-width:0}
 .week-pill{display:inline-block;background:#eef4ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:5px;font-size:.71rem;font-weight:700;padding:0 5px;margin-top:2px}
 .week-pill.is-past-open{background:#fff3cd;color:#856404;border-color:#ffc107}
-.prt-badge{display:inline-block;padding:2px 7px;border-radius:99px;font-weight:800;font-size:.75rem;white-space:nowrap}
-.prt-badge.is-done{background:#e0f2fe;color:#075985;border:1px solid #38bdf8}
-.prt-badge.is-todo{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+.prt-badge{display:inline-block;max-width:100%;padding:3px 7px;border-radius:8px;font-weight:800;font-size:.73rem;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.3;text-align:center}
+.prt-badge small{display:block;font-weight:600;font-size:.69rem;opacity:.9;margin-top:1px}
+.prt-badge.is-done,.prt-badge.is-printed{background:#e0f2fe;color:#075985;border:1px solid #38bdf8}
+.prt-badge.is-todo,.prt-badge.not-printed{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+.orders-tbl td,.orders-tbl th{overflow:hidden}
+.backup-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:9px 12px;margin:8px 0;font-size:.85rem;color:#14532d;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px}
+.backup-status{display:flex;flex-direction:column;gap:2px;min-width:220px;flex:1}
+.backup-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ord-actions{display:flex;flex-direction:column;align-items:center;gap:4px}
 .ord-action-row{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
 .btn-mini{padding:3px 7px!important;font-size:.74rem!important;font-weight:700;border-radius:6px!important;white-space:nowrap}

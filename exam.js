@@ -234,13 +234,14 @@ function hCellZy(zy){
 // 橫書 HTML 轉換（結合破音字詞庫覆寫，且絕不使用 inline-flex 包裹長字串）
 function rubyHtml(str){
   const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
-  // 先將作答括號統一為標準隱藏式空格盒
+  // 先將作答括號統一為標準加寬隱藏式空格盒（適合小學生較大字跡）
   const norm=String(str).replace(/[（(][\s　]*[）)]/g,'@@BLANK@@');
-  const parts=norm.split(/(@@BLANK@@|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?)/g);
+  const parts=norm.split(/(@@BLANK@@|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?|[A-Za-z0-9]+(?:[./:+\-×÷=><％%][A-Za-z0-9]+)*)/g);
   return parts.map(part=>{
     if(!part)return '';
-    if(part==='@@BLANK@@')return `<span class="h-blank">（　　）</span>`;
+    if(part==='@@BLANK@@')return `<span class="h-blank">（　　　）</span>`;
     if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(part))return hCellZy(part);
+    if(useZy && /^[A-Za-z0-9]/.test(part)) return `<span class="h-num">${esc(part)}</span>`;
     if(!useZy)return esc(part).replace(/\n/g,'<br>');
     const resolved=resolveTextZhuyin(part);
     let out='';
@@ -282,15 +283,30 @@ function gCellZy(zy,mainX=14){
 function gCellPunc(p,mainX=14){
   const vp=VPUNC_MAP[p]||p;
   const isClosePunc=/^[」』）)】〕》〉。，、；：？！…]$/.test(p);
-  return {h:22, isClosePunc, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="BiauKai,DFKai-SB,標楷體,Noto Sans TC,serif" fill="#111">${esc(vp)}</text></svg>`};
+  // 向量幾何精準對齊直書主軸 x=mainX（完全不受 Mac / Windows 字體偏左下影響）
+  let inner='';
+  if(p==='。'){
+    inner=`<circle cx="${mainX}" cy="11" r="2.7" fill="none" stroke="#111" stroke-width="1.5"/>`;
+  }else if(p==='、'){
+    inner=`<path d="M${mainX-2.2},7.5 Q${mainX+1.8},10.5 ${mainX+2.4},14.2" fill="none" stroke="#111" stroke-width="2.1" stroke-linecap="round"/>`;
+  }else if(p==='，'){
+    inner=`<circle cx="${mainX+0.4}" cy="8.5" r="1.8" fill="#111"/><path d="M${mainX+1.6},8.8 Q${mainX+1.2},13.2 ${mainX-1.6},15.2" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round"/>`;
+  }else if(p==='：'){
+    inner=`<circle cx="${mainX}" cy="7.5" r="1.55" fill="#111"/><circle cx="${mainX}" cy="14.5" r="1.55" fill="#111"/>`;
+  }else if(p==='；'){
+    inner=`<circle cx="${mainX}" cy="7" r="1.5" fill="#111"/><circle cx="${mainX+0.3}" cy="12.8" r="1.5" fill="#111"/><path d="M${mainX+1.2},13 Q${mainX+0.8},16.2 ${mainX-1.4},17.5" fill="none" stroke="#111" stroke-width="1.35" stroke-linecap="round"/>`;
+  }else{
+    inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="BiauKai,DFKai-SB,標楷體,Noto Sans TC,serif" fill="#111">${esc(vp)}</text>`;
+  }
+  return {h:22, isClosePunc, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`};
 }
-function gCellBlank(h=48,mainX=14){
-  return {h, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="7" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︵</text><text x="${mainX}" y="${h-7}" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︶</text></svg>`};
+function gCellBlank(h=64,mainX=14){
+  return {h, isBlank:true, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="7.5" dominant-baseline="central" text-anchor="middle" font-size="17.5" font-family="Noto Sans TC,serif" fill="#111">︵</text><text x="${mainX}" y="${h-7.5}" dominant-baseline="central" text-anchor="middle" font-size="17.5" font-family="Noto Sans TC,serif" fill="#111">︶</text></svg>`};
 }
 function gCellLabel(txt,bold=false,color='#111',fs=15,mainX=14){
   const len = String(txt).length;
-  const effFs = len >= 4 ? Math.min(fs, 10.8) : (len === 3 ? Math.min(fs, 12.2) : (len === 2 ? Math.min(fs, 14) : fs));
-  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="${effFs}" font-weight="${bold?'700':'600'}" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="${color}">${esc(txt)}</text></svg>`};
+  const effFs = len >= 4 ? Math.min(fs, 10.8) : (len === 3 ? Math.min(fs, 12.2) : (len === 2 ? Math.min(fs, 14) : Math.max(fs, 15.5)));
+  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11.5" dominant-baseline="central" text-anchor="middle" font-size="${effFs}" font-weight="${bold?'700':'600'}" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="${color}">${esc(txt)}</text></svg>`};
 }
 function gCellScore(pts,mainX=14){
   // 垂直堆疊置中配分標籤（緊黏前字，絕不獨立跳至次欄）
@@ -312,7 +328,7 @@ function tokenizeZhCells(str, useZy, mainX=14){
   while((m=re.exec(norm))!==null){
     const tk=m[0];
     if(tk==='\n'){cells.push({newline:true});continue;}
-    if(tk==='@@BLANK@@'){cells.push(gCellBlank(46,mainX));continue;}
+    if(tk==='@@BLANK@@'){cells.push(gCellBlank(64,mainX));continue;}
     if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(tk)){cells.push(gCellZy(tk,mainX));continue;}
     if(/^\d+\.?$/.test(tk)){cells.push(gCellLabel(tk,true,'#111',14.5,mainX));continue;}
     // 一般國字與標點片段：透過破音字詞庫覆寫解析
@@ -806,32 +822,36 @@ function genMathForUnit(grade, sem, uIdx, diff, kind, vIdx=0){
         const ord=shuffle([0,1,2]), longest=ord.indexOf(0)+1;
         return {q:`看圖比一比，下面哪一枝鉛筆最長？`,svg:svgLengthCompare(ord),opts:uniqueOpts(`(${longest})`,['(1)','(2)','(3)','一樣長']),a:`(${longest})`,exp:`第 (${longest}) 枝鉛筆最長。`};
       }
-      // uIdx===3 單元四：20以內的數與加減、時間（5種不同子題型輪替）
-      const hr=rnd(1,11), min=pick([0,30]), a=rnd(6,9), b=rnd(5,9), sub=v(5);
+      // uIdx===3 單元四：20以內的數與加減（純數與加減，絕不出現時鐘；多題型變化輪替）
+      const a=rnd(6,9), b=rnd(5,9), sub=v(6);
       if(kind==='tf'){
-        if(sub===0) return {q:`看時鐘，現在鐘面上的時間是 ${isTrue?hr:hr+1} 點${min?' 30 分':'整'}。`,svg:svgClock(hr,min),a:isTrue?'○':'✕',exp:`短針指 ${hr}、長針指 ${min?6:12}。`};
-        if(sub===1){const u=rnd(2,9);return {q:`看定位板，1 個十和 ${u} 個一合起來是 ${isTrue?10+u:u*10+1}。`,svg:svgAbacus(1,u),a:isTrue?'○':'✕',exp:`1 個十和 ${u} 個一是 ${10+u}。`};}
-        if(sub===2) return {q:`算式「${a} ＋ ${b}」的答案是 ${isTrue?a+b:a+b+2}。`,svg:svgBlockAdd(a,b),a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};
-        if(sub===3){const k=rnd(3,7);return {q:`排隊時${nm}排在第 ${k} 個，代表他前面有 ${isTrue?k-1:k} 個人。`,svg:svgRowCount(k+2),a:isTrue?'○':'✕',exp:`第 ${k} 個前面有 ${k-1} 人。`};}
+        if(sub===0){const u=rnd(2,9);return {q:`看定位板，1 個十和 ${u} 個一合起來是 ${isTrue?10+u:u*10+1}。`,svg:svgAbacus(1,u),a:isTrue?'○':'✕',exp:`1 個十和 ${u} 個一是 ${10+u}。`};}
+        if(sub===1) return {q:`算式「${a} ＋ ${b}」的答案是 ${isTrue?a+b:a+b+2}。`,svg:svgBlockAdd(a,b),a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};
+        if(sub===2){const k=rnd(3,7);return {q:`排隊時${nm}排在第 ${k} 個，代表他前面有 ${isTrue?k-1:k} 個人。`,svg:svgRowCount(k+2),a:isTrue?'○':'✕',exp:`第 ${k} 個前面有 ${k-1} 人。`};}
+        if(sub===3) return {q:`「${a} ＋ ${b}」和「${b} ＋ ${a}」算出來的答案一樣大。`,a:'○',exp:`加法交換律結果相同。`};
+        if(sub===4) return {q:`從 20 往前倒數 3 個數（20、19、18、□），會數到 ${isTrue?17:16}。`,a:isTrue?'○':'✕',exp:`20 倒數 3 個數是 17。`};
         return {q:`算式「${a+b} － ${a}」的答案是 ${isTrue?b:b+1}。`,a:isTrue?'○':'✕',exp:`${a+b}－${a}＝${b}。`};
       }
       if(kind==='fill'){
         if(sub===0){const tot=rnd(7,10),k=rnd(2,tot-1);return {q:`看圖數一數，共有（　）個圓圈；從左邊數起第 ${k} 個，從右邊數起是第（　）個。`,svg:svgRowCount(tot),a:`${tot}；${tot-k+1}`};}
         if(sub===1){const u=rnd(2,8);return {q:`看定位板填填看：1 個十和 ${u} 個一合起來是（　　）。`,svg:svgAbacus(1,u),a:String(10+u)};}
-        if(sub===2) return {q:`看時鐘填時間：短針指在 ${hr}，長針指在 12，現在是（　　）點整。`,svg:svgClock(hr,0),a:String(hr)};
-        if(sub===3){const st=rnd(11,15);return {q:`按照順序填填看：${st} → ${st+1} →（　　）→ ${st+3}。`,svg:svgSeqTrain([st,st+1,st+2,st+3],2),a:String(st+2)};}
+        if(sub===2){const st=rnd(11,15);return {q:`按照順序填填看：${st} → ${st+1} →（　　）→ ${st+3}。`,svg:svgSeqTrain([st,st+1,st+2,st+3],2),a:String(st+2)};}
+        if(sub===3) return {q:`湊十法計算：「8 ＋ ${a}」可以把 ${a} 分成 2 和 ${a-2}，先算 8 ＋ 2 ＝ 10，再加 ${a-2} 得（　　）。`,a:String(8+a)};
+        if(sub===4) return {q:`破十法計算：「15 － ${a}」先算 10 － ${a} ＝ ${10-a}，再算 ${10-a} ＋ 5 ＝（　　）。`,a:String(15-a)};
         return {q:`看積木圖計算：${a} ＋ ${b} ＝（　　）；${a+b} － ${b} ＝（　　）。`,svg:svgBlockAdd(a,b),a:`${a+b}；${a}`};
       }
-      if(kind==='calc') return v(2)===0?{q:`${a} ＋ ${b} ＝（　　）`,svg:svgBlockAdd(a,b),a:String(a+b)}:{q:`${a+b} － ${a} ＝（　　）`,a:String(b)};
+      if(kind==='calc') return v(3)===0?{q:`${a} ＋ ${b} ＝（　　）`,svg:svgBlockAdd(a,b),a:String(a+b)}:(v(3)===1?{q:`${a+b} － ${a} ＝（　　）`,a:String(b)}:{q:`等式推算：${a} ＋（　　）＝ 20`,a:String(20-a)});
       if(kind==='word'){
-        if(v(2)===0){const f=rnd(3,6),bk=rnd(2,5);return {q:`排隊買票時，${nm}前面有 ${f} 個人，後面有 ${bk} 個人，這一排共有幾個人？`,svg:svgRowCount(f+bk+1),a:`${f} + 1 + ${bk} = ${f+bk+1}（人）`};}
+        if(v(3)===0){const f=rnd(3,6),bk=rnd(2,5);return {q:`排隊買票時，${nm}前面有 ${f} 個人，後面有 ${bk} 個人，這一排共有幾個人？`,svg:svgRowCount(f+bk+1),a:`${f} + 1 + ${bk} = ${f+bk+1}（人）`};}
+        if(v(3)===1) return {q:`${nm}原本有 ${a+b} 顆彈珠，送給妹妹 ${a} 顆後，自己還剩下幾顆彈珠？`,a:`${a+b} - ${a} = ${b}（顆）`};
         return {q:`書架上原有 ${a} 本故事書，老師又放進 ${b} 本，現在書架上共有幾本故事書？`,svg:svgBlockAdd(a,b),a:`${a} + ${b} = ${a+b}（本）`};
       }
-      if(kind==='match') return {q:'20以內加減配對',pairs:[[`${a} ＋ ${b}`,String(a+b)],[`15 － 6`,'9'],[`8 ＋ 9`,'17'],[`16 － 8`,'8']]};
-      if(sub===0){const ans=`${hr} 點${min?' 30 分':'整'}`;return {q:`看圖回答，現在鐘面上的時間是幾點幾分？`,svg:svgClock(hr,min),opts:uniqueOpts(ans,[`${hr} 點${min?'整':' 30 分'}`,`${hr+1} 點${min?' 30 分':'整'}`,`6 點 ${hr} 分`]),a:ans,exp:`短針指 ${hr}，長針指 ${min?6:12}，是 ${ans}。`};}
-      if(sub===1){const u=rnd(2,9);return {q:`看定位板，「1 個十和 ${u} 個一」合起來是多少？`,svg:svgAbacus(1,u),opts:uniqueOpts(10+u,[u*10+1,1+u,20+u]),a:String(10+u),exp:`1 個十是 10，加 ${u} 個一是 ${10+u}。`};}
-      if(sub===2) return {q:`看積木圖，「${a} ＋ ${b}」合起來共有幾個？`,svg:svgBlockAdd(a,b),opts:uniqueOpts(`${a+b} 個`,[`${a+b-1} 個`,`${a+b+1} 個`,`${a+b+2} 個`]),a:`${a+b} 個`,exp:`${a}＋${b}＝${a+b} 個。`};
-      if(sub===3){const x=rnd(13,18),y=rnd(5,9);return {q:`算式「${x} － ${y}」的答案是多少？`,opts:uniqueOpts(x-y,[x-y+1,x-y-1,x+y]),a:String(x-y),exp:`${x}－${y}＝${x-y}。`};}
+      if(kind==='match') return {q:'20以內進位與退位加減配對',pairs:[[`${a} ＋ ${b}`,String(a+b)],[`15 － 6`,'9'],[`8 ＋ 9`,'17'],[`16 － 8`,'8']]};
+      if(sub===0){const u=rnd(2,9);return {q:`看定位板，「1 個十和 ${u} 個一」合起來是多少？`,svg:svgAbacus(1,u),opts:uniqueOpts(10+u,[u*10+1,1+u,20+u]),a:String(10+u),exp:`1 個十是 10，加 ${u} 個一是 ${10+u}。`};}
+      if(sub===1) return {q:`看積木圖，「${a} ＋ ${b}」合起來共有幾個？`,svg:svgBlockAdd(a,b),opts:uniqueOpts(`${a+b} 個`,[`${a+b-1} 個`,`${a+b+1} 個`,`${a+b+2} 個`]),a:`${a+b} 個`,exp:`${a}＋${b}＝${a+b} 個。`};
+      if(sub===2){const x=rnd(13,18),y=rnd(5,9);return {q:`算式「${x} － ${y}」的答案是多少？`,opts:uniqueOpts(x-y,[x-y+1,x-y-1,x+y]),a:String(x-y),exp:`${x}－${y}＝${x-y}。`};}
+      if(sub===3){const st=rnd(12,16);return {q:`看火車數列圖，空格裡應該填入哪一個數字？`,svg:svgSeqTrain([st,st+1,st+2,st+3],2),opts:uniqueOpts(st+2,[st+1,st+3,st+4]),a:String(st+2),exp:`依序順數，空格為 ${st+2}。`};}
+      if(sub===4) return {q:`把「19、12、16、14」從大到小排好，排在第二個的是哪一個數？`,opts:uniqueOpts('16',['19','14','12']),a:'16',exp:`19＞16＞14＞12，第二個是 16。`};
       const k=rnd(4,8);return {q:`從第 1 頁讀到第 ${10+k} 頁，總共讀了幾頁？`,opts:uniqueOpts(`${10+k} 頁`,[`${9+k} 頁`,`${11+k} 頁`,'10 頁']),a:`${10+k} 頁`,exp:`共讀了 ${10+k} 頁。`};
     }
     // 1年級下
@@ -1395,19 +1415,23 @@ function genMathUnitExtra(g, sem, uIdx, diff, kind, vIdx=0){
       if(kind==='word') return {q:`${nm}用 3 個長方形積木和 2 個圓柱積木堆城堡，哪一種積木只能放在最上面才不會倒？為什麼？`,a:'圓柱或圓形容易滾動（若橫放）不適合當底層；長方形有平平的面較平穩。'};
       if(kind==='match') return {q:'立體與平面物品配對',pairs:[['魔術方塊','正方體'],['足球','球體'],['罐頭','圓柱體'],['三角板','三角形']]};
     }
-    if(uIdx===3){ // 20以內的數與加減、幾點幾點半
-      const a=rnd(6,9), b=rnd(5,8), hr=rnd(2,10);
+    if(uIdx===3){ // 20以內的數與加減（純數與加減，絕不含時鐘）
+      const a=rnd(6,9), b=rnd(5,8);
       if(kind==='mc'){
+        if(slot===0) return {q:`哪一個數是由「1 個十和 ${a} 個一」組成的？`,opts:uniqueOpts(10+a,[a*10+1,1+a,20]),a:String(10+a),exp:`1 個十是 10，加 ${a} 個一是 ${10+a}。`};
         if(slot===1) return {q:`從 11 往上兩個一數：11、13、15、（　）、19，括號裡應填多少？`,opts:uniqueOpts(17,[16,18,14]),a:'17',exp:`每次多 2，15＋2＝17。`};
         if(slot===2) return {q:`「${a} ＋ ${b}」的算式答案是多少？`,opts:uniqueOpts(a+b,[a+b-1,a+b+1,a+b+2]),a:String(a+b),exp:`${a}＋${b}＝${a+b}。`};
-        return {q:`鐘面上短針在 ${hr} 和 ${hr+1} 中間，長針指著 6，現在是幾點幾分？`,svg:svgClock(hr,30),opts:uniqueOpts(`${hr} 點 30 分`,[`${hr} 點整`,`${hr+1} 點 30 分`,`6 點 ${hr} 分`]),a:`${hr} 點 30 分`,exp:`長針指 6 代表半點（30分）。`};
+        if(slot===3) return {q:`比大小：下面哪一個數比 15 大、又比 18 小？`,opts:uniqueOpts('16',['14','19','12']),a:'16',exp:`16 介於 15 和 18 之間。`};
+        return {q:`算式「17 －（　）＝ 9」，括號裡面應該填多少？`,opts:uniqueOpts('8',['7','9','6']),a:'8',exp:`17－9＝8。`};
       }
       if(kind==='tf'){
         if(slot===1) return {q:`「1 個十和 7 個一」合起來是 ${isTrue?17:71}。`,a:isTrue?'○':'✕',exp:`1 個十和 7 個一是 17。`};
+        if(slot===2) return {q:`計算「9 ＋ ${a}」時，先讓 9 加上 1 湊成 10，再加 ${a-1} 就可以算出答案是 ${10+a-1}。`,a:'○',exp:`9＋${a}＝${9+a}。`};
         return {q:`從 19 往前倒數 1 個數是 ${isTrue?18:20}。`,a:isTrue?'○':'✕',exp:`19 往前數 1 是 18。`};
       }
       if(kind==='fill'){
-        if(slot===1) return {q:`看時鐘填幾點幾分：短針在 ${hr} 和 ${hr+1} 中間、長針指 6，是（　）點（　　）分。`,svg:svgClock(hr,30),a:`${hr}；30`};
+        if(slot===1) return {q:`進退位練習：8 ＋ ${b} ＝（　　）；${10+a} － ${a} ＝（　　）。`,a:`${8+b}；10`};
+        if(slot===2) return {q:`比大小（填 ＞、＜ 或 ＝）：9 ＋ 6（　）14；17 － 8（　）10。`,a:'＞；＜'};
         return {q:`20 以內進位加法：9 ＋ ${a} ＝（　　）；18 － ${a} ＝（　　）。`,a:`${9+a}；${18-a}`};
       }
       if(kind==='calc'){
@@ -1415,7 +1439,7 @@ function genMathUnitExtra(g, sem, uIdx, diff, kind, vIdx=0){
         return {q:`9 ＋ ${b} ＝（　　）`,a:String(9+b)};
       }
       if(kind==='word') return {q:`${nm}有 ${a} 張色紙，${nm2}有 ${b} 張色紙，兩人合起來共有幾張色紙？`,a:`${a} + ${b} = ${a+b}（張）`};
-      if(kind==='match') return {q:'20以內數與時間配對',pairs:[['1 個十和 4 個一','14'],['19 少 1 的數','18'],['長針指 12、短針指 8','8 點整'],['長針指 6、短針在 3 和 4 間','3 點半']]};
+      if(kind==='match') return {q:'20以內加減與位值配對',pairs:[['1 個十和 4 個一','14'],['19 少 1 的數','18'],['7 ＋ 8','15'],['14 － 5','9']]};
     }
   }
 
@@ -1771,7 +1795,7 @@ const MATH_UNIT_FILTER = {
   '1_上_0': { allow:/分合|分成|合起來|排第|從左|從右|比.*大|比.*小|火車|數列|幾個|倒數|順數|一樣大|一樣多|最大|最小|順序|彈珠|＞|＜|下一個數|前一個數/, forbid:/＋|－|×|÷|\/|分之|時鐘|鐘面|幾點|長短|最長|最短|正方|長方|三角|圓形|圓柱|球體|錢幣|硬幣|鈔票|元|分針|時針|分鐘|小時|公分|公尺|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|角度|直角|銳角|鈍角|直徑|半徑|偶數|奇數|月曆|星期|質數|公因|未知數|體積|平均|速率|%|百位|千位|萬|[2-9]\d|\b1[1-9]\b/ },
   '1_上_1': { allow:/＋|－|合起來|一共|還剩|飛走|拿走|打破|放進|多幾|少幾|加法|減法|算式|相差|0 顆/, forbid:/×|÷|\/|分之|時鐘|鐘面|幾點|長短|最長|最短|正方|長方|三角|圓形|錢幣|硬幣|鈔票|元|分針|時針|分鐘|小時|公分|公尺|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|角度|直角|直徑|半徑|月曆|星期|偶數|奇數|百位|千位|萬|[2-9]\d|\b1[1-9]\b/ },
   '1_上_2': { allow:/長短|比一比|最長|最短|直線|曲線|圖形|形狀|三角形|正方形|長方形|圓形|正方體|長方體|圓柱|球|滾動|疊|硬幣的面|三角巾|國旗|骰子/, forbid:/＋|－|×|÷|\/|時鐘|鐘面|幾點|分鐘|小時|元|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|銳角|鈍角|直徑|半徑|對稱|月曆|星期|體積|表面積|梯形|平行四邊形|[2-9]\d|\b1[5-9]\b/ },
-  '1_上_3': { allow:/\b1[1-9]\b|\b20\b|時鐘|鐘面|幾點|點半|短針|長針|時針|分針|1 個十|進位|退位|排隊|＋|－/, forbid:/×|÷|\/|錢幣|硬幣|鈔票|元|公尺|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|銳角|鈍角|直徑|半徑|百位|千位|萬|月曆|星期|24 時|[3-9]\d|2[1-9]/ },
+  '1_上_3': { allow:/\b1[0-9]\b|\b20\b|1 個十|進位|退位|排隊|＋|－|湊十|破十|數列|十位|個位|合起來|相差|倒數|順數/, forbid:/×|÷|\/|時鐘|鐘面|幾點|點半|短針|長針|時針|分針|錢幣|硬幣|鈔票|元|公尺|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|銳角|鈍角|直徑|半徑|百位|千位|萬|月曆|星期|24 時|[3-9]\d|2[1-9]/ },
   '1_下_0': { allow:/個十|個一|十位|個位|兩個一數|五個一數|十個一數|100 以內|99|比.*大|比.*小|順序|倒數|順數/, forbid:/×|÷|\/|錢幣|硬幣|鈔票|元|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|直徑|半徑|千位|萬|時鐘|鐘面|月曆|星期/ },
   '1_下_1': { allow:/＋|－|進位|退位|不進位|加減|差|和|還剩|一共|相差|逆推/, forbid:/×|÷|\/|錢幣|硬幣|鈔票|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|直徑|半徑|千位|萬|時鐘|鐘面|[2-9]\d{2}/ },
   '1_下_2': { allow:/元|硬幣|鈔票|50 元|10 元|5 元|1 元|找回|付清|夠不夠|買|零錢/, forbid:/×|÷|\/|公里|毫米|公斤|公克|公升|毫公升|小數|分數|面積|周長|直徑|半徑|千位|萬|時鐘|鐘面|月曆|星期/ },
@@ -2012,17 +2036,46 @@ function genMathUnitSynth(g, sem, uIdx, diff, kind, vIdx=0){
   // 各領域實數算式／應用題核心素材（依 grade & sem & uIdx 精準對應，絕不混入別單元）
   const genNumericByDomain = () => {
     // 依據 g_sem_uIdx 產生真確數字算題（100% 符合該單元算式類型）
-    if(key==='1_上_3'){ // 20以內加減與整點/半點
-      const a=rnd(6,9), b=rnd(5,9), hr=rnd(1,12), isHalf=slot%2===1;
+    if(key==='1_上_3'){ // 20以內的數與加減（純數與加減・16種以上不重疊題型變化，絕不出現時鐘）
+      const a=rnd(6,9), b=rnd(5,9), n1=rnd(11,19), u=n1-10, s1=a+b;
+      const mcV = [
+        {arch:'arch_make_ten_method',q:`計算「${a} ＋ ${b}」時，先拆湊成 10 再加，答案是多少？`,opts:uniqueOpts(s1,[s1-1,s1+1,s1+2]),a:String(s1),exp:`${a}＋${b}＝${s1}。`},
+        {arch:'arch_teen_word_form',q:`數字「${n1}」由幾個十和幾個一合起來的？`,opts:uniqueOpts(`1 個十和 ${u} 個一`,[`${u} 個十和 1 個一`,`10 個十和 ${u} 個一`,`2 個十和 ${u} 個一`]),a:`1 個十和 ${u} 個一`,exp:`${n1}＝10＋${u}。`},
+        {arch:'arch_borrow_ten_method',q:`用「先從 10 減」的方法算「${s1} － ${a}」，答案是多少？`,opts:uniqueOpts(b,[b+1,Math.max(1,b-1),s1]),a:String(b),exp:`${s1}－${a}＝${b}。`},
+        {arch:'arch_teen_missing_box',q:`如果「${a} ＋ □ ＝ ${s1}」，那麼 □ 裡面應該填多少？`,opts:uniqueOpts(b,[a,s1,b+2]),a:String(b),exp:`${s1}－${a}＝${b}。`},
+        {arch:'arch_teen_parity_pat',q:`找規律：「12、14、（　）、18、20」，括號中應填入哪個數？`,opts:uniqueOpts('16',['15','17','13']),a:'16',exp:`每次多 2，14＋2＝16。`},
+        {arch:'arch_teen_compare_range',q:`下面哪一個算式算出來「比 13 大，又比 16 小」？`,opts:uniqueOpts('8 ＋ 6',['9 ＋ 8','7 ＋ 5','19 － 7']),a:'8 ＋ 6',exp:`8＋6＝14，介於 13 和 16 之間。`}
+      ];
+      const tfV = [
+        {arch:'arch_tf_teen_sub_chk',q:`把 ${s1} － ${a} 算出來，結果是 ${isTrue?b:b+1}。`,a:isTrue?'○':'✕',exp:`${s1}－${a}＝${b}。`},
+        {arch:'arch_tf_teen_digit_pos',q:`「19」的十位數字是 1、個位數字是 ${isTrue?9:0}。`,a:isTrue?'○':'✕',exp:`19 是 1 個十和 9 個一。`},
+        {arch:'arch_tf_teen_commute',q:`「${a} ＋ ${b}」和「${b} ＋ ${a}」算出來的答案一樣大。`,a:'○',exp:`交換加數順序，和不變。`},
+        {arch:'arch_tf_teen_countdown',q:`從 20 往前倒數兩個數（20、19、□）會停在 ${isTrue?18:17}。`,a:isTrue?'○':'✕',exp:`20 倒數兩個數是 18。`}
+      ];
+      const fillV = [
+        {arch:'arch_fill_teen_pair',q:`進位與退位：${a} ＋ ${b} ＝（　　）；16 － ${a} ＝（　　）。`,a:`${s1}；${16-a}`},
+        {arch:'arch_fill_teen_cmp',q:`比大小（填 ＞、＜ 或 ＝）：9 ＋ 5（　）13；18 － 9（　）10。`,a:'＞；＜'},
+        {arch:'arch_fill_teen_split',q:`湊十法步驟：計算 9 ＋ ${a} 時，把 ${a} 分成 1 和（　），答案是（　　）。`,a:`${a-1}；${9+a}`},
+        {arch:'arch_fill_teen_neighbors',q:`數的順序：比 ${n1} 多 1 的數是（　　），少 1 的數是（　　）。`,a:`${n1+1}；${n1-1}`}
+      ];
+      const calcV = [
+        {arch:'arch_calc_teen_add',q:`${a} ＋ ${b} ＝（　　）`,a:String(s1)},
+        {arch:'arch_calc_teen_sub',q:`${s1} － ${a} ＝（　　）`,a:String(b)},
+        {arch:'arch_calc_teen_eq',q:`平衡算式：8 ＋ 7 ＝ 10 ＋（　　）`,a:'5'},
+        {arch:'arch_calc_teen_3add',q:`連加計算：4 ＋ 6 ＋ ${b} ＝（　　）`,a:String(10+b)}
+      ];
+      const wordV = [
+        {arch:'arch_word_teen_combine',q:`籃子裡有 ${a} 顆紅球和 ${b} 顆藍球，合起來一共有幾顆球？`,a:`${a} + ${b} = ${s1}（顆）`},
+        {arch:'arch_word_teen_left',q:`${nm}原有 ${s1} 張貼紙，送給同學 ${a} 張後，還剩下幾張貼紙？`,a:`${s1} - ${a} = ${b}（張）`},
+        {arch:'arch_word_teen_diff',q:`哥哥折了 ${s1} 隻紙鶴，弟弟折了 ${a} 隻，哥哥比弟弟多折幾隻？`,a:`${s1} - ${a} = ${b}（隻）`}
+      ];
       return {
-        mc: slot%2===0
-          ? {q:`計算「${a} ＋ ${b}」時，先拆湊成 10 再加，答案是多少？`,opts:uniqueOpts(a+b,[a+b-1,a+b+1,a+b+2]),a:String(a+b),exp:`${a}＋${b}＝${a+b}。`}
-          : {q:`時鐘短針指在 ${hr} 和 ${hr===12?1:hr+1} 的中間，長針指在 ${isHalf?6:12}，現在是幾點？`,opts:uniqueOpts(`${hr} 點${isHalf?'半':'整'}`,[`${hr===12?1:hr+1} 點${isHalf?'半':'整'}`,`${hr} 點 ${isHalf?15:30} 分`,'12 點整']),a:`${hr} 點${isHalf?'半':'整'}`,exp:`短針過 ${hr}、長針指 ${isHalf?6:12} 為 ${hr} 點${isHalf?'半':'整'}。`},
-        tf: {q:`把 ${a+b} － ${a} 算出來，結果是 ${isTrue?b:b+1}。`,a:isTrue?'○':'✕',exp:`${a+b}－${a}＝${b}。`},
-        fill: {q:`進位與退位：${a} ＋ ${b} ＝（　　）；16 － ${a} ＝（　）。`,a:`${a+b}；${16-a}`},
-        calc: slot%2===0 ? {q:`${a} ＋ ${b} ＝（　　）`,a:String(a+b)} : {q:`${a+b} － ${a} ＝（　　）`,a:String(b)},
-        word: {q:`籃子裡有 ${a} 顆紅球和 ${b} 顆藍球，合起來一共有幾顆球？`,a:`${a} + ${b} = ${a+b}（顆）`},
-        match: {q:'20 以內與整點時間配對',pairs:[['8 ＋ 7','15'],['14 － 6','8'],['長針指 12、短針指 5','5 點整'],['長針指 6、短針在 9 和 10 中間','9 點半']]}
+        mc: mcV[slot % mcV.length],
+        tf: tfV[slot % tfV.length],
+        fill: fillV[slot % fillV.length],
+        calc: calcV[slot % calcV.length],
+        word: wordV[slot % wordV.length],
+        match: {q:'20 以內進退位與位值配對',pairs:[['8 ＋ 7','15'],['14 － 6','8'],['1 個十和 9 個一','19'],['9 ＋ 8','17']]}
       };
     }
     if(g===2 && sem==='上' && uIdx===3 || g===2 && sem==='下' && uIdx===0){ // 二年級乘法表
@@ -3533,6 +3586,75 @@ function inferTopicKeys(item, subj){
   return [...new Set(keys)];
 }
 
+// 嚴格辨識「題型／結構原型鍵」(Hard Archetype Key)：同一張考卷中同一個題型原型（例如時鐘、定位板、數列火車、分合樹、積木加等）絕不重複！
+function inferSvgArchetype(svg){
+  if(!svg) return null;
+  const s = String(svg);
+  if(s.includes('r="35"') && s.includes('stroke-linecap="round"')) return 'svg_clock';
+  if(s.includes('十位') && s.includes('個位')) return 'svg_abacus';
+  if(s.includes('viewBox="0 0 110 54"')) return 'svg_split_box';
+  if(s.includes('stroke="#f59e0b"') || s.includes('cx="80" cy="40"') || s.includes('翅膀')) return 'svg_butterfly';
+  if(s.includes('height="30"') && s.includes('width="34"')) return 'svg_seq_train';
+  if(s.includes('左邊') && s.includes('右邊') && s.includes('<circle')) return 'svg_row_queue';
+  if(s.includes('r="2.2"') || (s.includes('rx="6"') && s.includes('width="84"'))) return 'svg_dice_pair';
+  if(s.includes('#66bb6a') && s.includes('#42a5f5')) return 'svg_block_add';
+  if(s.includes('50元') || s.includes('10元') || s.includes('5元') || s.includes('1元')) return 'svg_coins';
+  if(s.includes('公') && s.includes('tick') || s.includes('x1="15"') && s.includes('#4fc3f7')) return 'svg_ruler';
+  if(s.includes('<rect') && s.includes('rx="') === false && s.includes('人')) return 'svg_bar_chart';
+  if(s.includes('平分成')) return 'svg_fraction_bar';
+  if(s.includes('直徑') || s.includes('半徑')) return 'svg_circle';
+  if(s.includes('底 ') && s.includes('高 ')) return 'svg_triangle';
+  if(s.includes('角度') || s.includes('arc')) return 'svg_angle';
+  if(s.includes('扇形') || s.includes('圓心角')) return 'svg_sector';
+  if(s.includes('robots') || (s.includes('#ef9a9a') && s.includes('#90caf9') && s.includes('#ffe082'))) return 'svg_shape_count';
+  if(s.includes('(1)') && s.includes('(2)') && s.includes('(3)')) return 'svg_length_compare';
+  if(s.includes('①') && s.includes('④')) return 'svg_lines_four';
+  return 'svg_custom_' + s.slice(0, 48).replace(/\d+/g, '#');
+}
+
+function inferArchetypeKeys(item, subj, kindKey=''){
+  const keys = [];
+  if(!item) return keys;
+  if(item.arch) keys.push('arch_' + item.arch);
+  const svgArch = inferSvgArchetype(item.svg);
+  if(svgArch) keys.push('arch_' + svgArch);
+
+  const q = String(item.q || '');
+  const full = q + ' ' + String(item.a || '') + ' ' + String(item.exp || '');
+  if(subj === '數學'){
+    if(/時鐘|鐘面|幾點幾分|幾點整|點半|時針|分針/.test(full)) keys.push('arch_concept_clock');
+    if(/定位板|個十和.*個一|十位數字.*個位數字|百位.*十位.*個位/.test(full)) keys.push('arch_concept_placevalue');
+    if(/火車數列|順數|倒數|數列|空格裡應該填入|下一個數/.test(q)) keys.push('arch_concept_seq');
+    if(/分合表|分成.*和|合起來剛好是|合起來是/.test(q) && !/蘋果|彈珠|糖果|橘子|卡片|貼紙|鴨子/.test(q)) keys.push('arch_concept_split');
+    if(/骰子點數|骰子圖/.test(full)) keys.push('arch_concept_dice');
+    if(/積木圖|積木合起來/.test(full)) keys.push('arch_concept_block_add');
+    if(/排隊.*第.*個|前面有.*個人.*後面有/.test(q)) keys.push('arch_concept_queue');
+    if(/從第.*1.*頁讀到第/.test(q)) keys.push('arch_concept_book_pages');
+    if(/機器人圖形|小屋圖形/.test(q)) keys.push('arch_concept_shape_count');
+    if(/直線與曲線|直線.*曲線/.test(q)) keys.push('arch_concept_lines');
+    if(/直尺圖|測量圖|刻度/.test(q)) keys.push('arch_concept_ruler');
+    if(/鉛筆最長|一端對齊/.test(q)) keys.push('arch_concept_compare_len');
+    if(/統計圖|長條圖/.test(q)) keys.push('arch_concept_barchart');
+    if(/點陣圖/.test(q)) keys.push('arch_concept_arraydots');
+    if(/硬幣|找回.*元|麵包.*元|橡皮擦.*元/.test(q) && /硬幣|鈔票|50\s*元/.test(full)) keys.push('arch_concept_coins');
+    if(/滾動|堆疊|疊高/.test(q)) keys.push('arch_concept_roll_stack');
+    if(/湊十法|拆湊成\s*10/.test(full)) keys.push('arch_concept_make10');
+    if(/破十法|先從\s*10\s*減/.test(full)) keys.push('arch_concept_borrow10');
+    if(/交換.*一樣大|結果相同/.test(full) && /＋|×/.test(q)) keys.push('arch_concept_commute');
+    if(/加\s*0|減\s*0|放進\s*0\s*顆/.test(q)) keys.push('arch_concept_zero');
+    if(/比大小.*＞.*＜|填\s*＞、＜/.test(q)) keys.push('arch_concept_cmp_sym');
+  } else if(subj === '國語'){
+    if(/量詞/.test(full)) keys.push('arch_zh_measure_word');
+    if(/相反詞|反義詞/.test(full)) keys.push('arch_zh_antonym');
+    if(/相似詞|近義詞/.test(full)) keys.push('arch_zh_synonym');
+    if(/疊字/.test(full)) keys.push('arch_zh_redup');
+    if(/錯別字|改為/.test(full)) keys.push('arch_zh_typo');
+    if(/組合成語|四字成語/.test(q)) keys.push('arch_zh_idiom_' + kindKey);
+    if(/部首/.test(q) && kindKey !== 'calc') keys.push('arch_zh_radical_' + kindKey);
+  }
+  return [...new Set(keys)];
+}
+
 // 識別題目所屬之「廣義概念群組」（同一題組若有 2 題以上，強制由簡單排到困難）
 function inferBroadCategory(item, subj, kindKey){
   const q=String(item.q||'');
@@ -3982,8 +4104,9 @@ function generateExamQuestions(cfg){
   const g=+cfg.grade, subj=cfg.subject, diff=cfg.diff;
   const tier=g<=2?'low':(g<=4?'mid':'high');
   const sections=[];
-  // 全卷（及跨張懶人包）防重集合：題幹、版型簽名（防只換數字/人名）、與概念主題皆不得重複
-  const examTopicsUsed=new Set();
+  // 全卷（及跨張懶人包）硬性防重集合：題幹、版型簽名、主題標籤、與「結構題型原型」皆嚴格禁止重複！
+  const examTopicsUsed=new Set(cfg.excludeTopics instanceof Set ? cfg.excludeTopics : []);
+  const examArchetypesUsed=new Set(cfg.excludeArchetypes instanceof Set ? cfg.excludeArchetypes : []);
   const examQuestionsUsed=new Set();
   const examSigsUsed=new Set();
   const extQuestions = cfg.excludeQuestions instanceof Set ? cfg.excludeQuestions : null;
@@ -3998,18 +4121,27 @@ function generateExamQuestions(cfg){
     }
     return false;
   };
-  const isTopicConflict=(cand)=>{
-    if(isGlobalDup(cand, true)) return true;
-    const tKeys=inferTopicKeys(cand,subj);
-    return tKeys.some(k=>examTopicsUsed.has(k));
+  const hasArchetypeConflict=(cand, kindKey='', allowTopicRelax=false)=>{
+    const aKeys = inferArchetypeKeys(cand, subj, kindKey);
+    if(aKeys.some(k=>examArchetypesUsed.has(k))) return true;
+    if(!allowTopicRelax){
+      const tKeys = inferTopicKeys(cand, subj);
+      if(tKeys.some(k=>examTopicsUsed.has(k))) return true;
+    }
+    return false;
   };
-  const markTopicUsed=(cand, secSet)=>{
+  const isTopicConflict=(cand, kindKey='')=>{
+    if(isGlobalDup(cand, true)) return true;
+    return hasArchetypeConflict(cand, kindKey, false);
+  };
+  const markTopicUsed=(cand, secSet, kindKey='')=>{
     const sig=normalizeTemplateSig(cand.q);
     examQuestionsUsed.add(cand.q);
     examSigsUsed.add(sig);
     if(extQuestions) extQuestions.add(cand.q);
     if(extSigs) extSigs.add(sig);
     inferTopicKeys(cand,subj).forEach(k=>{examTopicsUsed.add(k);if(secSet)secSet.add(k);});
+    inferArchetypeKeys(cand,subj,kindKey).forEach(k=>examArchetypesUsed.add(k));
   };
 
   const pullBank=(kindKey, count, title)=>{
@@ -4047,61 +4179,78 @@ function generateExamQuestions(cfg){
         const effD=getStepDiff(i);
         const mathStaticPool = sortByDiffPref(mathStaticAll, effD);
         let item=null;
-        // 第一輪：優先指定單元專屬題型（跨卷版型不重、全卷概念不重；每位選中單元各自連續遞增索引用盡不跳號）
-        for(let tr=0;tr<48;tr++){
+        // 第一輪：指定單元專屬題型 + 靜態出版社補充（嚴格單元過濾＋硬性全卷零重複題型原型）
+        for(let tr=0;tr<60;tr++){
           const uPick=uIdxs[(i+tr)%uIdxs.length];
           const uStep=Math.floor(tr/uIdxs.length);
           const cand=genMathForUnit(g,cfg.sem,uPick,effD,kindKey,i+uStep+randSeed);
-          if(cand && !isTopicConflict(cand)){item=cand;break;}
+          if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isTopicConflict(cand, kindKey)){item=cand;break;}
         }
-        // 第二輪：同單元多難度與結構題型（僅限勾選單元，不跨單元／不跨年級）
-        if(!item){
-          for(let tr=0;tr<48;tr++){
-            const uPick=uIdxs[(i+tr)%uIdxs.length];
-            const uStep=Math.floor(tr/uIdxs.length);
-            const dTry = tr<20 ? effD : ['easy','mid','hard'][tr%3];
-            const cand = (isUnitSubset || tr%3!==0)
-              ? genMathForUnit(g,cfg.sem,uPick,dTry,kindKey,i+uStep+randSeed+13)
-              : genMath(g,dTry,kindKey,tr+i+randSeed);
-            if(!cand) continue;
-            if(!isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs)) continue;
-            const tKeys=inferTopicKeys(cand,subj);
-            if(!isGlobalDup(cand,true) && !tKeys.some(k=>secTopicsUsed.has(k))){item=cand;break;}
-          }
+        // 第一之二輪：優先從該單元專屬靜態題庫（鼎甲/良品/奇鼎）挑選不重複題型原型
+        if(!item && mathStaticPool.length){
+          const stCand=mathStaticPool.find(r=>!isTopicConflict(r, kindKey));
+          if(stCand) item={...stCand};
         }
-        // 第三輪：跨題型多變化數學題庫 genMathVariety（嚴格過濾：僅納入通過該年級與勾選單元規則者！）
+        // 第二輪：多變化結構題庫 genMathUnitSynth（嚴格掃描所有變化索引＋單元過濾＋硬性禁止同卷同題型原型＆跨張同版型）
         if(!item){
-          for(let k=0;k<110;k++){
-            const cand=genMathVariety(g,cfg.sem,effD,kindKey,i*7+k+randSeed);
-            if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true)){item=cand;break;}
-          }
-        }
-        // 第四輪：同年級勾選單元多變化結構補充 + 靜態單元標籤題庫
-        if(!item){
-          for(let tr=0;tr<96&&!item;tr++){
+          for(let tr=0;tr<120;tr++){
             const uPick=uIdxs[(i+tr)%uIdxs.length];
             const uStep=Math.floor(tr/uIdxs.length);
             const dTry=['easy','mid','hard'][tr%3];
-            const cand=genMathUnitSynth(g,cfg.sem,uPick,dTry,kindKey,i+uStep+randSeed);
-            if(cand && !isGlobalDup(cand,true)){item=cand;break;}
+            const cand=genMathUnitSynth(g,cfg.sem,uPick,dTry,kindKey,uStep+randSeed);
+            if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true) && !hasArchetypeConflict(cand, kindKey, true)){item=cand;break;}
           }
         }
-        if(!item && !isUnitSubset){
-          for(let k=0;k<20;k++){
-            const cand=genMath(g,effD,kindKey,i*3+k+randSeed);
-            if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true)){item=cand;break;}
+        // 第三輪：跨題型多變化數學題庫 genMathVariety（完整掃描 96 個題型槽位＋單元過濾＋零重複題型原型＆版型）
+        if(!item){
+          for(let k=0;k<96;k++){
+            const cand=genMathVariety(g,cfg.sem,effD,kindKey,k+i+randSeed);
+            if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true) && !hasArchetypeConflict(cand, kindKey, true)){item=cand;break;}
+          }
+        }
+        // 第四輪：補足掃描 genMathUnitSynth / genMathVariety / genMathForUnit / 靜態出版社庫（嚴格鎖定：單元合格＋跨張不重版型 checkSig＋單張零重複 SVG 圖形原型！）
+        if(!item){
+          for(let tr=0;tr<240&&!item;tr++){
+            const uPick=uIdxs[tr%uIdxs.length];
+            const uStep=Math.floor(tr/uIdxs.length);
+            const dTry=['easy','mid','hard'][tr%3];
+            const cand = tr < 96
+              ? genMathUnitSynth(g,cfg.sem,uPick,dTry,kindKey,uStep+randSeed+tr)
+              : (tr < 192
+                ? genMathVariety(g,cfg.sem,dTry,kindKey,(tr-96)+i+randSeed)
+                : genMathForUnit(g,cfg.sem,uPick,dTry,kindKey,uStep+randSeed+tr));
+            if(!cand || !isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs)) continue;
+            const svgA = inferSvgArchetype(cand.svg);
+            if(svgA && examArchetypesUsed.has('arch_' + svgA)) continue;
+            if(!isGlobalDup(cand,true)){item=cand;break;}
           }
         }
         if(!item && mathStaticPool.length){
-          const stCand=mathStaticPool.find(r=>!isGlobalDup(r,true));
+          const stCand=mathStaticPool.find(r=>{
+            const svgA=inferSvgArchetype(r.svg);
+            return (!svgA || !examArchetypesUsed.has('arch_'+svgA)) && !isGlobalDup(r,true);
+          });
           if(stCand) item={...stCand};
         }
-        // 最終保底（僅限勾選單元本身，題幹完全不重、絕不跨單元／跨學期／跨年級）
+        if(!item && !isUnitSubset){
+          for(let k=0;k<48;k++){
+            const cand=genMath(g,effD,kindKey,i*3+k+randSeed);
+            const svgA=cand?inferSvgArchetype(cand.svg):null;
+            if(svgA && examArchetypesUsed.has('arch_'+svgA)) continue;
+            if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true)){item=cand;break;}
+          }
+        }
+        // 最終保底（僅限勾選單元本身，仍硬性拒絕同張 SVG 圖形題型重複！）
         if(!item){
-          for(let tr=0;tr<40;tr++){
+          for(let tr=0;tr<60;tr++){
             const uPick=uIdxs[(i+tr)%uIdxs.length];
-            const cand=genMathForUnit(g,cfg.sem,uPick,effD,kindKey,i*7+tr+randSeed+53);
-            if(cand && !isGlobalDup(cand,false)){item=cand;break;}
+            const cand=tr%2===0
+              ? genMathUnitSynth(g,cfg.sem,uPick,['easy','mid','hard'][tr%3],kindKey,i*7+tr+randSeed+53)
+              : genMathForUnit(g,cfg.sem,uPick,effD,kindKey,i*7+tr+randSeed+53);
+            if(!cand || !isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs)) continue;
+            const svgA = inferSvgArchetype(cand.svg);
+            if(svgA && examArchetypesUsed.has('arch_' + svgA)) continue;
+            if(!isGlobalDup(cand,false)){item=cand;break;}
           }
         }
         if(item){
@@ -4110,7 +4259,7 @@ function generateExamQuestions(cfg){
           item._diff=effD;
           item._broadCat=inferBroadCategory(item,subj,kindKey);
           item._dScore=calcQuestionDifficulty(item,subj,kindKey,effD);
-          markTopicUsed(item, secTopicsUsed);
+          markTopicUsed(item, secTopicsUsed, kindKey);
           qs.push(item);
         }
       }
@@ -4126,26 +4275,26 @@ function generateExamQuestions(cfg){
         const unitList = sortByDiffPref(unitFiltered, effD);
 
         const tryDynamic=()=>{
-          for(let tr=0;tr<32;tr++){
+          for(let tr=0;tr<40;tr++){
             let d=null;
             if(subj==='國語'&&(kindKey==='mc'||kindKey==='fill'||kindKey==='tf'||kindKey==='calc'||kindKey==='word'||kindKey==='match')) d=genChineseDynamic(g,kindKey,effD,cfg.units,isUnitSubset);
             else if(subj==='英語'&&kindKey!=='word') d=genEngProc(g,kindKey,effD,uIdxs,isUnitSubset);
             else if(subj==='生活'||subj==='自然科學'||subj==='社會') d=genFactProc(subj,g,kindKey,effD,cfg.sem,uIdxs,isUnitSubset);
-            if(d && (subj==='國語' || !isUnitSubset || matchesUnitTopics(d,subj,g,cfg.sem,uIdxs,allUnitsCount)) && !isTopicConflict(d)) return d;
+            if(d && (subj==='國語' || !isUnitSubset || matchesUnitTopics(d,subj,g,cfg.sem,uIdxs,allUnitsCount)) && !isTopicConflict(d, kindKey)) return d;
           }
           return null;
         };
 
         const tryStatic=()=>{
-          const avail=unitList.filter(r=>!isTopicConflict(r));
+          const avail=unitList.filter(r=>!isTopicConflict(r, kindKey));
           return avail.length?avail[0]:null;
         };
 
         const tryUnitSpecific=(strictSig=true)=>{
-          for(let tr=0;tr<36;tr++){
+          for(let tr=0;tr<44;tr++){
             const uPick=uIdxs[(i+tr)%uIdxs.length];
             const cand=genCurriculumUnitQuestion(subj,g,cfg.sem,uPick,kindKey,effD,i+tr+randSeed,cfg.units);
-            if(cand && !isGlobalDup(cand,strictSig)) return cand;
+            if(cand && !isGlobalDup(cand,strictSig) && !hasArchetypeConflict(cand, kindKey, !strictSig)) return cand;
           }
           return null;
         };
@@ -4160,7 +4309,7 @@ function generateExamQuestions(cfg){
           chosen=tryStatic()||tryDynamic()||tryUnitSpecific(true)||tryUnitSpecific(false);
         }
         if(!chosen){
-          const unusedStatic=unitList.find(r=>!isGlobalDup(r,true)) || unitList.find(r=>!isGlobalDup(r,false));
+          const unusedStatic=unitList.find(r=>!isGlobalDup(r,true) && !hasArchetypeConflict(r, kindKey, true)) || unitList.find(r=>!isGlobalDup(r,false));
           if(unusedStatic) chosen=unusedStatic;
         }
         if(chosen){
@@ -4171,7 +4320,7 @@ function generateExamQuestions(cfg){
           item._diff=effD;
           item._broadCat=inferBroadCategory(item,subj,kindKey);
           item._dScore=calcQuestionDifficulty(item,subj,kindKey,effD);
-          markTopicUsed(item, secTopicsUsed);
+          markTopicUsed(item, secTopicsUsed, kindKey);
           qs.push(item);
         }
       }
@@ -4341,7 +4490,7 @@ function chooseBestLayout(exam){
   return res[1];
 }
 
-function updateCapInfo(pagesCount){
+function updateCapInfo(pagesCount, ansPagesCount=null){
   if(curExam&&pagesCount!=null)curExam._lastPageCount=pagesCount;
   const total=curExam && curExam.sections
     ? curExam.sections.reduce((a,s)=>a+s.qs.length,0)
@@ -4352,12 +4501,13 @@ function updateCapInfo(pagesCount){
   const isWarn=two&&pagesCount>2;
   const fillPct = curExam && curExam._lastPageFill ? Math.round(curExam._lastPageFill*100) : 0;
   const fillTag = fillPct ? `・末頁填滿約 ${fillPct}%` : '';
+  const ansCnt = ansPagesCount != null ? ansPagesCount : 1;
   const cls='cap-banner '+(isWarn?'warn':'ok');
   const msg=pagesCount==null
     ? `📋 目前設定共 ${total} 題`
     : (isWarn
       ? `⚠️ 超出兩頁範圍！目前設定共 ${total} 題，預覽達 ${pagesCount} 頁（超過正反一張紙），請減少題數或切換雙欄！`
-      : `✅ 版面均衡：目前共 ${total} 題（總分 100 分），試卷 ${pagesCount} 頁${two?'（正反雙面）':''}${fillTag}${curExam&&curExam.meta.withAns?' ＋ 解答 1 頁':''}`);
+      : `✅ 版面均衡：目前共 ${total} 題（總分 100 分），試卷 ${pagesCount} 頁${two?'（正反雙面）':''}${fillTag}${curExam&&curExam.meta.withAns?` ＋ 解答 ${ansCnt} 頁`:''}`);
   ['exCapInfo','exCapInfo2'].forEach(id=>{
     const el=$(id); if(!el)return;
     el.className=cls; el.textContent=msg;
@@ -4383,25 +4533,31 @@ function renderExam(){
   const makeQEl=(b,zhMode)=>{
     const kind=b.kind, q=b.item;
     const d=document.createElement('div');d.className=zhMode?'ex-zh-q':'ex-q';
-    const brk=zhMode?'︵　︶':'(　)';
+    const brk=zhMode?'︵　　︶':'(　　)';
     const noRaw=zhMode?`<span class="tcy">${b.num}.</span>`:`${b.num}.`;
     const noText=(kind==='mc'||kind==='tf')?`${noRaw} ${brk}`:noRaw;
-    const rawQ = String(q.q || '');
+    const rawQ = String(q.q || '').trimEnd();
     const ptsTag = `<span class="qpts">（${q.pts}分）</span>`;
+    // 防止括弧與配分標籤（5分）單獨掉落換行：將最後一詞（含括弧＋句尾標點）與配分緊密黏合
+    const glueTailMatch = rawQ.match(/^(.*?)((?:[^\s\n])?[（(][\s　]*[）)][？。！：.,!?]?|[^\s\n]{1,2}[？。！：.,!?]?)$/);
     let qHtml = '';
-    if(rawQ.length >= 2){
+    if(glueTailMatch && glueTailMatch[1]){
+      qHtml = `${rubyHtml(glueTailMatch[1])}<span class="qend-glue">${rubyHtml(glueTailMatch[2])}${ptsTag}</span>`;
+    }else if(rawQ.length >= 2){
       const headPart = rawQ.slice(0, -1);
       const tailChar = rawQ.slice(-1);
       qHtml = `${rubyHtml(headPart)}<span class="qend-glue">${rubyHtml(tailChar)}${ptsTag}</span>`;
     } else {
       qHtml = `<span class="qend-glue">${rubyHtml(rawQ)}${ptsTag}</span>`;
     }
+    // 同時將題幹中間的作答括弧與前後1字緊黏，避免括弧在句末孤立斷行
+    qHtml = qHtml.replace(/([^>])(<span class="h-blank">[^<]+<\/span>)([？。！：，、；]?)/g, '$1<span class="qblank-glue">$2$3</span>');
     let body=`<div class="qt">${qHtml}</div>`;
     if(q.svg) body+=`<div class="ex-svg">${q.svg}</div>`;
     if(kind==='mc'){
       body+=`<div class="qopts">${q.opts.map((o,i)=>`<span>${optLabels[i]} ${rubyHtml(o)}</span>`).join('')}</div>`;
     }else if(kind==='match'){
-      const rows=q.pairs.map((p,i)=>`<div><b>${i+1}.</b> <span class="h-blank">（　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
+      const rows=q.pairs.map((p,i)=>`<div><b>${i+1}.</b> <span class="h-blank">（　　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
       body+=`<div class="ex-match">${rows}</div>`;
     }else if(kind==='calc'||kind==='word'){
       body+=`<div class="qbox ${kind}"></div>`;
@@ -4432,16 +4588,22 @@ function renderExam(){
       cells.forEach(c=>{
         if(c.newline){if(cur.length)cols.push(cur);startCol(true);return;}
         if(c.isScore || c.isClosePunc){
-          // 配分標籤與句尾閉括號／標點絕不單獨開出新欄：微超則緊貼欄底，否則帶上最後一個字一起轉至次欄
-          if(h+c.h <= maxColUnits+28 || cur.length <= (indentUnits>0?2:1)){
+          // 配分標籤、作答括號與句尾閉括號／標點絕不單獨開出新欄：微超則緊貼欄底，否則帶上前一字／括弧一起轉至次欄
+          if(h+c.h <= maxColUnits+36 || cur.length <= (indentUnits>0?2:1)){
             cur.push(c);h+=c.h;return;
           }
-          const prev = cur.pop();
+          const carry=[];
+          if(cur.length) carry.unshift(cur.pop());
+          if(carry[0] && (carry[0].isBlank || carry[0].isClosePunc) && cur.length > (indentUnits>0?1:0)){
+            carry.unshift(cur.pop());
+          }
           cols.push(cur);startCol(true);
-          if(prev){cur.push(prev);h+=prev.h;}
+          carry.forEach(x=>{cur.push(x);h+=x.h;});
           cur.push(c);h+=c.h;return;
         }
-        if(h+c.h>maxColUnits&&cur.length>(indentUnits>0?1:0)){
+        if(c.isBlank && h+c.h > maxColUnits && cur.length > (indentUnits>0?1:0)){
+          cols.push(cur);startCol(true);
+        }else if(h+c.h>maxColUnits&&cur.length>(indentUnits>0?1:0)){
           cols.push(cur);startCol(true);
         }
         cur.push(c);h+=c.h;
@@ -4455,7 +4617,7 @@ function renderExam(){
       const wrap=document.createElement('div');wrap.className='ex-zh-q';
       const headCells=[gCellLabel(`${b.num}.`,true,'#111',15,mainX)];
       if(kind==='mc'||kind==='tf'){
-        headCells.push(gCellBlank(42,mainX));
+        headCells.push(gCellBlank(52,mainX));
       }
       const indentH=headCells.reduce((a,c)=>a+c.h,0);
 
@@ -4466,7 +4628,7 @@ function renderExam(){
           const pCells=[
             gCellSpace(12),
             gCellLabel(`${i+1}.`,true,'#111',14,mainX),
-            gCellBlank(36,mainX),
+            gCellBlank(50,mainX),
             ...tokenizeZhCells(pr[0],useZy,mainX),
             gCellSpace(14),
             gCellLabel(matchLabels[i],true,'#7a3b00',15,mainX),
@@ -4762,6 +4924,32 @@ function renderExam(){
         fillCol(c1,cols[0]);inner.appendChild(c1);
       }
       pg.appendChild(inner);
+      // 實機 DOM 安全高度校準（即使在後台隱藏分頁或附注音寬括弧換行時，亦確保絕不超出 1096px 底部安全界線）
+      {
+        const fitHost=document.createElement('div');
+        fitHost.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;z-index:-1';
+        inner.style.height='auto';
+        fitHost.appendChild(pg);
+        document.body.appendChild(fitHost);
+        const colEls=[...inner.querySelectorAll('.ex-col-l,.ex-col-r,.ex-col-1')];
+        let curFs=chosenD.fs, curLh=baseSt.lh, curGap=baseSt.gap, curCalc=baseSt.calcH, curWord=baseSt.wordH;
+        for(let step=0; step<12 && inner.scrollHeight>1094; step++){
+          curGap=Math.max(2, curGap-4);
+          curLh=Math.max(1.18, +(curLh-0.08).toFixed(2));
+          curCalc=Math.max(16, curCalc-6);
+          curWord=Math.max(24, curWord-8);
+          if(step>=3) curFs=Math.max(10.6, +(curFs-0.4).toFixed(1));
+          [inner, ...colEls].forEach(el=>{
+            el.style.setProperty('--ex-fs', curFs+'px');
+            el.style.setProperty('--ex-lh', curLh);
+            el.style.setProperty('--ex-gap', curGap+'px');
+            el.style.setProperty('--ex-box-calc', curCalc+'px');
+            el.style.setProperty('--ex-box-word', curWord+'px');
+          });
+        }
+        document.body.removeChild(fitHost);
+        inner.style.height='100%';
+      }
       if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(794,1122,meta.wmText||''));
       const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
       pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${pgIdx+1} / ${totalP} 頁`}));
@@ -4770,20 +4958,32 @@ function renderExam(){
   }
 
   if(meta.withAns){
-    const allPg=box.querySelectorAll('.a4').length+1;
-    const cap=document.createElement('div');cap.className='pcap';
     const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+    const ansPagesOut=[];
     if(isZh){
-      cap.textContent=`A4 橫式直書（由右至左）解答與解析頁　第 ${allPg} / ${allPg} 頁`;box.appendChild(cap);
-      const pg=document.createElement('div');pg.className='a4 exam-a4 ex-land';
-      pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-      const inner=document.createElement('div');inner.className='ex-zh-wrap';
-      inner.style.setProperty('--ex-fs','13.5px');
+      // 國語科橫式直書解答：以隱藏實測寬度自動分頁，絕不裁切溢出
+      const createZhAnsPg=()=>{
+        const pg=document.createElement('div');pg.className='a4 exam-a4 ex-land';
+        pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+        const inner=document.createElement('div');inner.className='ex-zh-wrap';
+        inner.style.setProperty('--ex-fs','13.5px');
+        pg.appendChild(inner);
+        return {pg,inner};
+      };
+      let cur=createZhAnsPg();
       const hd=document.createElement('div');hd.className='ex-zh-hd';
       hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語科解答與解析（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>`);
-      inner.appendChild(hd);
+      cur.inner.appendChild(hd);
+
+      const meas=document.createElement('div');
+      meas.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;z-index:-1';
+      document.body.appendChild(meas);
+      meas.appendChild(cur.pg);
+
+      const ansBlocks=[];
       sections.forEach(sec=>{
-        const sh=document.createElement('div');sh.className='ex-zh-sec';sh.innerHTML=zhFormat(esc(sec.heading));inner.appendChild(sh);
+        const sh=document.createElement('div');sh.className='ex-zh-sec';sh.innerHTML=zhFormat(esc(sec.heading));
+        ansBlocks.push(sh);
         sec.qs.forEach((q,i)=>{
           let ans=q.a;
           if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);ans=`${['①','②','③','④'][ix]} ${q.a}`;}
@@ -4792,22 +4992,69 @@ function renderExam(){
           const col=document.createElement('div');
           col.style.cssText='writing-mode:vertical-rl;text-orientation:upright;height:100%;margin:0 4px;line-height:1.55;font-size:13.5px;flex:none';
           col.innerHTML=zhFormat(`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span style="color:#555;font-size:0.9em">（${esc(q.exp)}）</span>`:''}`);
-          inner.appendChild(col);
+          ansBlocks.push(col);
         });
       });
-      pg.appendChild(inner);
-      if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
-      pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${allPg} / ${allPg} 頁`}));
-      box.appendChild(pg);
+
+      ansBlocks.forEach(el=>{
+        cur.inner.appendChild(el);
+        if(cur.inner.scrollWidth > cur.inner.clientWidth + 2 && cur.inner.children.length > 1){
+          cur.inner.removeChild(el);
+          meas.removeChild(cur.pg);
+          ansPagesOut.push(cur.pg);
+          cur=createZhAnsPg();
+          meas.appendChild(cur.pg);
+          cur.inner.appendChild(el);
+        }
+      });
+      meas.removeChild(cur.pg);
+      ansPagesOut.push(cur.pg);
+      document.body.removeChild(meas);
+
+      const baseQ=box.querySelectorAll('.a4').length;
+      const totAll=baseQ+ansPagesOut.length;
+      box.querySelectorAll('.pcap').forEach((el,idx)=>{if(idx<baseQ)el.textContent=`A4 橫式上下雙排直書（由右至左）　第 ${idx+1} / ${totAll} 頁`;});
+      box.querySelectorAll('.a4 .cap').forEach((el,idx)=>{if(idx<baseQ)el.textContent=`${cpr}　｜　第 ${idx+1} / ${totAll} 頁`;});
+      ansPagesOut.forEach((pg,ai)=>{
+        const pNo=baseQ+ai+1;
+        const cap=document.createElement('div');cap.className='pcap';
+        cap.textContent=`A4 橫式直書（由右至左）解答與解析頁　第 ${pNo} / ${totAll} 頁`;box.appendChild(cap);
+        if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
+        pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${pNo} / ${totAll} 頁`}));
+        box.appendChild(pg);
+      });
+      if(curExam) updateCapInfo(curExam._lastPageCount, ansPagesOut.length);
     }else{
-      cap.textContent=`A4 直式解答與解析頁　第 ${allPg} / ${allPg} 頁`;box.appendChild(cap);
-      const pg=document.createElement('div');pg.className='a4 exam-a4';
-      pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-      const inner=document.createElement('div');inner.className='ex-wrap'+($('exRuby').checked?' has-ruby':'');
-      inner.innerHTML=`<div class="ex-hd"><h3>解答與解析</h3><div class="ex-sub">國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}（總分 100 分）</div></div>`;
+      // 直式 A4 解答與解析頁：動態 DOM 高度實測分頁，嚴禁任何題解被底線裁切！
+      const createPortAnsPg=(isCont)=>{
+        const pg=document.createElement('div');pg.className='a4 exam-a4';
+        pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+        const inner=document.createElement('div');inner.className='ex-wrap'+($('exRuby').checked?' has-ruby':'');
+        inner.style.height='auto';inner.style.minHeight='0';
+        inner.innerHTML=`<div class="ex-hd"><h3>解答與解析${isCont?'（續）':''}</h3><div class="ex-sub">國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}（總分 100 分）</div></div>`;
+        pg.appendChild(inner);
+        return {pg,inner};
+      };
+      let cur=createPortAnsPg(false);
+      const meas=document.createElement('div');
+      meas.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;z-index:-1';
+      document.body.appendChild(meas);
+      meas.appendChild(cur.pg);
+      const MAX_ANS_H=1052; // 1122 - 70 安全底界，預留頁尾版權列與列印安全邊距
+
       sections.forEach(sec=>{
-        const h=document.createElement('div');h.className='ex-sec';h.textContent=sec.heading;inner.appendChild(h);
-        const grid=document.createElement('div');grid.className='ex-ans-grid';
+        const mkSecHdr=()=>{const h=document.createElement('div');h.className='ex-sec';h.textContent=sec.heading;return h;};
+        let hEl=mkSecHdr();
+        let grid=document.createElement('div');grid.className='ex-ans-grid';
+        cur.inner.appendChild(hEl);
+        cur.inner.appendChild(grid);
+        if(cur.inner.scrollHeight > MAX_ANS_H && cur.inner.children.length > 3){
+          cur.inner.removeChild(grid);cur.inner.removeChild(hEl);
+          meas.removeChild(cur.pg);ansPagesOut.push(cur.pg);
+          cur=createPortAnsPg(true);meas.appendChild(cur.pg);
+          hEl=mkSecHdr();grid=document.createElement('div');grid.className='ex-ans-grid';
+          cur.inner.appendChild(hEl);cur.inner.appendChild(grid);
+        }
         sec.qs.forEach((q,i)=>{
           const d=document.createElement('div');d.className='ex-ans';
           let ans=q.a;
@@ -4816,13 +5063,34 @@ function renderExam(){
           ans=String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2) ');
           d.innerHTML=`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span class="hint">（${esc(q.exp)}）</span>`:''}`;
           grid.appendChild(d);
+          if(cur.inner.scrollHeight > MAX_ANS_H && grid.children.length > 1){
+            grid.removeChild(d);
+            meas.removeChild(cur.pg);ansPagesOut.push(cur.pg);
+            cur=createPortAnsPg(true);meas.appendChild(cur.pg);
+            const h2=document.createElement('div');h2.className='ex-sec';h2.textContent=`${sec.heading}（續）`;
+            grid=document.createElement('div');grid.className='ex-ans-grid';
+            cur.inner.appendChild(h2);cur.inner.appendChild(grid);
+            grid.appendChild(d);
+          }
         });
-        inner.appendChild(grid);
       });
-      pg.appendChild(inner);
-      if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(794,1122,meta.wmText||''));
-      pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${allPg} / ${allPg} 頁`}));
-      box.appendChild(pg);
+      meas.removeChild(cur.pg);
+      ansPagesOut.push(cur.pg);
+      document.body.removeChild(meas);
+
+      const baseQ=box.querySelectorAll('.a4').length;
+      const totAll=baseQ+ansPagesOut.length;
+      box.querySelectorAll('.pcap').forEach((el,idx)=>{if(idx<baseQ)el.textContent=`A4 直式測驗卷　第 ${idx+1} / ${totAll} 頁`;});
+      box.querySelectorAll('.a4 .cap').forEach((el,idx)=>{if(idx<baseQ)el.textContent=`${cpr}　｜　第 ${idx+1} / ${totAll} 頁`;});
+      ansPagesOut.forEach((pg,ai)=>{
+        const pNo=baseQ+ai+1;
+        const cap=document.createElement('div');cap.className='pcap';
+        cap.textContent=`A4 直式解答與解析頁　第 ${pNo} / ${totAll} 頁`;box.appendChild(cap);
+        if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(794,1122,meta.wmText||''));
+        pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${pNo} / ${totAll} 頁`}));
+        box.appendChild(pg);
+      });
+      if(curExam) updateCapInfo(curExam._lastPageCount, ansPagesOut.length);
     }
   }
 }
@@ -4901,16 +5169,17 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 
 /* 隱藏式格子系統（一字一格、一符一格、一空一格，橫書與直書零重疊） */
 /* 1. 橫書科目（數學、生活、自然、社會、英語） */
-.hcell-han{display:inline-block;width:1.75em;height:1.26em;vertical-align:-.22em;margin:0 .02em;overflow:visible}
-.hcell-zy{display:inline-block;width:1.25em;height:1.32em;vertical-align:-.25em;margin:0 .03em;overflow:visible}
-.h-blank{display:inline-block;min-width:2.6em;text-align:center;font-weight:600;margin:0 .08em;white-space:nowrap}
+.hcell-han{display:inline-block;width:1.75em;height:1.26em;vertical-align:-.25em;margin:0 .02em;overflow:visible}
+.hcell-zy{display:inline-block;width:1.25em;height:1.32em;vertical-align:-.26em;margin:0 .03em;overflow:visible}
+.h-num{display:inline-block;vertical-align:-.02em;line-height:1.25;margin:0 .04em;font-variant-numeric:tabular-nums}
+.h-blank{display:inline-block;min-width:4.4em;padding:0 .16em;text-align:center;font-weight:600;margin:0 .1em;white-space:nowrap;letter-spacing:.04em}
 
 /* 2. 直書國語科（全部統一為寬 42 單位之隱藏式格子，主軸 x=14，注音軌 x=31） */
 .gcell{display:block;width:1.85em;margin:0 auto;overflow:visible}
 .g-han{height:1.24em}
 .g-zy{height:1.38em}
 .g-punc{height:.95em}
-.g-blank{height:2.2em}
+.g-blank{height:2.9em}
 .g-badge{height:1.8em}
 
 /* 直式 A4（數學／生活／自然／社會／英語） */
@@ -4954,12 +5223,15 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:2.1em;height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:3.2em}
-.tcy{display:inline-block;writing-mode:horizontal-tb;text-orientation:mixed;vertical-align:middle;line-height:1.1}
+.tcy{display:inline-block;text-combine-upright:all;-webkit-text-combine:horizontal;width:1.38em;text-align:center;writing-mode:horizontal-tb;vertical-align:middle;line-height:1.08;margin:1px auto}
+.qend-glue{white-space:nowrap;display:inline}
+.qblank-glue{white-space:nowrap;display:inline}
 
 @media print{
   #examSheet{display:block;padding:0;gap:0}
   .ex-wrap{padding:8mm 10mm}
   .ex-zh-wrap{padding:8mm 10mm}
+  .a4:last-child{break-after:auto!important;page-break-after:auto!important}
 }
 
 /* 即時題數與兩頁一張顯眼狀態橫幅 */
@@ -5178,13 +5450,18 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   const addOneToKind=(k)=>{
     const extQ=new Set(baseCfg.excludeQuestions||[]);
     const extS=new Set(baseCfg.excludeSigs||[]);
+    const extT=new Set(baseCfg.excludeTopics||[]);
+    const extA=new Set(baseCfg.excludeArchetypes||[]);
     curExam.sections.forEach(s=>s.qs.forEach(q=>{
       extQ.add(q.q);
       extS.add(normalizeTemplateSig(q.q));
+      inferTopicKeys(q, baseCfg.subject).forEach(t=>extT.add(t));
+      inferArchetypeKeys(q, baseCfg.subject, s.kind).forEach(a=>extA.add(a));
     }));
     const singleCfg={
       ...baseCfg,
       excludeQuestions:extQ, excludeSigs:extS,
+      excludeTopics:extT, excludeArchetypes:extA,
       nMc:k==='mc'?1:0, nTf:k==='tf'?1:0, nFill:k==='fill'?1:0,
       nMatch:k==='match'?1:0, nCalc:k==='calc'?1:0, nWord:k==='word'?1:0
     };
@@ -5504,11 +5781,214 @@ function parseBatchCsv(text){
 }
 window.parseBatchCsv = parseBatchCsv;
 
-function saveOrdersToLocalDB(){
+const LOCAL_ORDERS_CLEARED_KEY = 'kids_orders_cleared_v1';
+const ORDER_IDB_NAME = 'SunflowerOrderBackupDB';
+const ORDER_IDB_STORE = 'backups';
+let _cloudBackupTimer = null;
+
+function _openOrderBackupIDB(){
+  return new Promise((resolve)=>{
+    if(typeof indexedDB === 'undefined'){ resolve(null); return; }
+    try{
+      const req = indexedDB.open(ORDER_IDB_NAME, 1);
+      req.onupgradeneeded = (e)=>{
+        const db = e.target.result;
+        if(!db.objectStoreNames.contains(ORDER_IDB_STORE)){
+          db.createObjectStore(ORDER_IDB_STORE, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> resolve(null);
+    }catch(_){ resolve(null); }
+  });
+}
+
+async function mirrorOrdersToIndexedDB(orders, reason='auto'){
+  const db = await _openOrderBackupIDB();
+  if(!db) return false;
+  return new Promise((resolve)=>{
+    try{
+      const tx = db.transaction(ORDER_IDB_STORE, 'readwrite');
+      const st = tx.objectStore(ORDER_IDB_STORE);
+      const nowIso = new Date().toISOString();
+      const nowTxt = formatNowMMDDHHmm();
+      const cleanArr = Array.isArray(orders) ? orders : [];
+      st.put({ id:'latest', savedAt: nowIso, savedLabel: nowTxt, reason, count: cleanArr.length, orders: cleanArr });
+      const reqSnaps = st.get('snapshots');
+      reqSnaps.onsuccess = ()=>{
+        const prev = (reqSnaps.result && Array.isArray(reqSnaps.result.items)) ? reqSnaps.result.items : [];
+        const nextSnap = { savedAt: nowIso, savedLabel: nowTxt, reason, count: cleanArr.length, orders: cleanArr };
+        const items = [nextSnap, ...prev].slice(0, 20);
+        st.put({ id:'snapshots', items });
+      };
+      tx.oncomplete = ()=>{
+        try{ localStorage.setItem('sunflower_last_idb_backup_at', nowTxt); }catch(_){}
+        refreshBackupStatusUI();
+        resolve(true);
+      };
+      tx.onerror = ()=> resolve(false);
+    }catch(_){ resolve(false); }
+  });
+}
+
+async function readOrdersFromIndexedDB(){
+  const db = await _openOrderBackupIDB();
+  if(!db) return null;
+  return new Promise((resolve)=>{
+    try{
+      const tx = db.transaction(ORDER_IDB_STORE, 'readonly');
+      const req = tx.objectStore(ORDER_IDB_STORE).get('latest');
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> resolve(null);
+    }catch(_){ resolve(null); }
+  });
+}
+
+function getAdminCloudBackupCreds(){
+  let url = '', token = '';
+  try{
+    url = (localStorage.getItem('kids_gas_webapp_url') || localStorage.getItem('sunflower_gas_url') || '').trim();
+    token = (sessionStorage.getItem('kids_admin_session_token') || '').trim();
+  }catch(_){}
+  if(!url && $('gasUrlInput')) url = ($('gasUrlInput').value || '').trim();
+  return { url, token };
+}
+
+async function backupOrdersToGoogleCloud(orders, silent=false){
+  const { url, token } = getAdminCloudBackupCreds();
+  if(!url || !token || token === 'local-dev-session'){
+    refreshBackupStatusUI();
+    if(!silent && $('batchMsg')){
+      $('batchMsg').style.color='#b45309';
+      $('batchMsg').textContent='ℹ️ 尚未連線 Google 雲端試算表或僅為本機開發登入；訂單已自動鏡像至瀏覽器 IndexedDB，亦可點「匯出 JSON 備份檔」保存至雲端硬碟！';
+    }
+    return { ok:false, reason:'no_cloud_creds' };
+  }
+  try{
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'backupOrders', token, orders })
+    });
+    const data = await resp.json();
+    if(data && data.ok){
+      const lbl = formatNowMMDDHHmm();
+      try{ localStorage.setItem('sunflower_last_cloud_backup_at', lbl); }catch(_){}
+      refreshBackupStatusUI();
+      if(!silent && $('batchMsg')){
+        $('batchMsg').style.color='#1f9d55';
+        $('batchMsg').textContent=`☁️ 已成功將 ${data.count||orders.length} 筆訂單自動備份至 Google 雲端硬碟資料夾與試算表「系統訂單備份紀錄」（${lbl}）！`;
+      }
+      return data;
+    }
+    if(!silent && $('batchMsg')){
+      $('batchMsg').style.color='#c0392b';
+      $('batchMsg').textContent=`⚠️ 雲端備份回傳錯誤：${(data&&data.error)||'未知錯誤'}`;
+    }
+    return data || { ok:false };
+  }catch(err){
+    if(!silent && $('batchMsg')){
+      $('batchMsg').style.color='#c0392b';
+      $('batchMsg').textContent=`⚠️ 雲端備份連線失敗（本機 IndexedDB 仍已安全備份）：${err.message}`;
+    }
+    return { ok:false, error: err.message };
+  }
+}
+
+async function restoreOrdersFromGoogleCloud(){
+  const { url, token } = getAdminCloudBackupCreds();
+  if(!url || !token || token === 'local-dev-session'){
+    if($('batchMsg')){
+      $('batchMsg').style.color='#b45309';
+      $('batchMsg').textContent='⚠️ 需先連線 Google Apps Script Web App 網址並使用管理員帳號登入雲端後台，方可從 Google 雲端取回備份；或請使用右側「匯入 JSON 還原」。';
+    }
+    return;
+  }
+  try{
+    const sep = url.includes('?') ? '&' : '?';
+    const resp = await fetch(`${url}${sep}action=getOrdersBackup&token=${encodeURIComponent(token)}`);
+    const data = await resp.json();
+    if(data && data.ok && Array.isArray(data.orders)){
+      curBatchOrders = data.orders.map((o,i)=>normalizeOrderRow(o,i));
+      saveOrdersToLocalDB();
+      syncCsvBoxFromOrders();
+      renderBatchTable(curBatchOrders);
+      if($('batchMsg')){
+        $('batchMsg').style.color='#1f9d55';
+        $('batchMsg').textContent=`📥 已從 Google 雲端（${data.source||'雲端備份'}・${data.savedAt||''}）救回 ${curBatchOrders.length} 筆訂單！`;
+      }
+    }else if($('batchMsg')){
+      $('batchMsg').style.color='#c0392b';
+      $('batchMsg').textContent=`⚠️ 無法取得雲端備份：${(data&&data.error)||'尚無備份資料'}`;
+    }
+  }catch(err){
+    if($('batchMsg')){
+      $('batchMsg').style.color='#c0392b';
+      $('batchMsg').textContent=`⚠️ 從 Google 雲端救回失敗：${err.message}`;
+    }
+  }
+}
+
+function refreshBackupStatusUI(){
+  const locEl = $('backupLocalStatus');
+  const cldEl = $('backupCloudStatus');
+  if(!locEl && !cldEl) return;
+  let lastIdb = '', lastCld = '';
+  try{
+    lastIdb = localStorage.getItem('sunflower_last_idb_backup_at') || '';
+    lastCld = localStorage.getItem('sunflower_last_cloud_backup_at') || '';
+  }catch(_){}
+  if(locEl){
+    locEl.textContent = lastIdb
+      ? `✅ 本機 IndexedDB 雙寫鏡像完成（共 ${curBatchOrders.length} 筆・更新於 ${lastIdb}）`
+      : `本機 IndexedDB 自動鏡像就緒（目前 ${curBatchOrders.length} 筆）`;
+  }
+  if(cldEl){
+    const { url, token } = getAdminCloudBackupCreds();
+    if(url && token && token !== 'local-dev-session'){
+      cldEl.textContent = lastCld
+        ? `☁️ Google 雲端雙重自動備份已啟用（最近雲端同步：${lastCld}）`
+        : `☁️ Google 雲端備份已連線（訂單變動時自動同步至 Drive 資料夾與試算表）`;
+    }else{
+      cldEl.textContent = `雲端備份：尚未連接 Google 雲端試算表（目前由本機 IndexedDB 20份滾動快照＋JSON 匯出保護）`;
+    }
+  }
+}
+
+function exportOrdersJsonBackup(){
+  const payload = {
+    app: 'sunflower-study-shop',
+    exportedAt: new Date().toISOString(),
+    count: curBatchOrders.length,
+    orders: curBatchOrders
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `向日葵國小伴學誌_訂單完整備份_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function scheduleCloudAutoBackup(){
+  if(typeof clearTimeout==='function') clearTimeout(_cloudBackupTimer);
+  if(typeof setTimeout!=='function') return;
+  _cloudBackupTimer = setTimeout(()=>{
+    const { url, token } = getAdminCloudBackupCreds();
+    if(url && token && token !== 'local-dev-session'){
+      backupOrdersToGoogleCloud(curBatchOrders, true);
+    }
+  }, 1500);
+}
+
+function saveOrdersToLocalDB(explicitClear=false){
   try{
     localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(curBatchOrders));
+    if(explicitClear && curBatchOrders.length === 0) localStorage.setItem(LOCAL_ORDERS_CLEARED_KEY, '1');
+    else localStorage.removeItem(LOCAL_ORDERS_CLEARED_KEY);
   }catch(_){}
   updateNavOrderBadge();
+  mirrorOrdersToIndexedDB(curBatchOrders, explicitClear?'clear':'save');
+  scheduleCloudAutoBackup();
 }
 
 function loadOrdersFromLocalDB(){
@@ -5524,6 +6004,7 @@ function loadOrdersFromLocalDB(){
   return null;
 }
 window.loadOrdersFromLocalDB = loadOrdersFromLocalDB;
+window.backupOrdersToGoogleCloud = backupOrdersToGoogleCloud;
 
 function syncCsvBoxFromOrders(){
   if(!$('batchCsvInput')) return;
@@ -5699,7 +6180,7 @@ function renderBatchTable(orders){
     const stCls = o.isInvalid ? 'st-inv' : (o.isPaid ? 'st-paid' : 'st-pend');
     const rowCls = o.isInvalid ? 'row-inv' : (o.isPaid ? 'row-paid' : 'row-pend');
     const prtBadge = o.isPrinted
-      ? `<span class="prt-badge is-printed" title="最近列印：${esc(o.printed_at||'已列印')}">✅ 已經列印（${o.print_count||1}次${o.printed_at?`・${esc(o.printed_at)}`:''}）</span>`
+      ? `<span class="prt-badge is-printed" title="最近列印：${esc(o.printed_at||'已列印')}">✅ 已經列印（${o.print_count||1}次）${o.printed_at?`<small>${esc(o.printed_at)}</small>`:''}</span>`
       : `<span class="prt-badge not-printed">🖨️ 未列印</span>`;
     return `<tr class="${rowCls}${o.selectedForPrint?' is-picked':''}" data-order-id="${esc(o.order_id)}">
     <td style="text-align:center">
@@ -5746,7 +6227,7 @@ function renderBatchTable(orders){
   }).join('');
 
   wrap.innerHTML = `<table class="batch-tbl orders-tbl">
-    <colgroup><col style="width:44px"><col style="width:20%"><col style="width:30%"><col style="width:14%"><col style="width:21%"><col style="width:94px"></colgroup>
+    <colgroup><col style="width:44px"><col style="width:20%"><col style="width:28%"><col style="width:16%"><col style="width:21%"><col style="width:94px"></colgroup>
     <thead><tr>
       <th style="text-align:center">印製</th>
       <th>批號／家長／下單時間</th>
@@ -5871,7 +6352,7 @@ function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
   const today = new Date().toISOString().slice(0,10);
   const sched = typeof window.computePickupSchedule === 'function'
     ? window.computePickupSchedule()
-    : { batchLabel:'當週梯次', deliveryStr:'當週五～日（3日內）' };
+    : { batchLabel:'當週梯次', deliveryStr:'每週五中午 12:00 起 ～ 每週日晚上 21:00 止' };
   const batchSeq = `第 ${idx+1}/${totalOrders} 袋`;
   const cpr = window.COPYRIGHT_STATEMENT || '🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
 
@@ -5906,7 +6387,7 @@ function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
         <div><b>年級／科目：</b><span>國小 ${esc(order.grade)} 年級 ${esc(order.sem)}｜${esc(order.subj)}（${esc(order.pubName)}）</span></div>
         <div><b>訂購方案：</b><span>${esc(order.planName)}（${esc(order.packType||'懶人包')}）</span></div>
         <div><b>教材張數：</b><span>共 ${order.sheets||20} 張內容（印製 ${stats.contentPages-1} 頁＋本取貨聯）</span></div>
-        <div><b>領取時程：</b><span><b>${esc(sched.deliveryStr)}</b>（送達起 3 日內憑編號領取）</span></div>
+        <div><b>領取時程：</b><span><b>${esc(sched.deliveryStr)}</b>（請於週五中午 12:00 以後至週日晚上 21:00 以前憑編號領取）</span></div>
       </div>
       <div style="font-size:.78rem;color:#666;border-top:1px dashed #ddd;padding-top:5px;margin-top:6px;display:flex;justify-content:space-between;gap:8px">
         <span>※ 客製教材僅供個人練習，請核對取貨編號與家長稱呼後領取</span>
@@ -5982,52 +6463,114 @@ const LAZY_EXAM_PROFILES = [
 window.LAZY_EXAM_PROFILES = LAZY_EXAM_PROFILES;
 window.normalizeTemplateSig = normalizeTemplateSig;
 
-// 依單張試卷答案彙整出精簡「免費附贈紙本解答彙整頁」（每頁最多容納 5 份試卷對照）
+// 依單張試卷答案彙整出精簡「免費附贈紙本解答彙整頁」（採動態實測高度自動分頁，絕不底端截斷、不產空白頁）
 function buildBatchAnswerPagesA4(records, order, wmText){
   const out = [];
   if(!records.length) return out;
   const optMap = order.subj==='英語' ? ['(A)','(B)','(C)','(D)'] : ['①','②','③','④'];
   const matchL = 'ㄅㄆㄇㄈㄉㄊㄋㄌ';
-  const perPage = 5;
   const cpr = window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
-  const totalPages = Math.ceil(records.length / perPage);
 
-  for(let p=0; p<totalPages; p++){
-    const slice = records.slice(p*perPage, (p+1)*perPage);
+  const makePageShell = ()=>{
     const pg = document.createElement('div');
     pg.className = 'a4 exam-a4';
     pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
     const inner = document.createElement('div');
     inner.className = 'ex-inner';
-    inner.style.padding = '22px 28px';
-    inner.innerHTML = `<div class="ex-hd" style="margin-bottom:10px;padding-bottom:6px">
-      <h3 style="font-size:17px">🎁 免費附贈紙本解答彙整｜國小 ${esc(order.grade)} 年級${esc(order.sem)} ${esc(order.subj)}（${p+1}/${totalPages}）</h3>
-      <div class="ex-sub">取貨編號：${esc(order.order_id)}　｜　家長：${esc(order.parent_label)}　｜　共 ${records.length} 份不重複試卷詳解對照</div>
-    </div>`;
-
-    slice.forEach(rec=>{
-      const card = document.createElement('div');
-      card.style.cssText = 'border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 11px;margin-bottom:9px;background:#fafcff;font-size:12px;line-height:1.45';
-      const secHtml = rec.sections.map(sec=>{
-        let qNumStart = 1;
-        for(const s of rec.sections){ if(s===sec)break; qNumStart += s.qs.length; }
-        const items = sec.qs.map((q,qi)=>{
-          let ans = q.a;
-          if(sec.kind==='mc'){ const ix=q.opts.indexOf(q.a); ans = `${optMap[ix]||''} ${q.a}`; }
-          else if(sec.kind==='match'){ ans = q.pairs.map((pr,j)=>`${j+1}→${matchL[q.right.indexOf(pr[1])]}`).join('/'); }
-          return `<b>${qNumStart+qi}.</b>${esc(ans)}`;
-        }).join('　');
-        return `<div style="margin-top:3px"><span style="color:#b35a00;font-weight:700">${esc(sec.title)}：</span>${items}</div>`;
-      }).join('');
-      card.innerHTML = `<div style="font-weight:800;color:#1e3a5f;border-bottom:1px dashed #cbd5e1;padding-bottom:3px;margin-bottom:4px">第 ${rec.sheetNo} 份｜${esc(rec.profileName)}　<small style="font-weight:600;color:#64748b">範圍：${esc(rec.unitsLabel)}</small></div>${secHtml}`;
-      inner.appendChild(card);
-    });
-
+    inner.style.padding = '22px 28px 34px';
+    const hd = document.createElement('div');
+    hd.className = 'ex-hd';
+    hd.style.cssText = 'margin-bottom:10px;padding-bottom:6px';
+    hd.innerHTML = `<h3 class="ans-hd-title" style="font-size:17px">🎁 免費附贈紙本解答彙整｜國小 ${esc(order.grade)} 年級${esc(order.sem)} ${esc(order.subj)}</h3>
+      <div class="ex-sub">取貨編號：${esc(order.order_id)}　｜　家長：${esc(order.parent_label)}　｜　共 ${records.length} 份不重複試卷詳解對照</div>`;
+    inner.appendChild(hd);
     pg.appendChild(inner);
-    if(window.createWatermarkLayer) pg.appendChild(window.createWatermarkLayer(794,1122,wmText||''));
-    pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　免費附贈解答彙整 第 ${p+1} / ${totalPages} 頁`}));
-    out.push(pg);
-  }
+    return { pg, inner, hd };
+  };
+
+  const renderSecDiv = (rec, sec)=>{
+    let qNumStart = 1;
+    for(const s of rec.sections){ if(s===sec)break; qNumStart += s.qs.length; }
+    const items = sec.qs.map((q,qi)=>{
+      let ans = q.a;
+      if(sec.kind==='mc'){ const ix=q.opts.indexOf(q.a); ans = `${optMap[ix]||''} ${q.a}`; }
+      else if(sec.kind==='match'){ ans = q.pairs.map((pr,j)=>`${j+1}→${matchL[q.right.indexOf(pr[1])]}`).join('/'); }
+      return `<b>${qNumStart+qi}.</b>${esc(ans)}`;
+    }).join('　');
+    const div = document.createElement('div');
+    div.style.marginTop = '3px';
+    div.innerHTML = `<span style="color:#b35a00;font-weight:700">${esc(sec.title)}：</span>${items}`;
+    return div;
+  };
+
+  const makeCardShell = (rec, isCont=false)=>{
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1.5px solid #cbd5e1;border-radius:8px;padding:7px 11px;margin-bottom:8px;background:#fafcff;font-size:12px;line-height:1.42';
+    card.innerHTML = `<div style="font-weight:800;color:#1e3a5f;border-bottom:1px dashed #cbd5e1;padding-bottom:3px;margin-bottom:4px">第 ${rec.sheetNo} 份｜${esc(rec.profileName)}${isCont?'（續）':''}　<small style="font-weight:600;color:#64748b">範圍：${esc(rec.unitsLabel)}</small></div>`;
+    return card;
+  };
+
+  // 以隱藏實測容器計算實際像素高度（1122px A4 保留底部 74px 安全區 → 上限 1048px）
+  const meas = document.createElement('div');
+  meas.style.cssText = 'position:fixed;left:-9999px;top:0;visibility:hidden;z-index:-1';
+  document.body.appendChild(meas);
+
+  const MAX_H = 1048;
+  const pageItems = [];
+  let cur = makePageShell();
+  meas.appendChild(cur.pg);
+  pageItems.push(cur);
+
+  records.forEach(rec=>{
+    const cardFull = makeCardShell(rec, false);
+    rec.sections.forEach(sec=> cardFull.appendChild(renderSecDiv(rec, sec)));
+    cur.inner.appendChild(cardFull);
+    if(cur.inner.scrollHeight <= MAX_H){
+      return;
+    }
+    // 整卡加入會超過單頁安全高度：若本頁已有其他試卷卡，先開新頁放這張整卡；若空頁單卡就超過，則拆大題分頁
+    cur.inner.removeChild(cardFull);
+    if(cur.inner.children.length > 1){
+      meas.removeChild(cur.pg);
+      cur = makePageShell();
+      meas.appendChild(cur.pg);
+      pageItems.push(cur);
+      cur.inner.appendChild(cardFull);
+      if(cur.inner.scrollHeight <= MAX_H){
+        return;
+      }
+      cur.inner.removeChild(cardFull);
+    }
+    // 單卡過長時按大題逐步安全裝入，保證絕不截斷
+    let partCard = makeCardShell(rec, false);
+    cur.inner.appendChild(partCard);
+    rec.sections.forEach(sec=>{
+      const sd = renderSecDiv(rec, sec);
+      partCard.appendChild(sd);
+      if(cur.inner.scrollHeight > MAX_H && partCard.children.length > 2){
+        partCard.removeChild(sd);
+        meas.removeChild(cur.pg);
+        cur = makePageShell();
+        meas.appendChild(cur.pg);
+        pageItems.push(cur);
+        partCard = makeCardShell(rec, true);
+        partCard.appendChild(sd);
+        cur.inner.appendChild(partCard);
+      }
+    });
+  });
+
+  if(cur.pg.parentNode === meas) meas.removeChild(cur.pg);
+  document.body.removeChild(meas);
+
+  const totalPages = pageItems.length;
+  pageItems.forEach((item, p)=>{
+    const tEl = item.hd.querySelector('.ans-hd-title');
+    if(tEl) tEl.textContent += `（${p+1}/${totalPages}）`;
+    if(window.createWatermarkLayer) item.pg.appendChild(window.createWatermarkLayer(794,1122,wmText||''));
+    item.pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　免費附贈解答彙整 第 ${p+1} / ${totalPages} 頁`}));
+    out.push(item.pg);
+  });
   return out;
 }
 
@@ -6120,8 +6663,9 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
     const diffZh = {easy:'基礎熟練(鼎甲風)',mid:'標準評量(良品風)',hard:'素養挑戰(奇鼎風)',mix:'混合難度(三強混合)'}[effDiff] || '標準評量(良品風)';
     const unitsLabel = sheetUnits.length ? sheetUnits.join('、') : '全冊綜合';
 
+    const qCountThisExam = (curExam && curExam._lastPageCount) ? curExam._lastPageCount : Math.min(2, rawPages.length);
     rawPages.forEach((p, pIdx)=>{
-      const isTrailingSingleAns = wantSingleExamAns && rawPages.length>1 && pIdx===rawPages.length-1;
+      const isTrailingSingleAns = wantSingleExamAns && pIdx >= qCountThisExam;
       if(!isTrailingSingleAns && (examSheetsTarget > 1 || isPreviewLazy)){
         const subEl = p.querySelector('.ex-sub');
         const sideLabel = pIdx===0 ? '正面第1頁' : '背面第2頁';
@@ -6140,8 +6684,8 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
       ? rawPages
       : rawPages.map(p => p.classList.contains('ex-land') ? wrapLandscapePageForBatch(p) : p);
 
-    if(wantSingleExamAns && converted.length > 1){
-      singleAnsPageCount = 1;
+    if(wantSingleExamAns && converted.length > qCountThisExam){
+      singleAnsPageCount = converted.length - qCountThisExam;
     }
     qDomPages.push(...converted);
 
@@ -6430,7 +6974,7 @@ function initExamUI(){
       curBatchOrders = [];
       if($('batchCsvInput')) $('batchCsvInput').value = '';
       if($('batchSheet')) $('batchSheet').innerHTML = '';
-      saveOrdersToLocalDB();
+      saveOrdersToLocalDB(true);
       renderBatchTable(curBatchOrders);
       if($('btnUndoClearOrders') && lastClearedOrdersSnapshot && lastClearedOrdersSnapshot.length){
         $('btnUndoClearOrders').style.display='';
@@ -6439,6 +6983,37 @@ function initExamUI(){
         $('batchMsg').style.color='#b45309';
         $('batchMsg').textContent='🗑️ 已清空全部訂單（預設範例不會再自動冒出）；如誤按可點「↩️ 復原清空」救回。';
       }
+    };
+  }
+  if($('btnCloudBackupNow')) $('btnCloudBackupNow').onclick=()=>backupOrdersToGoogleCloud(curBatchOrders, false);
+  if($('btnCloudRestoreNow')) $('btnCloudRestoreNow').onclick=()=>restoreOrdersFromGoogleCloud();
+  if($('btnExportJsonBackup')) $('btnExportJsonBackup').onclick=exportOrdersJsonBackup;
+  if($('importJsonBackupFile')){
+    $('importJsonBackupFile').onchange=e=>{
+      const f=e.target.files&&e.target.files[0]; if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>{
+        try{
+          const parsed=JSON.parse(String(r.result||'[]'));
+          const arr=Array.isArray(parsed)?parsed:(Array.isArray(parsed.orders)?parsed.orders:null);
+          if(!arr) throw new Error('格式不符，找不到 orders 陣列');
+          curBatchOrders=arr.map((o,i)=>normalizeOrderRow(o,i));
+          saveOrdersToLocalDB();
+          syncCsvBoxFromOrders();
+          renderBatchTable(curBatchOrders);
+          if($('batchMsg')){
+            $('batchMsg').style.color='#1f9d55';
+            $('batchMsg').textContent=`📂 已從 JSON 備份檔成功還原 ${curBatchOrders.length} 筆訂單！`;
+          }
+        }catch(err){
+          if($('batchMsg')){
+            $('batchMsg').style.color='#c0392b';
+            $('batchMsg').textContent=`⚠️ 匯入 JSON 備份失敗：${err.message}`;
+          }
+        }
+        e.target.value='';
+      };
+      r.readAsText(f,'UTF-8');
     };
   }
   if($('btnUndoClearOrders')){
@@ -6470,18 +7045,30 @@ function initExamUI(){
     };
   }
 
-  // 初始化載入本機已保存之訂單（注意：若為明確清空後的空陣列 []，保留清空狀態不再復活範例訂單！）
+  // 初始化載入本機已保存之訂單（注意：若為明確清空後的空陣列 []，保留清空狀態；若 localStorage 意外遺失則自動從 IndexedDB 救回！）
   const initialOrders = loadOrdersFromLocalDB();
   if(initialOrders !== null){
     curBatchOrders = initialOrders;
     syncCsvBoxFromOrders();
+    mirrorOrdersToIndexedDB(curBatchOrders, 'init');
   }else{
     const freshCsv = buildDefaultSampleBatchCsv();
     if($('batchCsvInput')) $('batchCsvInput').value = freshCsv;
     curBatchOrders = parseBatchCsv(freshCsv);
     saveOrdersToLocalDB();
+    readOrdersFromIndexedDB().then(bk=>{
+      let wasCleared = false;
+      try{ wasCleared = localStorage.getItem(LOCAL_ORDERS_CLEARED_KEY) === '1'; }catch(_){}
+      if(!wasCleared && bk && Array.isArray(bk.orders) && bk.orders.length > curBatchOrders.length){
+        curBatchOrders = bk.orders.map((o,i)=>normalizeOrderRow(o,i));
+        saveOrdersToLocalDB();
+        syncCsvBoxFromOrders();
+        renderBatchTable(curBatchOrders);
+      }
+    });
   }
   renderBatchTable(curBatchOrders);
+  refreshBackupStatusUI();
 
   if($('exRuby'))$('exRuby').checked=(+$('exGrade').value<=2);
   fillSubjects();

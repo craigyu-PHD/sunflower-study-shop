@@ -25,11 +25,11 @@ function computePickupSchedule(nowDate){
     isWedAfterCutoff,
     batchLabel: `${fmt(thu)}～${fmt(wed)} 批次`,
     cutoffStr: `${fmt(wed)}（三）21:00`,
-    deliveryStr: `${fmt(fri)}（五）～${fmt(sun)}（日）`,
-    nextDeliveryStr: `${fmt(nextFri)}（五）～${fmt(nextSun)}（日）`,
+    deliveryStr: `${fmt(fri)}（五）中午 12:00 起 ～ ${fmt(sun)}（日）晚上 21:00 止`,
+    nextDeliveryStr: `${fmt(nextFri)}（五）中午 12:00 起 ～ ${fmt(nextSun)}（日）晚上 21:00 止`,
     windowBadge: isWedAfterCutoff
-      ? `⚠️ 已過今晚 21:00 截單，現在下單將於次週五 ${fmt(fri)}～${fmt(sun)} 取貨`
-      : `📅 ${fmt(wed)}（三）21:00 前匯款 → 當週 ${fmt(fri)}（五）～${fmt(sun)}（日）取貨`
+      ? `⚠️ 已過今晚 21:00 截單，現在下單將於次週 ${fmt(fri)}（五）12:00 以後 ～ ${fmt(sun)}（日）21:00 以前取貨`
+      : `📅 ${fmt(wed)}（三）21:00 前匯款 → 當週 ${fmt(fri)}（五）12:00 以後 ～ ${fmt(sun)}（日）21:00 以前取貨`
   };
 }
 window.computePickupSchedule = computePickupSchedule;
@@ -828,7 +828,7 @@ async function submitStoreOrder(){
     return;
   }
   if(!agreed){
-    msgEl.textContent = '⚠️ 請先勾選同意《消費者保護法》客製化商品規定與 3 日內警衛室取貨規範！';
+    msgEl.textContent = '⚠️ 請先勾選同意《消費者保護法》客製化商品規定與「每週五中午 12:00 以後至每週日晚上 21:00 以前」警衛室取貨規範！';
     return;
   }
 
@@ -898,10 +898,11 @@ async function submitStoreOrder(){
         <div><b>👨‍👩‍👧 取貨人稱呼：</b><b>${esc(parent_label)}</b></div>
         <div><b>📅 所屬梯次與截單：</b>${esc(sched.batchLabel)}（截單：${esc(sched.cutoffStr)}）</div>
         <div><b>💳 匯款後五碼／總額：</b>末五碼 <b>${esc(remit_last5)}</b> ／ 共 <b>NT$ ${totalAmt} 元</b></div>
-        <div style="grid-column:1/-1;background:#fff8eb;border:1px solid #ffd48a;border-radius:7px;padding:8px 10px;color:#7a3b00;line-height:1.55">
-          <b>⏰ 具體取件時間確認（請務必留意）：</b><br>
-          • <b>若於 ${esc(sched.cutoffStr)} 前完成匯款：</b>預計 <b style="color:#0d5220">${esc(sched.deliveryStr)}</b> 送達「桃園市桃園區豪情世家警衛室（同德七街46號）」！<br>
-          • <b>若於當週三晚上 9 點（21:00）之後才完成匯款：</b>則順延至 <b style="color:#b33a00">${esc(sched.nextDeliveryStr)}</b> 交貨取件（請於送達起 3 日內憑取貨編號領取）。
+        <div style="grid-column:1/-1;background:#fff8eb;border:1.5px solid #ff9d42;border-radius:8px;padding:10px 12px;color:#7a3b00;line-height:1.6">
+          <b>⏰ 統一律定取件時段與遊戲規則（請務必準時配合）：</b><br>
+          • <b>若於 ${esc(sched.cutoffStr)} 前完成匯款：</b>統一於 <b style="color:#0d5220">${esc(sched.deliveryStr)}</b> 至「桃園市桃園區豪情世家警衛室（同德七街46號）」取貨！<br>
+          • <b>若於當週三晚上 21:00（9點）之後才完成匯款／下單：</b>順延至下一梯次 <b style="color:#b33a00">${esc(sched.nextDeliveryStr)}</b> 開放取件。<br>
+          • <b>取件時間明確規定：</b>固定為<b>每週五中午 12:00 以後 ～ 每週日晚上 21:00（9點）以前</b>。週五中午 12:00 前尚未配送到位恕不接受提前領取；逾週日晚上 21:00 本梯次結束，請務必於規定時段內憑<b>「取貨編號 ${esc(pickupBase)}」＋「${esc(parent_label)}」</b>向警衛室領取。
         </div>
       </div>
       <p style="margin:8px 0 0;font-size:.86rem;color:#136529">✅ 系統已將您的訂單即時傳送至管理員後台對帳清單，核對匯款後五碼無誤即排入印製裝袋！</p>
@@ -920,8 +921,8 @@ function initStore(){
   if($('stPickupWindow')) $('stPickupWindow').textContent = sched.windowBadge;
   if($('stRemitScheduleNote')){
     $('stRemitScheduleNote').innerHTML = sched.isWedAfterCutoff
-      ? `⏰ <b>截單順延提醒：</b>目前已過本週三 21:00，現在完成匯款將於 <b>${esc(sched.deliveryStr)}</b> 交貨取件！`
-      : `⏰ <b>交貨時程說明：</b>請於 <b>${esc(sched.cutoffStr)}（晚上9點）前</b>完成匯款 → 當週 <b style="color:#0d5220">${esc(sched.deliveryStr)}</b> 送達取件；<b>9 點之後</b>匯款／下單則順延至 <b>${esc(sched.nextDeliveryStr)}</b> 交貨！`;
+      ? `⏰ <b>截單順延提醒：</b>目前已過本週三 21:00，現在完成匯款將於 <b>${esc(sched.deliveryStr)}</b>（週五 12:00 以後～週日 21:00 以前）開放取件！`
+      : `⏰ <b>交貨與取件時段律定：</b>請於 <b>${esc(sched.cutoffStr)}（晚上9點）前</b>完成匯款 → 統一於 <b style="color:#0d5220">${esc(sched.deliveryStr)}</b> 取件；<b>週三 21:00 之後</b>匯款／下單則順延至 <b>${esc(sched.nextDeliveryStr)}</b>（週五 12:00～週日 21:00）！`;
   }
 
   // 導覽列切換（受管理員權限鎖保護）

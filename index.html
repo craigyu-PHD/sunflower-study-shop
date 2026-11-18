@@ -92,15 +92,16 @@
         </div>
       </div>
       <div class="rule-box">
-        <div class="rule-title">⏰ 截單時間與交貨／取件規定</div>
+        <div class="rule-title">⏰ 截單時間與統一取件時段規定</div>
         <div class="rule-body">
           <p><b>📌 每週三晚上 21:00（9點）準時截單：</b></p>
           <ul class="rule-list">
-            <li><b style="color:#136529">當週三 21:00 前完成匯款</b> → <b>當週週五送達警衛室</b></li>
-            <li><b style="color:#b33a00">當週三 21:00 後才匯款</b> → <b>順延至次週週五交貨</b></li>
-            <li>送達後請於<b>週五起 3 日內（週五～週日）</b>憑「取貨編號」與「家長稱呼＋手機末四碼」領取</li>
+            <li><b style="color:#136529">當週三 21:00 前完成匯款</b> → <b>當週五中午 12:00 起</b>開放警衛室取件</li>
+            <li><b style="color:#b33a00">當週三 21:00 後才匯款／下單</b> → <b>順延至次週五中午 12:00 起</b>開放取件</li>
+            <li><b>統一律定取件時段：</b><b style="color:#9c4200">每週五中午 12:00 以後 ～ 每週日晚上 21:00（9點）以前</b></li>
+            <li>請務必於上述時間內，憑<b>「取貨編號」＋「家長稱呼＋手機末四碼」</b>至警衛室領取；週五 12:00 前尚未配送就定位、週日 21:00 後本梯次即結案，恕不接受非規定時段領取</li>
           </ul>
-          <div id="stPickupWindow" class="pickup-window-pill">📅 本批預計取件：當週五～週日（3 日內領取）</div>
+          <div id="stPickupWindow" class="pickup-window-pill">📅 統一取件時段：每週五 12:00 以後 ～ 每週日 21:00 以前</div>
         </div>
       </div>
       <div class="rule-box">
@@ -372,7 +373,7 @@
           </div>
           <div class="bank-line"><span>應匯總額：</span><b id="stRemitTotal" style="font-size:1.35rem;color:#d93025">NT$ 0 元</b></div>
           <div id="stRemitScheduleNote" style="margin-top:8px;padding:8px 10px;background:#fff5e0;border:1px solid #ffb86c;border-radius:8px;font-size:.85rem;color:#7a3b00;line-height:1.5">
-            ⏰ <b>交貨時程提醒：</b>當週三 <b>21:00（9點）前</b>完成匯款 → 當週五送達警衛室；<b>21:00 之後</b>完成匯款或下單 → 自動順延至<b>次週五</b>交貨取件！
+            ⏰ <b>取件時段明確規定：</b>當週三 <b>21:00（9點）前</b>完成匯款 → <b>當週五中午 12:00 以後 ～ 週日晚上 21:00 以前</b>至警衛室取件；<b>21:00 之後</b>匯款／下單 → 自動順延至<b>次週五中午 12:00 以後 ～ 次週日晚上 21:00 以前</b>取件！
           </div>
         </div>
 
@@ -392,7 +393,7 @@
           </div>
           <label class="chk legal-chk">
             <input type="checkbox" id="stAgreeTerms">
-            <span>我已詳閱並同意：本客製化教材依<b>《消費者保護法》第19條但書規定不適用 7 日鑑賞期</b>；採先匯款後印製（<b>當週三 21:00 前匯款當週五取，21:00 後次週五交貨</b>），請於送達起 3 日內至桃園區「豪情世家」警衛室領取完畢。</span>
+            <span>我已詳閱並同意：本客製化教材依<b>《消費者保護法》第19條但書規定不適用 7 日鑑賞期</b>；採先匯款後印製（<b>當週三 21:00 前匯款當週取，21:00 後順延次週</b>），並遵守統一取件時段<b>「每週五中午 12:00 以後至每週日晚上 21:00 以前」</b>親至桃園區「豪情世家」警衛室領取完畢。</span>
           </label>
           <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <button id="btnStSubmit" type="button" class="btn ok big" style="flex:1">✅ 確認已匯款・送出訂購單</button>
@@ -606,6 +607,19 @@
     <label class="chk"><input type="checkbox" id="batchOrderWm" checked> 浮水印加家長編號防轉傳</label>
   </div>
   <div id="batchSummary" class="cap-banner ok" style="display:none"></div>
+  <!-- 雙重自動備份狀態列（本機 IndexedDB 自動鏡像 + Google 雲端試算表／Drive 備份 + JSON 還原） -->
+  <div id="batchBackupBar" class="backup-box">
+    <div class="backup-status">
+      <div><b>🛡️ 雙層訂單自動備份：</b><span id="backupLocalStatus">本機 IndexedDB 自動鏡像就緒</span></div>
+      <div style="font-size:.78rem;color:#166534" id="backupCloudStatus">雲端備份：尚未連接 Google 雲端試算表（可於上方登入或使用本機 JSON 備份還原）</div>
+    </div>
+    <div class="backup-actions">
+      <button type="button" class="btn btn-mini" style="background:#dcfce7;border:1px solid #22c55e;color:#14532d" id="btnCloudBackupNow">☁️ 立即備份至 Google 雲端</button>
+      <button type="button" class="btn btn-mini" style="background:#e0f2fe;border:1px solid #38bdf8;color:#075985" id="btnCloudRestoreNow">📥 從 Google 雲端救回訂單</button>
+      <button type="button" class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155" id="btnExportJsonBackup">💾 匯出 JSON 備份檔</button>
+      <label class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155;cursor:pointer;margin:0">📂 匯入 JSON 還原<input type="file" id="importJsonBackupFile" accept=".json" style="display:none"></label>
+    </div>
+  </div>
   <div id="batchTableWrap" style="width:100%;margin-top:8px"></div>
 
   <!-- 離線／CSV 批次匯入與備份（收合於下方，畫面乾淨免捲動） -->
