@@ -1,0 +1,4802 @@
+'use strict';
+(function(){
+const $=id=>document.getElementById(id);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+const shuffle=arr=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const NAMES=['小華','小美','阿明','小晴','柏宇','子涵','宥翔','品妍','冠宇','思妤','宇軒','詠晴','承恩','語彤','定謙','芷瑜','品睿','映竹','秉澄','欣妤','哲維','星辰','廷恩','雨潔','瑞霖','詩涵','奕辰','可晴','子軒','若曦','晨希','采恩','宇恩','樂晴','少祺','語希'];
+const ITEMS=['鉛筆','橡皮擦','故事書','貼紙','蘋果','餅乾','彩色筆','筆記本','蠟筆','果凍','彈珠','書籤','尺','水彩筆','自動筆','色紙','積木','橘子','草莓','銅鑼燒','飯糰','牛奶糖','拼圖','卡片','資料夾','螢光筆','便利貼','麵包','泡芙','布丁','奇異果','水蜜桃'];
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const lcm=(a,b)=>(a*b)/gcd(a,b);
+
+function uniqueOpts(ans, cand){
+  const s=new Set([String(ans)]);
+  for(const c of cand){if(s.size>=4)break;if(String(c)!==String(ans))s.add(String(c));}
+  let k=1;while(s.size<4){s.add(String(Number(ans)+k||ans+k));k++;}
+  return shuffle([...s]);
+}
+
+
+// ===== 0. 國小高頻破音字詞庫覆寫引擎（詞語層級最長優先匹配，杜絕單字直查標錯音）=====
+// 格式：詞語 -> 以空白分隔之各字注音；若某字用 '_' 代表沿用 ZY_DATA 單字預設音
+const POLY_PHRASE_RAW = {
+  // 1. 長（預設 ㄔㄤˊ；覆寫 ㄓㄤˇ）
+  '長大':'ㄓㄤˇ _','成長':'_ ㄓㄤˇ','生長':'_ ㄓㄤˇ','長出':'ㄓㄤˇ _','長高':'ㄓㄤˇ _','長得':'ㄓㄤˇ ˙ㄉㄜ',
+  '師長':'_ ㄓㄤˇ','校長':'_ ㄓㄤˇ','班長':'_ ㄓㄤˇ','市長':'_ ㄓㄤˇ','縣長':'_ ㄓㄤˇ','村長':'_ ㄓㄤˇ',
+  '里長':'_ ㄓㄤˇ','家長':'_ ㄓㄤˇ','長輩':'ㄓㄤˇ _','兄長':'_ ㄓㄤˇ','專長':'_ ㄓㄤˇ','擅長':'_ ㄓㄤˇ',
+  '年長':'_ ㄓㄤˇ','區長':'_ ㄓㄤˇ','鄉長':'_ ㄓㄤˇ','鎮長':'_ ㄓㄤˇ','部長':'_ ㄓㄤˇ','院長':'_ ㄓㄤˇ',
+  '議長':'_ ㄓㄤˇ','組長':'_ ㄓㄤˇ','隊長':'_ ㄓㄤˇ','廠長':'_ ㄓㄤˇ','站長':'_ ㄓㄤˇ','長進':'ㄓㄤˇ _',
+  '長相':'ㄓㄤˇ ㄒㄧㄤˋ','助長':'_ ㄓㄤˇ','苗長':'_ ㄓㄤˇ','長幼':'ㄓㄤˇ _','長官':'ㄓㄤˇ _','長子':'ㄓㄤˇ _',
+  // 2. 行（預設 ㄒㄧㄥˊ；覆寫 ㄏㄤˊ／ㄏㄤˋ）
+  '銀行':'_ ㄏㄤˊ','行列':'ㄏㄤˊ _','一行':'_ ㄏㄤˊ','兩行':'_ ㄏㄤˊ','幾行':'_ ㄏㄤˊ','同行':'_ ㄏㄤˊ',
+  '行業':'ㄏㄤˊ _','行號':'ㄏㄤˊ _','車行':'_ ㄏㄤˊ','商行':'_ ㄏㄤˊ','分行':'_ ㄏㄤˊ','外行':'_ ㄏㄤˊ',
+  '內行':'_ ㄏㄤˊ','在行':'_ ㄏㄤˊ','行家':'ㄏㄤˊ _','排行':'_ ㄏㄤˊ','行道樹':'ㄏㄤˊ _ _',
+  // 3. 重（預設 ㄓㄨㄥˋ；覆寫 ㄔㄨㄥˊ）
+  '重新':'ㄔㄨㄥˊ _','重複':'ㄔㄨㄥˊ _','重疊':'ㄔㄨㄥˊ _','重組':'ㄔㄨㄥˊ _','重逢':'ㄔㄨㄥˊ _',
+  '重現':'ㄔㄨㄥˊ _','重溫':'ㄔㄨㄥˊ _','重演':'ㄔㄨㄥˊ _','重返':'ㄔㄨㄥˊ _','重來':'ㄔㄨㄥˊ _',
+  '重播':'ㄔㄨㄥˊ _','重修':'ㄔㄨㄥˊ _','重建':'ㄔㄨㄥˊ _','重申':'ㄔㄨㄥˊ _','重圍':'ㄔㄨㄥˊ _',
+  '雙重':'_ ㄔㄨㄥˊ','多重':'_ ㄔㄨㄥˊ','九重':'_ ㄔㄨㄥˊ','重陽':'ㄔㄨㄥˊ _','重蹈':'ㄔㄨㄥˊ _',
+  // 4. 好（預設 ㄏㄠˇ；覆寫 ㄏㄠˋ）
+  '好奇':'ㄏㄠˋ ㄑㄧˊ','愛好':'_ ㄏㄠˋ','喜好':'_ ㄏㄠˋ','好學':'ㄏㄠˋ _','好客':'ㄏㄠˋ _',
+  '好勝':'ㄏㄠˋ _','好動':'ㄏㄠˋ _','癖好':'_ ㄏㄠˋ','嗜好':'_ ㄏㄠˋ','投其所好':'_ _ _ ㄏㄠˋ',
+  // 5. 樂（預設 ㄌㄜˋ；覆寫 ㄩㄝˋ）
+  '音樂':'_ ㄩㄝˋ','樂器':'ㄩㄝˋ _','樂團':'ㄩㄝˋ _','樂曲':'ㄩㄝˋ ㄑㄩˇ','樂譜':'ㄩㄝˋ _',
+  '樂隊':'ㄩㄝˋ _','樂音':'ㄩㄝˋ _','樂章':'ㄩㄝˋ _','樂師':'ㄩㄝˋ _','國樂':'_ ㄩㄝˋ',
+  '西樂':'_ ㄩㄝˋ','弦樂':'_ ㄩㄝˋ','管樂':'_ ㄩㄝˋ','打擊樂':'_ _ ㄩㄝˋ','交響樂':'_ _ ㄩㄝˋ',
+  '聲樂':'_ ㄩㄝˋ','奏樂':'_ ㄩㄝˋ','配樂':'_ ㄩㄝˋ','育樂':'_ ㄌㄜˋ',
+  // 6. 覺（預設 ㄐㄩㄝˊ；覆寫 ㄐㄧㄠˋ）
+  '睡覺':'_ ㄐㄧㄠˋ','午覺':'_ ㄐㄧㄠˋ','睡午覺':'_ _ ㄐㄧㄠˋ','睡大覺':'_ _ ㄐㄧㄠˋ','一覺醒來':'_ ㄐㄧㄠˋ _ _',
+  // 7. 數（預設 ㄕㄨˋ；覆寫 ㄕㄨˇ／ㄕㄨㄛˋ）
+  '數一數':'ㄕㄨˇ _ ㄕㄨˇ','數數看':'ㄕㄨˇ ㄕㄨˇ _','數到':'ㄕㄨˇ _','數出':'ㄕㄨˇ _','數得':'ㄕㄨˇ ˙ㄉㄜ',
+  '一個一數':'_ _ _ ㄕㄨˇ','兩個一數':'_ _ _ ㄕㄨˇ','五個一數':'_ _ _ ㄕㄨˇ','十個一數':'_ _ _ ㄕㄨˇ',
+  '一百一數':'_ _ _ ㄕㄨˇ','一千一數':'_ _ _ ㄕㄨˇ','細數':'_ ㄕㄨˇ','倒數':'ㄉㄠˋ ㄕㄨˇ',
+  '不可勝數':'_ _ _ ㄕㄨˇ','屈指可數':'_ _ _ ㄕㄨˇ','數見不鮮':'ㄕㄨㄛˋ _ _ ㄒㄧㄢˇ',
+  // 8. 著（預設 ˙ㄓㄜ；覆寫 ㄓㄨˋ／ㄓㄠˊ／ㄓㄨㄛˊ）
+  '著名':'ㄓㄨˋ _','著作':'ㄓㄨˋ _','名著':'_ ㄓㄨˋ','顯著':'_ ㄓㄨˋ','昭著':'_ ㄓㄨˋ','編著':'_ ㄓㄨˋ',
+  '著急':'ㄓㄠˊ _','著火':'ㄓㄠˊ _','著涼':'ㄓㄠˊ _','著迷':'ㄓㄠˊ _','睡著':'_ ㄓㄠˊ','找著':'_ ㄓㄠˊ',
+  '猜著':'_ ㄓㄠˊ','點著':'_ ㄓㄠˊ','用得著':'_ ˙ㄉㄜ ㄓㄠˊ','用不著':'_ _ ㄓㄠˊ',
+  '穿著':'ㄔㄨㄢ ㄓㄨㄛˊ','衣著':'_ ㄓㄨㄛˊ','著手':'ㄓㄨㄛˊ _','著陸':'ㄓㄨㄛˊ _','著地':'ㄓㄨㄛˊ ㄉㄧˋ',
+  '著想':'ㄓㄨㄛˊ _','著重':'ㄓㄨㄛˊ ㄓㄨㄥˋ','著色':'ㄓㄨㄛˊ _','著落':'ㄓㄨㄛˊ ㄌㄨㄛˋ','執著':'_ ㄓㄨㄛˊ',
+  // 9. 得（預設 ㄉㄜˊ；覆寫 ˙ㄉㄜ／ㄉㄟˇ）
+  '覺得':'ㄐㄩㄝˊ ˙ㄉㄜ','記得':'_ ˙ㄉㄜ','懂得':'_ ˙ㄉㄜ','認得':'_ ˙ㄉㄜ','捨得':'_ ˙ㄉㄜ',
+  '曉得':'_ ˙ㄉㄜ','怪不得':'_ _ ˙ㄉㄜ','恨不得':'_ _ ˙ㄉㄜ','免得':'_ ˙ㄉㄜ','見得':'_ ˙ㄉㄜ',
+  '顯得':'_ ˙ㄉㄜ','變得':'_ ˙ㄉㄜ','跑得':'_ ˙ㄉㄜ','走得':'_ ˙ㄉㄜ','飛得':'_ ˙ㄉㄜ','跳得':'_ ˙ㄉㄜ',
+  '寫得':'_ ˙ㄉㄜ','做得':'_ ˙ㄉㄜ','說得':'_ ˙ㄉㄜ','唱得':'_ ˙ㄉㄜ','畫得':'_ ˙ㄉㄜ','算得':'_ ˙ㄉㄜ',
+  '長得更':'ㄓㄤˇ ˙ㄉㄜ ㄍㄥˋ','聽得見':'_ ˙ㄉㄜ _','看得見':'_ ˙ㄉㄜ _','看得很':'_ ˙ㄉㄜ _',
+  '拿得起':'_ ˙ㄉㄜ _','來得及':'_ ˙ㄉㄜ _','不得了':'_ ˙ㄉㄜ ㄌㄧㄠˇ','了不得':'ㄌㄧㄠˇ _ ˙ㄉㄜ',
+  '非得':'_ ㄉㄟˇ','總得':'_ ㄉㄟˇ','還得':'ㄏㄞˊ ㄉㄟˇ','得要':'ㄉㄟˇ _','必得':'_ ㄉㄟˇ',
+  // 10. 地（預設 ㄉㄧˋ；副詞詞尾覆寫 ˙ㄉㄜ）
+  '慢慢地':'_ _ ˙ㄉㄜ','悄悄地':'_ _ ˙ㄉㄜ','靜靜地':'_ _ ˙ㄉㄜ','漸漸地':'_ _ ˙ㄉㄜ','輕輕地':'_ _ ˙ㄉㄜ',
+  '緊緊地':'_ _ ˙ㄉㄜ','深深地':'_ _ ˙ㄉㄜ','高興地':'_ ㄒㄧㄥˋ ˙ㄉㄜ','開心地':'_ _ ˙ㄉㄜ','快樂地':'_ ㄌㄜˋ ˙ㄉㄜ',
+  '專心地':'_ _ ˙ㄉㄜ','用心地':'_ _ ˙ㄉㄜ','仔細地':'_ _ ˙ㄉㄜ','小心地':'_ _ ˙ㄉㄜ','大聲地':'_ _ ˙ㄉㄜ',
+  '輕聲地':'_ _ ˙ㄉㄜ','不斷地':'_ _ ˙ㄉㄜ','勇敢地':'_ _ ˙ㄉㄜ','努力地':'_ _ ˙ㄉㄜ','認真地':'_ _ ˙ㄉㄜ',
+  '飛快地':'_ _ ˙ㄉㄜ','默默地':'_ _ ˙ㄉㄜ','安靜地':'_ _ ˙ㄉㄜ','緩緩地':'_ _ ˙ㄉㄜ','笑咪咪地':'_ _ _ ˙ㄉㄜ',
+  // 11. 為（預設 ㄨㄟˊ；覆寫 ㄨㄟˋ）
+  '因為':'_ ㄨㄟˋ','為了':'ㄨㄟˋ ˙ㄌㄜ','為什麼':'ㄨㄟˋ _ ˙ㄇㄜ','為何':'ㄨㄟˋ _','為民':'ㄨㄟˋ _',
+  '為國':'ㄨㄟˋ _','為人著想':'ㄨㄟˋ _ ㄓㄨㄛˊ _','為虎作倀':'ㄨㄟˋ _ _ _',
+  // 12. 應（預設 ㄧㄥ；覆寫 ㄧㄥˋ）
+  '應用':'ㄧㄥˋ _','反應':'_ ㄧㄥˋ','對應':'_ ㄧㄥˋ','回應':'_ ㄧㄥˋ','答應':'_ ㄧㄥˋ','供應':'ㄍㄨㄥ ㄧㄥˋ',
+  '適應':'_ ㄧㄥˋ','感應':'_ ㄧㄥˋ','效應':'_ ㄧㄥˋ','呼應':'_ ㄧㄥˋ','應變':'ㄧㄥˋ _','應付':'ㄧㄥˋ _',
+  '應對':'ㄧㄥˋ _','應急':'ㄧㄥˋ _','應景':'ㄧㄥˋ _','應徵':'ㄧㄥˋ _','應邀':'ㄧㄥˋ _','應屆':'ㄧㄥˋ _',
+  '有求必應':'_ _ _ ㄧㄥˋ','得心應手':'ㄉㄜˊ _ ㄧㄥˋ _','應有盡有':'ㄧㄥ _ _ _',
+  // 13. 興（預設 ㄒㄧㄥ；覆寫 ㄒㄧㄥˋ）
+  '高興':'_ ㄒㄧㄥˋ','興趣':'ㄒㄧㄥˋ _','雅興':'_ ㄒㄧㄥˋ','助興':'_ ㄒㄧㄥˋ','掃興':'_ ㄒㄧㄥˋ',
+  '盡興':'_ ㄒㄧㄥˋ','即興':'_ ㄒㄧㄥˋ','興致':'ㄒㄧㄥˋ _','興味':'ㄒㄧㄥˋ _','乘興':'_ ㄒㄧㄥˋ',
+  // 14. 背（預設 ㄅㄟˋ；覆寫 ㄅㄟ）
+  '背著':'ㄅㄟ ˙ㄓㄜ','背書包':'ㄅㄟ _ _','背包':'ㄅㄟ _','背負':'ㄅㄟ _','背起':'ㄅㄟ _',
+  // 15. 倒（預設 ㄉㄠˋ；覆寫 ㄉㄠˇ）
+  '跌倒':'_ ㄉㄠˇ','倒下':'ㄉㄠˇ _','傾倒':'_ ㄉㄠˇ','不倒翁':'_ ㄉㄠˇ _','倒閉':'ㄉㄠˇ _',
+  '打倒':'_ ㄉㄠˇ','昏倒':'_ ㄉㄠˇ','摔倒':'_ ㄉㄠˇ','滑倒':'_ ㄉㄠˇ','絆倒':'_ ㄉㄠˇ',
+  '東倒西歪':'_ ㄉㄠˇ _ _','排山倒海':'_ _ ㄉㄠˇ _',
+  // 16. 彈（預設 ㄉㄢˋ；覆寫 ㄊㄢˊ）
+  '彈簧':'ㄊㄢˊ _','彈性':'ㄊㄢˊ _','彈力':'ㄊㄢˊ _','彈琴':'ㄊㄢˊ _','彈鋼琴':'ㄊㄢˊ _ _',
+  '彈奏':'ㄊㄢˊ _','彈跳':'ㄊㄢˊ _','反彈':'_ ㄊㄢˊ','回彈':'_ ㄊㄢˊ','動彈不得':'_ ˙ㄊㄢ _ ˙ㄉㄜ',
+  '彈吉他':'ㄊㄢˊ _ _','彈琵琶':'ㄊㄢˊ _ _','對牛彈琴':'_ _ ㄊㄢˊ _',
+  // 17. 量（預設 ㄌㄧㄤˋ；覆寫 ㄌㄧㄤˊ）
+  '測量':'_ ㄌㄧㄤˊ','量杯':'ㄌㄧㄤˊ _','量角器':'ㄌㄧㄤˊ ㄐㄧㄠˇ _','量體溫':'ㄌㄧㄤˊ _ _','量身高':'ㄌㄧㄤˊ _ _',
+  '量一量':'ㄌㄧㄤˊ _ ㄌㄧㄤˊ','丈量':'_ ㄌㄧㄤˊ','估量':'_ ㄌㄧㄤˊ','不可限量':'_ _ _ ㄌㄧㄤˊ','商量':'_ ˙ㄌㄧㄤ',
+  // 18. 分（預設 ㄈㄣ；覆寫 ㄈㄣˋ）
+  '水分':'_ ㄈㄣˋ','養分':'_ ㄈㄣˋ','部分':'_ ㄈㄣˋ','成分':'_ ㄈㄣˋ','身分':'_ ㄈㄣˋ',
+  '鹽分':'_ ㄈㄣˋ','糖分':'_ ㄈㄣˋ','本分':'_ ㄈㄣˋ','過分':'_ ㄈㄣˋ','處分':'ㄔㄨˇ ㄈㄣˋ',
+  '緣分':'_ ㄈㄣˋ','名分':'_ ㄈㄣˋ','天分':'_ ㄈㄣˋ','輩分':'_ ㄈㄣˋ','分量':'ㄈㄣˋ ㄌㄧㄤˋ','分外':'ㄈㄣˋ _',
+  // 19. 種（預設 ㄓㄨㄥˇ；覆寫 ㄓㄨㄥˋ）
+  '種植':'ㄓㄨㄥˋ _','種花':'ㄓㄨㄥˋ _','種樹':'ㄓㄨㄥˋ _','種菜':'ㄓㄨㄥˋ _','種田':'ㄓㄨㄥˋ _',
+  '種在':'ㄓㄨㄥˋ _','栽種':'_ ㄓㄨㄥˋ','耕種':'_ ㄓㄨㄥˋ','播種':'_ ㄓㄨㄥˇ','接種':'_ ㄓㄨㄥˋ',
+  // 20. 空（預設 ㄎㄨㄥ；覆寫 ㄎㄨㄥˋ）
+  '空格':'ㄎㄨㄥˋ _','填空':'_ ㄎㄨㄥˋ','空白':'ㄎㄨㄥˋ _','空隙':'ㄎㄨㄥˋ _','空位':'ㄎㄨㄥˋ _',
+  '空閒':'ㄎㄨㄥˋ _','有空':'_ ㄎㄨㄥˋ','沒空':'ㄇㄟˊ ㄎㄨㄥˋ','抽空':'_ ㄎㄨㄥˋ','空缺':'ㄎㄨㄥˋ _','空出':'ㄎㄨㄥˋ _',
+  // 21. 假（預設 ㄐㄧㄚˇ；覆寫 ㄐㄧㄚˋ）
+  '放假':'_ ㄐㄧㄚˋ','暑假':'_ ㄐㄧㄚˋ','寒假':'_ ㄐㄧㄚˋ','假日':'ㄐㄧㄚˋ _','假期':'ㄐㄧㄚˋ _',
+  '請假':'_ ㄐㄧㄚˋ','休假':'_ ㄐㄧㄚˋ','病假':'_ ㄐㄧㄚˋ','事假':'_ ㄐㄧㄚˋ','連假':'_ ㄐㄧㄚˋ',
+  '例假':'_ ㄐㄧㄚˋ','年假':'_ ㄐㄧㄚˋ','公假':'_ ㄐㄧㄚˋ','度假':'_ ㄐㄧㄚˋ',
+  // 22. 轉（預設 ㄓㄨㄢˇ；覆寫 ㄓㄨㄢˋ）
+  '自轉':'_ ㄓㄨㄢˋ','公轉':'_ ㄓㄨㄢˋ','旋轉':'_ ㄓㄨㄢˋ','運轉':'_ ㄓㄨㄢˋ','打轉':'_ ㄓㄨㄢˋ',
+  '回轉':'_ ㄓㄨㄢˋ','轉速':'ㄓㄨㄢˋ _','轉盤':'ㄓㄨㄢˋ _','天旋地轉':'_ _ ㄉㄧˋ ㄓㄨㄢˋ',
+  // 23. 還（預設 ㄏㄞˊ；覆寫 ㄏㄨㄢˊ）
+  '歸還':'_ ㄏㄨㄢˊ','還書':'ㄏㄨㄢˊ _','還錢':'ㄏㄨㄢˊ _','退還':'_ ㄏㄨㄢˊ','償還':'_ ㄏㄨㄢˊ',
+  '返還':'_ ㄏㄨㄢˊ','還給':'ㄏㄨㄢˊ _','還原':'ㄏㄨㄢˊ _','生還':'_ ㄏㄨㄢˊ','往還':'_ ㄏㄨㄢˊ','以牙還牙':'_ _ ㄏㄨㄢˊ _',
+  // 24. 調（預設 ㄊㄧㄠˊ；覆寫 ㄉㄧㄠˋ）
+  '音調':'_ ㄉㄧㄠˋ','聲調':'_ ㄉㄧㄠˋ','語調':'_ ㄉㄧㄠˋ','曲調':'ㄑㄩˇ ㄉㄧㄠˋ','強調':'ㄑㄧㄤˊ ㄉㄧㄠˋ',
+  '步調':'_ ㄉㄧㄠˋ','格調':'_ ㄉㄧㄠˋ','單調':'_ ㄉㄧㄠˋ','基調':'_ ㄉㄧㄠˋ','空調':'ㄎㄨㄥ ㄉㄧㄠˋ',
+  '調動':'ㄉㄧㄠˋ _','調查':'ㄉㄧㄠˋ _','調職':'ㄉㄧㄠˋ _','調閱':'ㄉㄧㄠˋ _','調度':'ㄉㄧㄠˋ _','才調':'_ ㄉㄧㄠˋ',
+  // 25. 少（預設 ㄕㄠˇ；覆寫 ㄕㄠˋ）
+  '少年':'ㄕㄠˋ _','少女':'ㄕㄠˋ _','青少年':'_ ㄕㄠˋ _','少男':'ㄕㄠˋ _','年少':'_ ㄕㄠˋ',
+  '少爺':'ㄕㄠˋ _','老少咸宜':'_ ㄕㄠˋ _ _','男女老少':'_ _ _ ㄕㄠˋ',
+  // 26. 切（預設 ㄑㄧㄝ；覆寫 ㄑㄧㄝˋ）
+  '親切':'_ ㄑㄧㄝˋ','密切':'_ ㄑㄧㄝˋ','迫切':'_ ㄑㄧㄝˋ','一切':'_ ㄑㄧㄝˋ','確切':'_ ㄑㄧㄝˋ',
+  '切實':'ㄑㄧㄝˋ _','急切':'_ ㄑㄧㄝˋ','懇切':'_ ㄑㄧㄝˋ','熱切':'_ ㄑㄧㄝˋ','關切':'_ ㄑㄧㄝˋ',
+  '切記':'ㄑㄧㄝˋ _','切勿':'ㄑㄧㄝˋ _','切身':'ㄑㄧㄝˋ _','切合':'ㄑㄧㄝˋ _','不切實際':'_ ㄑㄧㄝˋ _ _','咬牙切齒':'_ _ ㄑㄧㄝˋ _',
+  // 27. 更（預設 ㄍㄥˋ；覆寫 ㄍㄥ）
+  '更換':'ㄍㄥ _','更新':'ㄍㄥ _','更改':'ㄍㄥ _','變更':'_ ㄍㄥ','更動':'ㄍㄥ _',
+  '更正':'ㄍㄥ _','更衣':'ㄍㄥ _','三更半夜':'_ ㄍㄥ _ _','自力更生':'_ _ ㄍㄥ _','萬象更新':'_ _ ㄍㄥ _',
+  // 28. 處（預設 ㄔㄨˇ；名詞覆寫 ㄔㄨˋ）
+  '到處':'_ ㄔㄨˋ','好處':'ㄏㄠˇ ㄔㄨˋ','長處':'ㄔㄤˊ ㄔㄨˋ','短處':'_ ㄔㄨˋ','高處':'_ ㄔㄨˋ',
+  '低處':'_ ㄔㄨˋ','遠處':'_ ㄔㄨˋ','近處':'_ ㄔㄨˋ','彎曲處':'_ ㄑㄩ ㄔㄨˋ','住處':'_ ㄔㄨˋ',
+  '處所':'ㄔㄨˋ _','四處':'_ ㄔㄨˋ','各處':'_ ㄔㄨˋ','益處':'_ ㄔㄨˋ','害處':'_ ㄔㄨˋ','深處':'_ ㄔㄨˋ',
+  // 29. 盛（預設 ㄔㄥˊ；覆寫 ㄕㄥˋ）
+  '茂盛':'_ ㄕㄥˋ','盛開':'ㄕㄥˋ _','豐盛':'_ ㄕㄥˋ','盛行':'ㄕㄥˋ ㄒㄧㄥˊ','盛大':'ㄕㄥˋ _',
+  '興盛':'ㄒㄧㄥ ㄕㄥˋ','全盛':'_ ㄕㄥˋ','盛夏':'ㄕㄥˋ _','盛況':'ㄕㄥˋ _','盛情':'ㄕㄥˋ _','盛產':'ㄕㄥˋ _','共襄盛舉':'_ _ ㄕㄥˋ _',
+  // 30. 相（預設 ㄒㄧㄤˋ；覆寫 ㄒㄧㄤ）
+  '相同':'ㄒㄧㄤ _','相反':'ㄒㄧㄤ _','相等':'ㄒㄧㄤ _','相吸':'ㄒㄧㄤ _','相斥':'ㄒㄧㄤ _',
+  '相差':'ㄒㄧㄤ ㄔㄚ','相距':'ㄒㄧㄤ _','相當':'ㄒㄧㄤ ㄉㄤ','互相':'_ ㄒㄧㄤ','相處':'ㄒㄧㄤ ㄔㄨˇ',
+  '相鄰':'ㄒㄧㄤ _','相交':'ㄒㄧㄤ _','相連':'ㄒㄧㄤ _','相乘':'ㄒㄧㄤ _','相加':'ㄒㄧㄤ _',
+  '相逢':'ㄒㄧㄤ _','相聚':'ㄒㄧㄤ _','相約':'ㄒㄧㄤ _','相信':'ㄒㄧㄤ _','相親相愛':'ㄒㄧㄤ _ ㄒㄧㄤ _',
+  '守望相助':'_ _ ㄒㄧㄤ _','相依為命':'ㄒㄧㄤ _ ㄨㄟˊ _','不相上下':'_ ㄒㄧㄤ _ _',
+  // 31. 曲、沒、中、傳、便、當、難、漂、朝、散、奇、省、薄、間、降、鮮
+  '彎曲':'_ ㄑㄩ','曲線':'ㄑㄩ _','曲折':'ㄑㄩ ㄓㄜˊ','扭曲':'_ ㄑㄩ',
+  '淹沒':'_ ㄇㄛˋ','沉沒':'_ ㄇㄛˋ','出沒':'_ ㄇㄛˋ','沒收':'ㄇㄛˋ _','沒落':'ㄇㄛˋ ㄌㄨㄛˋ','埋沒':'_ ㄇㄛˋ','神出鬼沒':'_ _ _ ㄇㄛˋ',
+  '中獎':'ㄓㄨㄥˋ _','命中':'_ ㄓㄨㄥˋ','百發百中':'_ ㄈㄚ _ ㄓㄨㄥˋ','中暑':'ㄓㄨㄥˋ _','中毒':'ㄓㄨㄥˋ _','中意':'ㄓㄨㄥˋ _','猜中':'_ ㄓㄨㄥˋ',
+  '自傳':'_ ㄓㄨㄢˋ','傳記':'ㄓㄨㄢˋ _','外傳':'_ ㄓㄨㄢˋ','列傳':'_ ㄓㄨㄢˋ',
+  '便宜':'ㄆㄧㄢˊ _','大腹便便':'_ _ ㄆㄧㄢˊ ㄆㄧㄢˊ',
+  '便當':'ㄅㄧㄢˋ ㄉㄤˋ','上當':'_ ㄉㄤˋ','適當':'_ ㄉㄤˋ','恰當':'_ ㄉㄤˋ','妥當':'_ ㄉㄤˋ','穩當':'_ ㄉㄤˋ',
+  '避難':'_ ㄋㄢˋ','災難':'_ ㄋㄢˋ','苦難':'_ ㄋㄢˋ','患難':'_ ㄋㄢˋ','難民':'ㄋㄢˋ _','遇難':'_ ㄋㄢˋ','大難臨頭':'_ ㄋㄢˋ _ _',
+  '漂浮':'ㄆㄧㄠ _','漂流':'ㄆㄧㄠ _','漂泊':'ㄆㄧㄠ _','漂白':'ㄆㄧㄠˇ _',
+  '朝氣':'ㄓㄠ _','朝陽':'ㄓㄠ _','朝夕':'ㄓㄠ _','今朝':'_ ㄓㄠ','有朝一日':'_ ㄓㄠ _ _',
+  '散文':'ㄙㄢˇ _','鬆散':'_ ㄙㄢˇ','散漫':'ㄙㄢˇ _','零散':'_ ㄙㄢˇ',
+  '奇數':'ㄐㄧ ㄕㄨˋ','奇偶':'ㄐㄧ _',
+  '反省':'_ ㄒㄧㄥˇ','省思':'ㄒㄧㄥˇ _','不省人事':'_ ㄒㄧㄥˇ _ _',
+  '薄紙':'ㄅㄠˊ _','薄片':'ㄅㄠˊ _','薄餅':'ㄅㄠˊ _','厚薄':'_ ㄅㄠˊ','薄荷':'ㄅㄛˋ _',
+  '間隔':'ㄐㄧㄢˋ _','間斷':'ㄐㄧㄢˋ _','相間':'ㄒㄧㄤ ㄐㄧㄢˋ','離間':'_ ㄐㄧㄢˋ',
+  '投降':'_ ㄒㄧㄤˊ','降伏':'ㄒㄧㄤˊ _',
+  '鮮少':'ㄒㄧㄢˇ _','屢見不鮮':'_ _ _ ㄒㄧㄢˇ'
+};
+const POLY_PHRASE_MAP = new Map();
+for(const [w, zStr] of Object.entries(POLY_PHRASE_RAW)){
+  POLY_PHRASE_MAP.set(w, zStr.split(' '));
+}
+
+// 依詞語脈絡解析整段文字之正確注音（最長詞優先匹配 4→3→2 字，再處理「了/著/得」語境）
+function resolveTextZhuyin(str){
+  const chars=[...String(str)];
+  const n=chars.length;
+  const out=new Array(n);
+  let i=0;
+  while(i<n){
+    let matched=false;
+    for(let len=Math.min(4,n-i);len>=2;len--){
+      const sub=chars.slice(i,i+len).join('');
+      const ov=POLY_PHRASE_MAP.get(sub);
+      if(ov){
+        for(let k=0;k<len;k++){
+          const c=chars[i+k];
+          const z=(ov[k]&&ov[k]!=='_')?ov[k]:(window.ZY_DATA&&ZY_DATA[c]||'');
+          out[i+k]={ch:c, zy:z};
+        }
+        i+=len; matched=true; break;
+      }
+    }
+    if(!matched){
+      const c=chars[i];
+      out[i]={ch:c, zy:(window.ZY_DATA&&ZY_DATA[c]||'')};
+      i++;
+    }
+  }
+  return out;
+}
+window.resolveTextZhuyin = resolveTextZhuyin;
+
+// ===== 0b. 隱藏式格子系統（直書 gcell 與橫書 hcell）=====
+function zhFormat(html){
+  return String(html).split(/(<[^>]+>)/g).map(tok=>
+    tok.startsWith('<') ? tok : tok
+      .replace(/……/g,'…')
+      .replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>`<span class="tcy">${VPUNC_MAP[m]||m}</span>`)
+      .replace(/(\d+\.|\b\d{2,3}\b)/g,'<span class="tcy">$1</span>')
+  ).join('');
+}
+
+// 橫書單格：國字＋右側注音（viewBox 40x28）
+function hCellHan(ch,zy){
+  const dot=zy.startsWith('˙'), tone=/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
+  const ph=zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split('');
+  const ys=ph.length===1?[14.5]:(ph.length===2?[9.5,19.5]:[7.5,14.5,21.5]);
+  const fs=ph.length===1?10.5:(ph.length===2?9.2:7.8);
+  if(dot)ys.forEach((_,i)=>{ys[i]+=2;});
+  const chEl=`<text x="11.5" y="14.5" dominant-baseline="central" text-anchor="middle" font-size="21" font-family="BiauKai,DFKai-SB,標楷體,Kaiti TC,serif" fill="#111">${esc(ch)}</text>`;
+  const phEls=ph.map((p,i)=>`<text x="28" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#222">${esc(p)}</text>`).join('');
+  const dotEl=dot?`<text x="28" y="3.5" dominant-baseline="central" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#222">˙</text>`:'';
+  const toneEl=tone?`<text x="36" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#222">${esc(tone)}</text>`:'';
+  return `<svg class="hcell-han" viewBox="0 0 40 28" xmlns="http://www.w3.org/2000/svg">${chEl}${dotEl}${phEls}${toneEl}</svg>`;
+}
+function hCellZy(zy){
+  const dot=zy.startsWith('˙'), tone=/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
+  const ph=zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split('');
+  if(!ph.length)return esc(zy);
+  const ys=ph.length===1?[14.5]:(ph.length===2?[9.5,19.5]:[7.5,14.5,21.5]);
+  const fs=ph.length===1?13:(ph.length===2?11:9.2);
+  if(dot)ys.forEach((_,i)=>{ys[i]+=2;});
+  const phEls=ph.map((p,i)=>`<text x="10" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#111">${esc(p)}</text>`).join('');
+  const dotEl=dot?`<text x="10" y="3.5" dominant-baseline="central" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#111">˙</text>`:'';
+  const toneEl=tone?`<text x="20" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#111">${esc(tone)}</text>`:'';
+  return `<svg class="hcell-zy" viewBox="0 0 26 28" xmlns="http://www.w3.org/2000/svg">${dotEl}${phEls}${toneEl}</svg>`;
+}
+
+// 橫書 HTML 轉換（結合破音字詞庫覆寫，且絕不使用 inline-flex 包裹長字串）
+function rubyHtml(str){
+  const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
+  // 先將作答括號統一為標準隱藏式空格盒
+  const norm=String(str).replace(/[（(][\s　]*[）)]/g,'@@BLANK@@');
+  const parts=norm.split(/(@@BLANK@@|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?)/g);
+  return parts.map(part=>{
+    if(!part)return '';
+    if(part==='@@BLANK@@')return `<span class="h-blank">（　　）</span>`;
+    if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(part))return hCellZy(part);
+    if(!useZy)return esc(part).replace(/\n/g,'<br>');
+    const resolved=resolveTextZhuyin(part);
+    let out='';
+    for(const {ch,zy} of resolved){
+      if(ch==='\n'){out+='<br>';continue;}
+      out+=zy?hCellHan(ch,zy):esc(ch);
+    }
+    return out;
+  }).join('');
+}
+
+// 直書國語專用：隱藏式等寬格子（所有格子統一 viewBox 寬 42，主字軸 x=14，注音軸 x=30）
+const VPUNC_MAP={'「':'﹁','」':'﹂','『':'﹃','』':'﹄','（':'︵','）':'︶','(':'︵',')':'︶','【':'︻','】':'︼','〔':'︹','〕':'︺','《':'︽','》':'︾','〈':'︿','〉':'﹀','…':'⋮','—':'︱','→':'↓','；':'；','：':'：','，':'，','。':'。','、':'、','？':'？','！':'！','／':'／'};
+const toVertPunc=s=>String(s).replace(/……/g,'…').replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>VPUNC_MAP[m]||m);
+function gCellHan(ch,zy){
+  const dot=zy&&zy.startsWith('˙'), tone=zy&&/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
+  const ph=zy?zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split(''):[];
+  const ys=ph.length===1?[14]:(ph.length===2?[9,19]:[7,14,21]);
+  const fs=ph.length===1?10.5:(ph.length===2?9.2:7.8);
+  if(dot)ys.forEach((_,i)=>{ys[i]+=2;});
+  const chEl=`<text x="14" y="14" dominant-baseline="central" text-anchor="middle" font-size="21.5" font-family="BiauKai,DFKai-SB,標楷體,Kaiti TC,serif" fill="#111">${esc(ch)}</text>`;
+  const phEls=ph.map((p,i)=>`<text x="30" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#222">${esc(p)}</text>`).join('');
+  const dotEl=dot?`<text x="30" y="3.5" dominant-baseline="central" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#222">˙</text>`:'';
+  const toneEl=tone?`<text x="38" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#222">${esc(tone)}</text>`:'';
+  return {h:28, svg:`<svg class="gcell g-han" viewBox="0 0 42 28" xmlns="http://www.w3.org/2000/svg">${chEl}${dotEl}${phEls}${toneEl}</svg>`};
+}
+function gCellZy(zy){
+  const dot=zy.startsWith('˙'), tone=/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
+  const ph=zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split('');
+  const ys=ph.length===1?[16]:(ph.length===2?[10.5,21.5]:[8,16,24]);
+  const fs=ph.length===1?14:(ph.length===2?12:10);
+  if(dot)ys.forEach((_,i)=>{ys[i]+=2.2;});
+  const phEls=ph.map((p,i)=>`<text x="14" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#111">${esc(p)}</text>`).join('');
+  const dotEl=dot?`<text x="14" y="4" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">˙</text>`:'';
+  const toneEl=tone?`<text x="26" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="12" font-weight="bold" fill="#111">${esc(tone)}</text>`:'';
+  return {h:32, svg:`<svg class="gcell g-zy" viewBox="0 0 42 32" xmlns="http://www.w3.org/2000/svg">${dotEl}${phEls}${toneEl}</svg>`};
+}
+function gCellPunc(p){
+  const vp=VPUNC_MAP[p]||p;
+  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="14" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="BiauKai,DFKai-SB,標楷體,Noto Sans TC,serif" fill="#111">${esc(vp)}</text></svg>`};
+}
+function gCellBlank(h=48){
+  return {h, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><text x="14" y="7" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︵</text><text x="14" y="${h-7}" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︶</text></svg>`};
+}
+function gCellLabel(txt,bold=false,color='#111',fs=15){
+  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="14" y="11" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-weight="${bold?'700':'500'}" font-family="BiauKai,DFKai-SB,Noto Sans TC,serif" fill="${color}">${esc(txt)}</text></svg>`};
+}
+function gCellSpace(h=22){
+  return {h, svg:`<svg class="gcell" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"></svg>`};
+}
+function tokenizeZhCells(str, useZy){
+  const cells=[];
+  const norm=String(str).replace(/……/g,'…').replace(/[（(][\s　]*[）)]/g,'@@BLANK@@');
+  const re=/(@@BLANK@@|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?|\d+\.|\d+|\n|[^\d\n@ㄅ-ㄩ˙ˊˇˋ]+)/g;
+  let m;
+  while((m=re.exec(norm))!==null){
+    const tk=m[0];
+    if(tk==='\n'){cells.push({newline:true});continue;}
+    if(tk==='@@BLANK@@'){cells.push(gCellBlank(46));continue;}
+    if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(tk)){cells.push(gCellZy(tk));continue;}
+    if(/^\d+\.?$/.test(tk)){cells.push(gCellLabel(tk,true,'#111',15));continue;}
+    // 一般國字與標點片段：透過破音字詞庫覆寫解析
+    const resolved=resolveTextZhuyin(tk);
+    for(const {ch,zy} of resolved){
+      if(ch===' '||ch==='　')continue;
+      if(zy){cells.push(gCellHan(ch,useZy?zy:''));}
+      else{cells.push(gCellPunc(ch));}
+    }
+  }
+  return cells;
+}
+
+// ===== 1a. 翰林版風格 SVG 圖解產生器 =====
+function svgSplitBox(top,l,r){
+  return `<svg width="110" height="54" viewBox="0 0 110 54" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="108" height="26" fill="#fff" stroke="#333" stroke-width="1.5"/><rect x="1" y="27" width="54" height="26" fill="#fff" stroke="#333" stroke-width="1.5"/><rect x="55" y="27" width="54" height="26" fill="#fff" stroke="#333" stroke-width="1.5"/><text x="55" y="19" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">${top}</text><text x="28" y="45" text-anchor="middle" font-size="14" fill="#111">${l}</text><text x="82" y="45" text-anchor="middle" font-size="14" fill="#111">${r}</text></svg>`;
+}
+function svgSeqTrain(nums,blankIdx){
+  const w=nums.length*34+2;
+  const cells=nums.map((n,i)=>`<rect x="${1+i*34}" y="1" width="34" height="28" fill="${i===blankIdx?'#fff8e6':'#fff'}" stroke="#333" stroke-width="1.5"/><text x="${18+i*34}" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">${i===blankIdx?'':n}</text>`).join('');
+  return `<svg width="${w}" height="30" viewBox="0 0 ${w} 30" xmlns="http://www.w3.org/2000/svg">${cells}</svg>`;
+}
+function svgClock(hr,min){
+  const ha=((hr%12)+min/60)*30-90, ma=min*6-90;
+  const hx=38+17*Math.cos(ha*Math.PI/180), hy=38+17*Math.sin(ha*Math.PI/180);
+  const mx=38+25*Math.cos(ma*Math.PI/180), my=38+25*Math.sin(ma*Math.PI/180);
+  const ticks=Array.from({length:12},(_,i)=>{
+    const n=i===0?12:i, a=(i*30-90)*Math.PI/180;
+    return `<text x="${(38+27*Math.cos(a)).toFixed(1)}" y="${(41.5+27*Math.sin(a)).toFixed(1)}" text-anchor="middle" font-size="${n%3===0?10.5:8.5}" font-weight="${n%3===0?'bold':'normal'}" fill="#111">${n}</text>`;
+  }).join('');
+  return `<svg width="76" height="76" viewBox="0 0 76 76" xmlns="http://www.w3.org/2000/svg"><circle cx="38" cy="38" r="35" fill="#fff" stroke="#222" stroke-width="1.8"/>${ticks}<line x1="38" y1="38" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#111" stroke-width="3" stroke-linecap="round"/><line x1="38" y1="38" x2="${mx.toFixed(1)}" y2="${my.toFixed(1)}" stroke="#d33" stroke-width="2" stroke-linecap="round"/><circle cx="38" cy="38" r="2.6" fill="#111"/></svg>`;
+}
+function svgRowCount(n){
+  const w=n*22+20;
+  const circles=Array.from({length:n},(_,i)=>`<circle cx="${18+i*22}" cy="14" r="8" fill="#ffe5b4" stroke="#333" stroke-width="1.2"/>`).join('');
+  return `<svg width="${w}" height="38" viewBox="0 0 ${w} 38" xmlns="http://www.w3.org/2000/svg">${circles}<text x="10" y="34" font-size="10" fill="#555">左邊</text><text x="${w-28}" y="34" font-size="10" fill="#555">右邊</text></svg>`;
+}
+function svgFraction(num,den,num2=0){
+  const bw=Math.min(28,Math.floor(180/den)), w=bw*den+4;
+  const rects=Array.from({length:den},(_,i)=>{
+    const fill=i<num?'#ffb366':(i<num+num2?'#90caf9':'#fff');
+    return `<rect x="${2+i*bw}" y="2" width="${bw}" height="24" fill="${fill}" stroke="#222" stroke-width="1.4"/>`;
+  }).join('');
+  const lbl=num2>0?`${num}/${den} ＋ ${num2}/${den}（共 ${den} 等份）`:`平分成 ${den} 等份，塗色 ${num} 份`;
+  return `<svg width="${Math.max(w,135)}" height="44" viewBox="0 0 ${Math.max(w,135)} 44" xmlns="http://www.w3.org/2000/svg">${rects}<text x="${Math.max(w,135)/2}" y="40" text-anchor="middle" font-size="11" font-weight="bold" fill="#222">${lbl}</text></svg>`;
+}
+function svgTriangle(b,h){
+  return `<svg width="130" height="68" viewBox="0 0 130 68" xmlns="http://www.w3.org/2000/svg"><polygon points="15,54 115,54 45,10" fill="#fff8ec" stroke="#333" stroke-width="1.5"/><line x1="45" y1="10" x2="45" y2="54" stroke="#d33" stroke-width="1.2" stroke-dasharray="3,2"/><text x="65" y="65" text-anchor="middle" font-size="11" fill="#111">底 ${b} 公分</text><text x="50" y="36" font-size="11" fill="#d33">高 ${h}</text></svg>`;
+}
+function svgCircle(val,isDiam){
+  return `<svg width="142" height="68" viewBox="0 0 142 68" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="34" cy="34" r="26" fill="#fff8ec" stroke="#222" stroke-width="1.6"/>
+    <circle cx="34" cy="34" r="2.5" fill="#111"/>
+    <line x1="${isDiam?8:34}" y1="34" x2="60" y2="34" stroke="#d33" stroke-width="2"/>
+    <text x="68" y="38" font-size="11.5" font-weight="bold" fill="#d33">${isDiam?'直徑':'半徑'} ${val}cm</text>
+  </svg>`;
+}
+
+function svgMagnet(l1,r1,l2,r2){
+  return `<svg width="160" height="44" viewBox="0 0 160 44" xmlns="http://www.w3.org/2000/svg">
+    <rect x="6" y="10" width="28" height="22" fill="#ffcccc" stroke="#333"/><text x="20" y="25" text-anchor="middle" font-size="12" font-weight="bold">${l1}</text>
+    <rect x="34" y="10" width="28" height="22" fill="#cce5ff" stroke="#333"/><text x="48" y="25" text-anchor="middle" font-size="12" font-weight="bold">${r1}</text>
+    <text x="80" y="25" text-anchor="middle" font-size="13" fill="#d33">↔</text>
+    <rect x="98" y="10" width="28" height="22" fill="#ffcccc" stroke="#333"/><text x="112" y="25" text-anchor="middle" font-size="12" font-weight="bold">${l2}</text>
+    <rect x="126" y="10" width="28" height="22" fill="#cce5ff" stroke="#333"/><text x="140" y="25" text-anchor="middle" font-size="12" font-weight="bold">${r2}</text>
+  </svg>`;
+}
+function svgLever(lDist,lW,rDist){
+  return `<svg width="170" height="58" viewBox="0 0 170 58" xmlns="http://www.w3.org/2000/svg">
+    <line x1="15" y1="26" x2="155" y2="26" stroke="#333" stroke-width="2.5"/>
+    <polygon points="85,27 75,46 95,46" fill="#ffd999" stroke="#333" stroke-width="1.3"/>
+    <rect x="20" y="8" width="26" height="16" fill="#cce5ff" stroke="#333"/><text x="33" y="20" text-anchor="middle" font-size="10">${lW}g</text>
+    <rect x="128" y="8" width="26" height="16" fill="#ffe5b4" stroke="#333"/><text x="141" y="20" text-anchor="middle" font-size="10">? g</text>
+    <text x="55" y="40" text-anchor="middle" font-size="10" fill="#d33">${lDist}cm</text>
+    <text x="115" y="40" text-anchor="middle" font-size="10" fill="#d33">${rDist}cm</text>
+  </svg>`;
+}
+function svgPreposition(pos){
+  // pos: 'on' | 'in' | 'under'
+  const ball=pos==='on'?'<circle cx="55" cy="14" r="8" fill="#ff7a1a" stroke="#333"/>':
+             (pos==='in'?'<circle cx="55" cy="34" r="8" fill="#ff7a1a" stroke="#333"/>':
+             '<circle cx="55" cy="52" r="8" fill="#ff7a1a" stroke="#333"/>');
+  return `<svg width="110" height="64" viewBox="0 0 110 64" xmlns="http://www.w3.org/2000/svg">
+    <rect x="35" y="22" width="40" height="22" fill="${pos==='in'?'#fff8ec':'#ffe5b4'}" stroke="#333" stroke-width="1.5"/>
+    ${ball}
+  </svg>`;
+}
+function svgShapeRobot(){
+  return `<svg width="110" height="82" viewBox="0 0 110 82" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="55" cy="14" r="10" fill="#fff8ec" stroke="#333" stroke-width="1.3"/>
+    <rect x="37" y="26" width="36" height="28" fill="#ffe5b4" stroke="#333" stroke-width="1.3"/>
+    <polygon points="37,26 23,46 37,46" fill="#cce5ff" stroke="#333" stroke-width="1.3"/>
+    <polygon points="73,26 87,46 73,46" fill="#cce5ff" stroke="#333" stroke-width="1.3"/>
+    <rect x="41" y="54" width="10" height="22" fill="#e2f0cb" stroke="#333" stroke-width="1.3"/>
+    <rect x="59" y="54" width="10" height="22" fill="#e2f0cb" stroke="#333" stroke-width="1.3"/>
+  </svg>`;
+}
+function svgBox3D(l,w,h){
+  return `<svg width="120" height="68" viewBox="0 0 120 68" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="15,24 75,24 95,10 35,10" fill="#fff8ec" stroke="#333" stroke-width="1.3"/>
+    <rect x="15" y="24" width="60" height="32" fill="#ffe5b4" stroke="#333" stroke-width="1.3"/>
+    <polygon points="75,24 95,10 95,42 75,56" fill="#ffd28a" stroke="#333" stroke-width="1.3"/>
+    <text x="45" y="66" text-anchor="middle" font-size="10">${l}cm</text>
+    <text x="96" y="54" font-size="10">寬${w}</text>
+    <text x="100" y="30" font-size="10">高${h}</text>
+  </svg>`;
+}
+
+
+function svgShapeHouse(){
+  return `<svg width="110" height="78" viewBox="0 0 110 78" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="55,6 18,34 92,34" fill="#ffd9b3" stroke="#333" stroke-width="1.3"/>
+    <rect x="24" y="34" width="62" height="38" fill="#fff8ec" stroke="#333" stroke-width="1.3"/>
+    <rect x="48" y="48" width="14" height="24" fill="#cce5ff" stroke="#333" stroke-width="1.3"/>
+    <circle cx="36" cy="48" r="6" fill="#e2f0cb" stroke="#333" stroke-width="1.3"/>
+    <circle cx="74" cy="48" r="6" fill="#e2f0cb" stroke="#333" stroke-width="1.3"/>
+  </svg>`;
+}
+function svgRectDim(w,h,unit='公分'){
+  return `<svg width="130" height="62" viewBox="0 0 130 62" xmlns="http://www.w3.org/2000/svg">
+    <rect x="18" y="8" width="76" height="38" fill="#fff8ec" stroke="#333" stroke-width="1.5"/>
+    <text x="56" y="58" text-anchor="middle" font-size="10.5" fill="#111">長 ${w} ${unit}</text>
+    <text x="98" y="30" font-size="10.5" fill="#d33">寬 ${h}</text>
+  </svg>`;
+}
+
+
+function svgDice(n,x0){
+  const pts={1:[[14,14]],2:[[8,8],[20,20]],3:[[7,7],[14,14],[21,21]],4:[[8,8],[20,8],[8,20],[20,20]],5:[[8,8],[20,8],[14,14],[8,20],[20,20]],6:[[8,7],[20,7],[8,14],[20,14],[8,21],[20,21]]}[n]||[[14,14]];
+  return `<rect x="${x0}" y="2" width="28" height="28" rx="4" fill="#fff" stroke="#333" stroke-width="1.5"/>`+pts.map(([x,y])=>`<circle cx="${x0+x}" cy="${y+2}" r="2.6" fill="${n===1||n===4?'#d33':'#111'}"/>`).join('');
+}
+function svgDicePair(a,b){
+  return `<svg width="86" height="32" viewBox="0 0 86 32" xmlns="http://www.w3.org/2000/svg">${svgDice(a,4)}<text x="43" y="21" text-anchor="middle" font-size="12" fill="#333">和</text>${svgDice(b,54)}</svg>`;
+}
+function svgBlockAdd(a,b){
+  const draw=(n,xOff)=>Array.from({length:n},(_,i)=>`<rect x="${xOff+(i%5)*16}" y="${i>=5?20:4}" width="13" height="13" fill="#ffe5b4" stroke="#333" stroke-width="1.2"/>`).join('');
+  return `<svg width="185" height="38" viewBox="0 0 185 38" xmlns="http://www.w3.org/2000/svg">${draw(a,4)}<text x="92" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#d33">＋</text>${draw(b,102)}</svg>`;
+}
+function svgLengthCompare(order){
+  const lens=[88,52,70];
+  const rows=[0,1,2].map(i=>{
+    const y=6+i*16, w=lens[order[i]];
+    return `<text x="10" y="${y+9}" font-size="10.5" fill="#111">(${i+1})</text><rect x="30" y="${y+2}" width="${w}" height="7" fill="#ffd999" stroke="#333" stroke-width="1.2"/><polygon points="${30+w},${y+2} ${38+w},${y+5.5} ${30+w},${y+9}" fill="#333"/>`;
+  }).join('');
+  return `<svg width="145" height="54" viewBox="0 0 145 54" xmlns="http://www.w3.org/2000/svg">${rows}</svg>`;
+}
+function svgButterfly(top,l,r){
+  return `<svg width="105" height="48" viewBox="0 0 105 48" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="30" cy="26" rx="22" ry="15" fill="#fff4e2" stroke="#333" stroke-width="1.3"/>
+    <ellipse cx="75" cy="26" rx="22" ry="15" fill="#fff4e2" stroke="#333" stroke-width="1.3"/>
+    <rect x="47" y="12" width="11" height="28" rx="5" fill="#d9b38c" stroke="#333"/>
+    <text x="52.5" y="10" text-anchor="middle" font-size="11" font-weight="bold" fill="#d33">合起來 ${top}</text>
+    <text x="28" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">${l}</text>
+    <text x="77" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">${r}</text>
+  </svg>`;
+}
+function svgLinesFour(){
+  return `<svg width="190" height="42" viewBox="0 0 190 42" xmlns="http://www.w3.org/2000/svg">
+    <text x="6" y="14" font-size="10">①</text><line x1="18" y1="8" x2="44" y2="28" stroke="#111" stroke-width="2"/>
+    <text x="52" y="14" font-size="10">②</text><path d="M64,24 Q72,6 80,24 T96,24" fill="none" stroke="#111" stroke-width="2"/>
+    <text x="104" y="14" font-size="10">③</text><line x1="116" y1="28" x2="142" y2="10" stroke="#111" stroke-width="2"/>
+    <text x="150" y="14" font-size="10">④</text><path d="M162,12 C170,32 178,4 186,28" fill="none" stroke="#111" stroke-width="2"/>
+  </svg>`;
+}
+function svgWeatherIcon(w){
+  if(w==='sunny') return `<svg width="56" height="44" viewBox="0 0 56 44" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="22" r="11" fill="#ffc83d" stroke="#e67e22" stroke-width="1.5"/><g stroke="#e67e22" stroke-width="2"><line x1="28" y1="4" x2="28" y2="8"/><line x1="28" y1="36" x2="28" y2="40"/><line x1="10" y1="22" x2="14" y2="22"/><line x1="42" y1="22" x2="46" y2="22"/></g></svg>`;
+  return `<svg width="64" height="46" viewBox="0 0 64 46" xmlns="http://www.w3.org/2000/svg"><path d="M16,28 a10,10 0 0,1 6,-18 a12,12 0 0,1 22,2 a8,8 0 0,1 4,16 z" fill="#dceefb" stroke="#333" stroke-width="1.3"/><line x1="22" y1="32" x2="19" y2="41" stroke="#2980b9" stroke-width="1.8"/><line x1="32" y1="32" x2="29" y2="41" stroke="#2980b9" stroke-width="1.8"/><line x1="42" y1="32" x2="39" y2="41" stroke="#2980b9" stroke-width="1.8"/></svg>`;
+}
+function svgShadowSun(mode='side'){
+  if(mode==='noon'){
+    return `<svg width="145" height="54" viewBox="0 0 145 54" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="72" cy="11" r="8.5" fill="#ffc83d" stroke="#e67e22" stroke-width="1.5"/>
+      <text x="108" y="15" font-size="10.5" font-weight="bold" fill="#b35a00">正午太陽</text>
+      <line x1="12" y1="46" x2="132" y2="46" stroke="#444" stroke-width="1.6"/>
+      <circle cx="72" cy="26" r="5" fill="#fff" stroke="#222" stroke-width="1.5"/>
+      <line x1="72" y1="31" x2="72" y2="46" stroke="#222" stroke-width="2.2"/>
+      <ellipse cx="72" cy="46" rx="8" ry="2.5" fill="#777"/>
+      <text x="36" y="42" font-size="10.5" font-weight="bold" fill="#333">影子最短</text>
+    </svg>`;
+  }
+  return `<svg width="150" height="54" viewBox="0 0 150 54" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="122" cy="14" r="9" fill="#ffc83d" stroke="#e67e22" stroke-width="1.5"/>
+    <text x="122" y="33" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#b35a00">太陽</text>
+    <line x1="10" y1="46" x2="140" y2="46" stroke="#444" stroke-width="1.6"/>
+    <circle cx="76" cy="24" r="5" fill="#fff" stroke="#222" stroke-width="1.5"/>
+    <line x1="76" y1="29" x2="76" y2="46" stroke="#222" stroke-width="2.2"/>
+    <ellipse cx="44" cy="46" rx="22" ry="3.2" fill="#777"/>
+    <text x="44" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="#222">影子（背光側）</text>
+  </svg>`;
+}
+function svgMagnetAttract(){
+  return `<svg width="165" height="48" viewBox="0 0 165 48" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="12" width="28" height="24" fill="#ffcccc" stroke="#222" stroke-width="1.4"/><text x="22" y="28" text-anchor="middle" font-size="12" font-weight="bold">N</text>
+    <rect x="36" y="12" width="28" height="24" fill="#cce5ff" stroke="#222" stroke-width="1.4"/><text x="50" y="28" text-anchor="middle" font-size="12" font-weight="bold">S</text>
+    <text x="76" y="27" text-anchor="middle" font-size="12" font-weight="bold" fill="#d33">吸引←</text>
+    <rect x="94" y="15" width="26" height="18" rx="8" fill="none" stroke="#444" stroke-width="2"/>
+    <text x="107" y="45" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">鐵迴紋針</text>
+    <rect x="132" y="14" width="24" height="20" fill="#f3d5b5" stroke="#333" stroke-width="1.2"/>
+    <text x="144" y="28" text-anchor="middle" font-size="9.5" font-weight="bold">木塊</text>
+  </svg>`;
+}
+function svgWaterGlasses(){
+  return `<svg width="150" height="54" viewBox="0 0 150 54" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="14" width="28" height="26" fill="#bde0fe"/><rect x="20" y="8" width="28" height="32" fill="none" stroke="#222" stroke-width="1.5"/>
+    <text x="34" y="51" text-anchor="middle" font-size="10.5" font-weight="bold">甲杯(水多)</text>
+    <rect x="92" y="30" width="28" height="10" fill="#bde0fe"/><rect x="92" y="8" width="28" height="32" fill="none" stroke="#222" stroke-width="1.5"/>
+    <text x="106" y="51" text-anchor="middle" font-size="10.5" font-weight="bold">乙杯(水少)</text>
+  </svg>`;
+}
+function svgTrafficLight(){
+  return `<svg width="135" height="44" viewBox="0 0 135 44" xmlns="http://www.w3.org/2000/svg">
+    <rect x="12" y="6" width="110" height="32" rx="10" fill="#333" stroke="#111" stroke-width="1.5"/>
+    <circle cx="34" cy="22" r="10" fill="#ff4d4d" stroke="#fff" stroke-width="1.2"/><text x="34" y="26" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">紅</text>
+    <circle cx="67" cy="22" r="10" fill="#ffd93d" stroke="#fff" stroke-width="1.2"/><text x="67" y="26" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">黃</text>
+    <circle cx="100" cy="22" r="10" fill="#2ecc71" stroke="#fff" stroke-width="1.2"/><text x="100" y="26" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">綠</text>
+  </svg>`;
+}
+function svgMoonPhase(type='full'){
+  return `<svg width="145" height="48" viewBox="0 0 145 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="28" cy="22" r="14" fill="#333"/><path d="M28,8 A14,14 0 0,1 28,36 A9,14 0 0,0 28,8 Z" fill="#ffe066"/>
+    <text x="28" y="46" text-anchor="middle" font-size="10" font-weight="bold">初三眉月</text>
+    <circle cx="74" cy="22" r="14" fill="#333"/><path d="M74,8 A14,14 0 0,1 74,36 Z" fill="#ffe066"/>
+    <text x="74" y="46" text-anchor="middle" font-size="10" font-weight="bold">初八上弦月</text>
+    <circle cx="118" cy="22" r="14" fill="#ffe066" stroke="#333" stroke-width="1.2"/>
+    <text x="118" y="46" text-anchor="middle" font-size="10" font-weight="bold">十五滿月</text>
+  </svg>`;
+}
+function svgAirCup(){
+  return `<svg width="135" height="54" viewBox="0 0 135 54" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="14" width="90" height="36" fill="#bde0fe" stroke="#222" stroke-width="1.5"/>
+    <rect x="48" y="18" width="34" height="24" fill="#fff" stroke="#d33" stroke-width="1.6"/>
+    <text x="65" y="33" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#d33">空氣</text>
+    <text x="108" y="11" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">水箱</text>
+  </svg>`;
+}
+function svgTaiwanTerrain(){
+  return `<svg width="175" height="54" viewBox="0 0 175 54" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8,44 L36,44 L44,30 L68,30 L76,42 L98,42 L112,26 L132,34 L152,10 L168,44 Z" fill="#e9f5db" stroke="#2d6a4f" stroke-width="1.6"/>
+    <text x="22" y="41" text-anchor="middle" font-size="9.5" font-weight="bold">平原</text>
+    <text x="56" y="27" text-anchor="middle" font-size="9.5" font-weight="bold">台地</text>
+    <text x="87" y="39" text-anchor="middle" font-size="9.5" font-weight="bold">盆地</text>
+    <text x="118" y="23" text-anchor="middle" font-size="9.5" font-weight="bold">丘陵</text>
+    <text x="152" y="9" text-anchor="middle" font-size="9.5" font-weight="bold">山地</text>
+  </svg>`;
+}
+
+
+function svgAbacus(tens,ones){
+  const beads=(n,x)=>Array.from({length:n},(_,i)=>`<ellipse cx="${x}" cy="${44-i*4.2}" rx="7" ry="2.2" fill="#ff9f43" stroke="#333" stroke-width="1"/>`).join('');
+  return `<svg width="96" height="64" viewBox="0 0 96 64" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="46" width="80" height="15" fill="#fff3df" stroke="#333" stroke-width="1.3"/>
+    <line x1="48" y1="46" x2="48" y2="61" stroke="#333" stroke-width="1.2"/>
+    <line x1="28" y1="6" x2="28" y2="46" stroke="#555" stroke-width="2"/>
+    <line x1="68" y1="6" x2="68" y2="46" stroke="#555" stroke-width="2"/>
+    ${beads(tens,28)}${beads(ones,68)}
+    <text x="28" y="57" text-anchor="middle" font-size="10" font-weight="bold">十位</text>
+    <text x="68" y="57" text-anchor="middle" font-size="10" font-weight="bold">個位</text>
+  </svg>`;
+}
+function svgCoins(n50,n10,n5,n1){
+  let x=14, els='';
+  const draw=(cnt,r,lbl,fill)=>{
+    for(let i=0;i<cnt;i++){
+      els+=`<circle cx="${x}" cy="18" r="${r}" fill="${fill}" stroke="#333" stroke-width="1.2"/><text x="${x}" y="22" text-anchor="middle" font-size="${r>10?10:8.5}" font-weight="bold" fill="#111">${lbl}</text>`;
+      x+=r*2+5;
+    }
+  };
+  draw(n50,12,'50','#ffd966'); draw(n10,10.5,'10','#f4cccc'); draw(n5,9,'5','#d9d9d9'); draw(n1,8,'1','#ead1dc');
+  const w=Math.max(80,x+6);
+  return `<svg width="${w}" height="36" viewBox="0 0 ${w} 36" xmlns="http://www.w3.org/2000/svg">${els}</svg>`;
+}
+function svgRulerMeasure(s,e){
+  const ticks=Array.from({length:11},(_,i)=>{
+    const x=14+i*15;
+    return `<line x1="${x}" y1="26" x2="${x}" y2="33" stroke="#333" stroke-width="1.2"/><text x="${x}" y="43" text-anchor="middle" font-size="8.5" fill="#111">${i}</text>`;
+  }).join('');
+  const x1=14+s*15, x2=14+e*15;
+  return `<svg width="180" height="50" viewBox="0 0 180 50" xmlns="http://www.w3.org/2000/svg">
+    <rect x="${x1}" y="10" width="${x2-x1}" height="11" rx="2" fill="#a2d2ff" stroke="#333" stroke-width="1.3"/>
+    <line x1="${x1}" y1="21" x2="${x1}" y2="26" stroke="#d33" stroke-dasharray="2,2"/>
+    <line x1="${x2}" y1="21" x2="${x2}" y2="26" stroke="#d33" stroke-dasharray="2,2"/>
+    <rect x="6" y="26" width="166" height="20" fill="#fff8ec" stroke="#333" stroke-width="1.3"/>
+    ${ticks}
+  </svg>`;
+}
+function svgArrayDots(rows,cols){
+  let dots='';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)dots+=`<circle cx="${14+c*15}" cy="${11+r*13}" r="4.5" fill="#ff9f43" stroke="#333" stroke-width="1"/>`;
+  const w=cols*15+16, h=rows*13+10;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${dots}</svg>`;
+}
+function svgBeaker(ml){
+  const hFill=Math.round((ml/1000)*40);
+  const ticks=[200,400,600,800,1000].map(v=>{
+    const y=50-Math.round((v/1000)*40);
+    return `<line x1="22" y1="${y}" x2="29" y2="${y}" stroke="#333" stroke-width="1"/><text x="58" y="${y+3}" font-size="8" fill="#333">${v}mL</text>`;
+  }).join('');
+  return `<svg width="92" height="58" viewBox="0 0 92 58" xmlns="http://www.w3.org/2000/svg">
+    <rect x="22" y="${50-hFill}" width="32" height="${hFill}" fill="#bde0fe"/>
+    <path d="M20,8 L22,50 L54,50 L56,8" fill="none" stroke="#333" stroke-width="1.6"/>
+    ${ticks}
+  </svg>`;
+}
+function svgAngleArc(deg){
+  const rad=deg*Math.PI/180, x2=24+38*Math.cos(-rad), y2=46+38*Math.sin(-rad);
+  return `<svg width="86" height="54" viewBox="0 0 86 54" xmlns="http://www.w3.org/2000/svg">
+    <line x1="24" y1="46" x2="72" y2="46" stroke="#111" stroke-width="2"/>
+    <line x1="24" y1="46" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#111" stroke-width="2"/>
+    ${deg===90?`<rect x="24" y="36" width="10" height="10" fill="none" stroke="#d33" stroke-width="1.3"/>`:`<path d="M38,46 A14,14 0 0,0 ${(24+14*Math.cos(-rad)).toFixed(1)},${(46+14*Math.sin(-rad)).toFixed(1)}" fill="none" stroke="#d33" stroke-width="1.4"/>`}
+    <text x="48" y="34" font-size="10" font-weight="bold" fill="#d33">${deg}°</text>
+  </svg>`;
+}
+function svgBarChart(labels,vals){
+  const mx=Math.max(...vals,10);
+  const bars=vals.map((v,i)=>{
+    const bh=Math.round((v/mx)*34), x=28+i*34, y=44-bh;
+    return `<rect x="${x}" y="${y}" width="18" height="${bh}" fill="#ffb703" stroke="#333" stroke-width="1"/><text x="${x+9}" y="${y-2}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#111">${v}</text><text x="${x+9}" y="55" text-anchor="middle" font-size="8.5" fill="#111">${labels[i]}</text>`;
+  }).join('');
+  return `<svg width="170" height="60" viewBox="0 0 170 60" xmlns="http://www.w3.org/2000/svg">
+    <line x1="20" y1="6" x2="20" y2="44" stroke="#333" stroke-width="1.3"/>
+    <line x1="20" y1="44" x2="162" y2="44" stroke="#333" stroke-width="1.3"/>
+    ${bars}
+  </svg>`;
+}
+function svgLShape(w1,h1,w2,h2){
+  return `<svg width="125" height="64" viewBox="0 0 125 64" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="18,8 56,8 56,28 96,28 96,50 18,50" fill="#fff8ec" stroke="#333" stroke-width="1.5"/>
+    <line x1="56" y1="28" x2="56" y2="50" stroke="#d33" stroke-dasharray="3,2"/>
+    <text x="37" y="7" text-anchor="middle" font-size="9.5">${w1}cm</text>
+    <text x="10" y="32" text-anchor="middle" font-size="9.5">${h1}</text>
+    <text x="76" y="25" text-anchor="middle" font-size="9.5">${w2}cm</text>
+    <text x="108" y="42" text-anchor="middle" font-size="9.5">${h2}</text>
+  </svg>`;
+}
+function svgTrapezoid(up,dn,h){
+  return `<svg width="130" height="64" viewBox="0 0 130 64" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="36,12 88,12 108,48 16,48" fill="#fff8ec" stroke="#333" stroke-width="1.5"/>
+    <line x1="36" y1="12" x2="36" y2="48" stroke="#d33" stroke-width="1.3" stroke-dasharray="3,2"/>
+    <rect x="36" y="42" width="6" height="6" fill="none" stroke="#d33" stroke-width="1"/>
+    <text x="62" y="10" text-anchor="middle" font-size="10" fill="#111">上底 ${up}cm</text>
+    <text x="62" y="60" text-anchor="middle" font-size="10" fill="#111">下底 ${dn}cm</text>
+    <text x="52" y="33" font-size="10" fill="#d33">高 ${h}</text>
+  </svg>`;
+}
+function svgParallelogram(b,h){
+  return `<svg width="130" height="62" viewBox="0 0 130 62" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="34,10 108,10 88,46 14,46" fill="#fff8ec" stroke="#333" stroke-width="1.5"/>
+    <line x1="34" y1="10" x2="34" y2="46" stroke="#d33" stroke-width="1.3" stroke-dasharray="3,2"/>
+    <rect x="34" y="40" width="6" height="6" fill="none" stroke="#d33" stroke-width="1"/>
+    <text x="52" y="58" text-anchor="middle" font-size="10" fill="#111">底 ${b} 公分</text>
+    <text x="50" y="32" font-size="10" fill="#d33">高 ${h}</text>
+  </svg>`;
+}
+function svgLineGraph(labels,vals){
+  const mn=Math.min(...vals)-2, mx=Math.max(...vals)+2;
+  const pts=vals.map((v,i)=>[28+i*34, 42-Math.round(((v-mn)/(mx-mn||1))*30)]);
+  const poly=pts.map(p=>p.join(',')).join(' ');
+  const dots=pts.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="3" fill="#d33"/><text x="${x}" y="${y-4}" text-anchor="middle" font-size="8.5" font-weight="bold">${vals[i]}</text><text x="${x}" y="55" text-anchor="middle" font-size="8.5">${labels[i]}</text>`).join('');
+  return `<svg width="168" height="60" viewBox="0 0 168 60" xmlns="http://www.w3.org/2000/svg">
+    <line x1="18" y1="6" x2="18" y2="44" stroke="#333" stroke-width="1.2"/>
+    <line x1="18" y1="44" x2="158" y2="44" stroke="#333" stroke-width="1.2"/>
+    <polyline points="${poly}" fill="none" stroke="#2980b9" stroke-width="1.8"/>
+    ${dots}
+  </svg>`;
+}
+function svgPieChart(pctA,nameA,pctB,nameB){
+  const a1=(pctA/100)*2*Math.PI-Math.PI/2;
+  const x1=32+24*Math.cos(a1), y1=30+24*Math.sin(a1);
+  const lg=pctA>50?1:0;
+  return `<svg width="150" height="60" viewBox="0 0 150 60" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="32" cy="30" r="24" fill="#ffe5b4" stroke="#333" stroke-width="1.3"/>
+    <path d="M32,30 L32,6 A24,24 0 ${lg},1 ${x1.toFixed(1)},${y1.toFixed(1)} Z" fill="#a2d2ff" stroke="#333" stroke-width="1.2"/>
+    <text x="66" y="22" font-size="9.5" fill="#111">■ ${nameA}：${pctA}%</text>
+    <text x="66" y="38" font-size="9.5" fill="#111">□ ${nameB}：${pctB}%</text>
+    <text x="66" y="52" font-size="9" fill="#555">其他：${100-pctA-pctB}%</text>
+  </svg>`;
+}
+function svgCylinder(r,h){
+  return `<svg width="142" height="68" viewBox="0 0 142 68" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16,18 L16,50 A24,8 0 0,0 64,50 L64,18" fill="#fff8ec" stroke="#222" stroke-width="1.5"/>
+    <ellipse cx="40" cy="18" rx="24" ry="8" fill="#ffe5b4" stroke="#222" stroke-width="1.5"/>
+    <circle cx="40" cy="18" r="2" fill="#111"/>
+    <line x1="40" y1="18" x2="64" y2="18" stroke="#d33" stroke-width="1.8"/>
+    <text x="72" y="24" font-size="11" font-weight="bold" fill="#d33">半徑 ${r}cm</text>
+    <text x="72" y="44" font-size="11" font-weight="bold" fill="#111">柱高 ${h}cm</text>
+  </svg>`;
+}
+function svgSector(r,deg){
+  const rad=deg*Math.PI/180, x2=30+26*Math.cos(-rad), y2=48+26*Math.sin(-rad), lg=deg>180?1:0;
+  return `<svg width="110" height="58" viewBox="0 0 110 58" xmlns="http://www.w3.org/2000/svg">
+    <path d="M30,48 L56,48 A26,26 0 ${lg},0 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="#ffe5b4" stroke="#333" stroke-width="1.4"/>
+    <text x="44" y="56" font-size="9.5" fill="#111">半徑 ${r}cm</text>
+    <text x="64" y="28" font-size="9.5" fill="#d33">${deg}°</text>
+  </svg>`;
+}
+function svgCircuit(closed){
+  return `<svg width="135" height="52" viewBox="0 0 135 52" xmlns="http://www.w3.org/2000/svg">
+    <rect x="14" y="18" width="24" height="14" fill="#ffd966" stroke="#333" stroke-width="1.3"/>
+    <rect x="38" y="21" width="4" height="8" fill="#333"/>
+    <text x="26" y="28" text-anchor="middle" font-size="8.5">電池</text>
+    <circle cx="98" cy="22" r="10" fill="${closed?'#fff176':'#fff'}" stroke="#333" stroke-width="1.3"/>
+    <text x="98" y="25" text-anchor="middle" font-size="8">燈泡</text>
+    <path d="M42,25 L70,25 ${closed?'L88,25':'L82,14'}" fill="none" stroke="#d33" stroke-width="1.6"/>
+    <path d="M14,25 L6,25 L6,44 L98,44 L98,32" fill="none" stroke="#333" stroke-width="1.5"/>
+  </svg>`;
+}
+function svgCompassRose(){
+  return `<svg width="76" height="62" viewBox="0 0 76 62" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="38,10 43,28 38,24 33,28" fill="#d33" stroke="#333" stroke-width="1"/>
+    <polygon points="38,52 43,34 38,38 33,34" fill="#fff" stroke="#333" stroke-width="1"/>
+    <line x1="20" y1="31" x2="56" y2="31" stroke="#333" stroke-width="1.3"/>
+    <text x="38" y="9" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#d33">北(N)</text>
+    <text x="64" y="34" text-anchor="middle" font-size="8.5">東</text>
+    <text x="12" y="34" text-anchor="middle" font-size="8.5">西</text>
+  </svg>`;
+}
+function svgPriceTag(item,price){
+  return `<svg width="108" height="44" viewBox="0 0 108 44" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="10,22 24,8 98,8 98,36 24,36" fill="#fff8ec" stroke="#333" stroke-width="1.4"/>
+    <circle cx="22" cy="22" r="3" fill="#fff" stroke="#333"/>
+    <text x="60" y="21" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">${item}</text>
+    <text x="60" y="33" text-anchor="middle" font-size="11" font-weight="bold" fill="#d33">$${price}</text>
+  </svg>`;
+}
+
+function svgToPng(svgStr){
+  return new Promise(res=>{
+    const m=svgStr.match(/width="(\d+)" height="(\d+)"/);
+    const w=m?+m[1]:140, h=m?+m[2]:60;
+    const img=new Image();
+    img.onload=()=>{const cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(img,0,0,cv.width,cv.height);res({b64:cv.toDataURL('image/png'),w,h});};
+    img.onerror=()=>res(null);
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);
+  });
+}
+
+
+// ===== 2b. 單元精準對應與單元專屬題庫產生器（勾選哪個單元就 100% 只出該單元題目）=====
+function genMathForUnit(grade, sem, uIdx, diff, kind, vIdx=0){
+  const g=+grade, hard=diff==='hard', easy=diff==='easy';
+  const nm=pick(NAMES), nm2=pick(NAMES.filter(x=>x!==nm)), it=pick(ITEMS);
+  const v=n=>(vIdx+randSeed)%n;
+  const isTrue=vIdx%2===0;
+
+  // --- 1年級 ---
+  if(g===1){
+    if(sem==='上'){
+      if(uIdx===0){ // 單元一：10以內的數與分合
+        const tot=rnd(6,10), l=rnd(1,tot-1), r=tot-l;
+        if(kind==='tf') return {q:`看圖，「${tot}」可以分成 ${l} 和 ${isTrue?r:r+1}。`,svg:svgSplitBox(tot,l,isTrue?r:r+1),a:isTrue?'○':'✕',exp:`${tot} 分成 ${l} 和 ${r}。`};
+        if(kind==='fill') return v(2)===0
+          ? {q:`在分合表中填入正確的數字：`,svg:svgSplitBox(tot,l,'□'),a:String(r)}
+          : {q:`看圖填填看，蝴蝶翅膀上的兩個數合起來是 ${tot}，問號應填（　）。`,svg:svgButterfly(tot,l,'?'),a:String(r)};
+        if(kind==='calc') return {q:`把 ${tot} 分成 ${l} 和（　　）`,svg:svgSplitBox(tot,l,'?'),a:String(r)};
+        if(kind==='word') return {q:`盤子裡有 ${l} 顆紅蘋果和 ${r} 顆青蘋果，合起來共有幾顆蘋果？`,svg:svgButterfly(tot,l,r),a:`${l} 和 ${r} 合起來是 ${tot} 顆`};
+        if(kind==='match') return {q:'10以內的分與合配對（合起來是 10）',pairs:[['1 和 □','9'],['3 和 □','7'],['4 和 □','6'],['2 和 □','8']]};
+        const st=rnd(4,9), nums=[st,st-1,st-2,st-3,st-4], bi=rnd(1,3);
+        return {q:`看火車數列圖，空格裡應該填入哪一個數字？`,svg:svgSeqTrain(nums,bi),opts:uniqueOpts(nums[bi],[nums[bi]+1,nums[bi]-1,10]),a:String(nums[bi]),exp:`依序倒數，空格為 ${nums[bi]}。`};
+      }
+      if(uIdx===1){ // 單元二：10以內的加減法
+        const a=((vIdx+randSeed)%4)+2, b=((vIdx*2+randSeed)%4)+2, sub=v(5);
+        if(kind==='tf'){
+          if(sub===0){const s=isTrue?a+b:a+b+1;return {q:`如圖，左邊骰子 ${a} 點、右邊骰子 ${b} 點，合起來是 ${s} 點。`,svg:svgDicePair(a,b),a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};}
+          if(sub===1) return {q:`看積木圖，左邊 ${a} 個加右邊 ${b} 個，合起來是 ${isTrue?a+b:a+b+2} 個。`,svg:svgBlockAdd(a,b),a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};
+          if(sub===2) return {q:`算式「${a+b} － ${a}」的答案是 ${isTrue?b:b+1}。`,a:isTrue?'○':'✕',exp:`${a+b}－${a}＝${b}。`};
+          if(sub===3) return {q:`「${a} ＋ ${b}」和「${b} ＋ ${a}」的答案${isTrue?'一樣大':'不一樣大'}。`,a:isTrue?'○':'✕',exp:`加法交換位置答案不變。`};
+          return {q:`盒子裡有 ${a} 顆球，再放進 0 顆，現在有 ${isTrue?a:0} 顆球。`,a:isTrue?'○':'✕',exp:`${a}＋0＝${a}。`};
+        }
+        if(kind==='fill') return {q:`看積木圖填算式：${a} ＋ ${b} ＝（　　）。`,svg:svgBlockAdd(a,b),a:String(a+b)};
+        if(kind==='calc') return v(2)===0?{q:`${a} ＋ ${b} ＝（　　）`,svg:svgDicePair(a,b),a:String(a+b)}:{q:`${a+b} － ${a} ＝（　　）`,a:String(b)};
+        if(kind==='word') return {q:`盒子裡有 ${a+b} 個${it}，拿走 ${b} 個後，還剩下幾個${it}？`,a:`${a+b} - ${b} = ${a}（個）`};
+        if(kind==='match') return {q:'10以內加減配對',pairs:[[`${a} ＋ 2`,String(a+2)],[`9 － 3`,'6'],[`4 ＋ 4`,'8'],[`7 － 2`,'5']]};
+        if(sub===0) return {q:`數一數，左邊 ${a} 個積木、右邊 ${b} 個積木，合起來共有幾個？`,svg:svgBlockAdd(a,b),opts:uniqueOpts(`${a+b} 個`,[`${a+b-1} 個`,`${a+b+1} 個`,`${a+b+2} 個`]),a:`${a+b} 個`,exp:`${a}＋${b}＝${a+b} 個。`};
+        if(sub===1) return {q:`看骰子圖，${a} 點和 ${b} 點合起來共有幾點？`,svg:svgDicePair(a,b),opts:uniqueOpts(`${a+b} 點`,[`${a+b-1} 點`,`${a+b+1} 點`,`${a+b+2} 點`]),a:`${a+b} 點`,exp:`${a}＋${b}＝${a+b} 點。`};
+        if(sub===2) return {q:`算式「${a+b} － ${a}」的答案是多少？`,opts:uniqueOpts(b,[b+1,b-1,a+b]),a:String(b),exp:`${a+b}－${a}＝${b}。`};
+        if(sub===3) return {q:`盤子裡有 ${a} 顆草莓，媽媽又放進 ${b} 顆，現在共有幾顆草莓？`,opts:uniqueOpts(`${a+b} 顆`,[`${a+b-1} 顆`,`${a+b+1} 顆`,`${a} 顆`]),a:`${a+b} 顆`,exp:`${a}＋${b}＝${a+b} 顆。`};
+        return {q:`有 ${a+b} 隻小鳥在樹上，飛走了 ${b} 隻，還剩下幾隻小鳥？`,opts:uniqueOpts(`${a} 隻`,[`${a+1} 隻`,`${b} 隻`,`${a+b} 隻`]),a:`${a} 隻`,exp:`${a+b}－${b}＝${a} 隻。`};
+      }
+      if(uIdx===2){ // 單元三：比長短與認識形狀
+        if(kind==='tf') return {q:isTrue?`皮球和圓罐比正方體積木更容易在地板上滾動。`:`正方體積木比皮球更容易在地板上滾動。`,a:isTrue?'○':'✕',exp:`有曲面或球體較容易滾動。`};
+        if(kind==='fill') return v(2)===0
+          ? {q:`數一數下面的機器人圖形：三角形有（　）個，圓形有（　）個，長方形有（　）個。`,svg:svgShapeRobot(),a:'2；1；3'}
+          : {q:`看圖分辨直線與曲線：屬於「直線」的有（　　），屬於「曲線」的有（　　）。`,svg:svgLinesFour(),a:'①、③；②、④'};
+        if(kind==='calc') return {q:`數一數下面的小屋圖形：三角形＋圓形＋長方形共有（　　）個。`,svg:svgShapeHouse(),a:'5（1＋2＋2＝5）'};
+        if(kind==='word') return {q:`在造型小屋圖形中，長方形和圓形合起來共有幾個？`,svg:svgShapeHouse(),a:`2 + 2 = 4（個）`};
+        if(kind==='match') return {q:'形狀與生活物品配對',pairs:[['硬幣的面','圓形'],['三角巾','三角形'],['國旗的面','長方形'],['骰子的面','正方形']]};
+        const ord=shuffle([0,1,2]), longest=ord.indexOf(0)+1;
+        return {q:`看圖比一比，下面哪一枝鉛筆最長？`,svg:svgLengthCompare(ord),opts:uniqueOpts(`(${longest})`,['(1)','(2)','(3)','一樣長']),a:`(${longest})`,exp:`第 (${longest}) 枝鉛筆最長。`};
+      }
+      // uIdx===3 單元四：20以內的數與加減、時間（5種不同子題型輪替）
+      const hr=rnd(1,11), min=pick([0,30]), a=rnd(6,9), b=rnd(5,9), sub=v(5);
+      if(kind==='tf'){
+        if(sub===0) return {q:`看時鐘，現在鐘面上的時間是 ${isTrue?hr:hr+1} 點${min?' 30 分':'整'}。`,svg:svgClock(hr,min),a:isTrue?'○':'✕',exp:`短針指 ${hr}、長針指 ${min?6:12}。`};
+        if(sub===1){const u=rnd(2,9);return {q:`看定位板，1 個十和 ${u} 個一合起來是 ${isTrue?10+u:u*10+1}。`,svg:svgAbacus(1,u),a:isTrue?'○':'✕',exp:`1 個十和 ${u} 個一是 ${10+u}。`};}
+        if(sub===2) return {q:`算式「${a} ＋ ${b}」的答案是 ${isTrue?a+b:a+b+2}。`,svg:svgBlockAdd(a,b),a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};
+        if(sub===3){const k=rnd(3,7);return {q:`排隊時${nm}排在第 ${k} 個，代表他前面有 ${isTrue?k-1:k} 個人。`,svg:svgRowCount(k+2),a:isTrue?'○':'✕',exp:`第 ${k} 個前面有 ${k-1} 人。`};}
+        return {q:`算式「${a+b} － ${a}」的答案是 ${isTrue?b:b+1}。`,a:isTrue?'○':'✕',exp:`${a+b}－${a}＝${b}。`};
+      }
+      if(kind==='fill'){
+        if(sub===0){const tot=rnd(7,10),k=rnd(2,tot-1);return {q:`看圖數一數，共有（　）個圓圈；從左邊數起第 ${k} 個，從右邊數起是第（　）個。`,svg:svgRowCount(tot),a:`${tot}；${tot-k+1}`};}
+        if(sub===1){const u=rnd(2,8);return {q:`看定位板填填看：1 個十和 ${u} 個一合起來是（　　）。`,svg:svgAbacus(1,u),a:String(10+u)};}
+        if(sub===2) return {q:`看時鐘填時間：短針指在 ${hr}，長針指在 12，現在是（　　）點整。`,svg:svgClock(hr,0),a:String(hr)};
+        if(sub===3){const st=rnd(11,15);return {q:`按照順序填填看：${st} → ${st+1} →（　　）→ ${st+3}。`,svg:svgSeqTrain([st,st+1,st+2,st+3],2),a:String(st+2)};}
+        return {q:`看積木圖計算：${a} ＋ ${b} ＝（　　）；${a+b} － ${b} ＝（　　）。`,svg:svgBlockAdd(a,b),a:`${a+b}；${a}`};
+      }
+      if(kind==='calc') return v(2)===0?{q:`${a} ＋ ${b} ＝（　　）`,svg:svgBlockAdd(a,b),a:String(a+b)}:{q:`${a+b} － ${a} ＝（　　）`,a:String(b)};
+      if(kind==='word'){
+        if(v(2)===0){const f=rnd(3,6),bk=rnd(2,5);return {q:`排隊買票時，${nm}前面有 ${f} 個人，後面有 ${bk} 個人，這一排共有幾個人？`,svg:svgRowCount(f+bk+1),a:`${f} + 1 + ${bk} = ${f+bk+1}（人）`};}
+        return {q:`書架上原有 ${a} 本故事書，老師又放進 ${b} 本，現在書架上共有幾本故事書？`,svg:svgBlockAdd(a,b),a:`${a} + ${b} = ${a+b}（本）`};
+      }
+      if(kind==='match') return {q:'20以內加減配對',pairs:[[`${a} ＋ ${b}`,String(a+b)],[`15 － 6`,'9'],[`8 ＋ 9`,'17'],[`16 － 8`,'8']]};
+      if(sub===0){const ans=`${hr} 點${min?' 30 分':'整'}`;return {q:`看圖回答，現在鐘面上的時間是幾點幾分？`,svg:svgClock(hr,min),opts:uniqueOpts(ans,[`${hr} 點${min?'整':' 30 分'}`,`${hr+1} 點${min?' 30 分':'整'}`,`6 點 ${hr} 分`]),a:ans,exp:`短針指 ${hr}，長針指 ${min?6:12}，是 ${ans}。`};}
+      if(sub===1){const u=rnd(2,9);return {q:`看定位板，「1 個十和 ${u} 個一」合起來是多少？`,svg:svgAbacus(1,u),opts:uniqueOpts(10+u,[u*10+1,1+u,20+u]),a:String(10+u),exp:`1 個十是 10，加 ${u} 個一是 ${10+u}。`};}
+      if(sub===2) return {q:`看積木圖，「${a} ＋ ${b}」合起來共有幾個？`,svg:svgBlockAdd(a,b),opts:uniqueOpts(`${a+b} 個`,[`${a+b-1} 個`,`${a+b+1} 個`,`${a+b+2} 個`]),a:`${a+b} 個`,exp:`${a}＋${b}＝${a+b} 個。`};
+      if(sub===3){const x=rnd(13,18),y=rnd(5,9);return {q:`算式「${x} － ${y}」的答案是多少？`,opts:uniqueOpts(x-y,[x-y+1,x-y-1,x+y]),a:String(x-y),exp:`${x}－${y}＝${x-y}。`};}
+      const k=rnd(4,8);return {q:`從第 1 頁讀到第 ${10+k} 頁，總共讀了幾頁？`,opts:uniqueOpts(`${10+k} 頁`,[`${9+k} 頁`,`${11+k} 頁`,'10 頁']),a:`${10+k} 頁`,exp:`共讀了 ${10+k} 頁。`};
+    }
+    // 1年級下
+    if(uIdx===0){ // 單元一：100以內的數
+      const t10=rnd(2,7), u1=rnd(1,7), n=t10*10+u1;
+      if(kind==='tf') return {q:`看定位板，「${n}」的十位數字是 ${isTrue?t10:u1}，個位數字是 ${isTrue?u1:t10}。`,svg:svgAbacus(t10,u1),a:isTrue?'○':'✕',exp:`${n} 是 ${t10} 個十和 ${u1} 個一。`};
+      if(kind==='fill') return {q:`看定位板上的算珠：十位有 ${t10} 顆、個位有 ${u1} 顆，合起來表示（　　）。`,svg:svgAbacus(t10,u1),a:String(n)};
+      if(kind==='calc'){const st=rnd(20,60);return {q:`五個一數：${st} → ${st+5} →（　　）→ ${st+15}`,svg:svgSeqTrain([st,st+5,st+10,st+15],2),a:String(st+10)};}
+      if(kind==='word') return {q:`每 10 顆糖果裝一袋，${nm}有 ${t10} 袋又 ${u1} 顆，合起來共有幾顆糖果？`,svg:svgAbacus(t10,u1),a:`${t10} 個十和 ${u1} 個一合起來是 ${n} 顆`};
+      if(kind==='match') return {q:'十位與個位合成配對',pairs:[['3 個十和 5 個一','35'],['5 個十和 3 個一','53'],['7 個十和 0 個一','70'],['4 個十和 9 個一','49']]};
+      return {q:`看定位板圖，「${t10} 個十和 ${u1} 個一」合起來是多少？`,svg:svgAbacus(t10,u1),opts:uniqueOpts(n,[u1*10+t10,t10+u1,n+10]),a:String(n),exp:`${t10}×10＋${u1}＝${n}。`};
+    }
+    if(uIdx===1){ // 單元二：100以內的加減法
+      const a=rnd(21,55), b=rnd(12,34);
+      if(kind==='tf') return {q:`算式「${a} ＋ ${b}」的答案是 ${isTrue?a+b:a+b+10}。`,a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};
+      if(kind==='fill') return {q:`填入正確答案：${a} ＋ ${b} ＝（　　）；${a+b} － ${b} ＝（　　）。`,a:`${a+b}；${a}`};
+      if(kind==='calc') return v(2)===0?{q:`${a} ＋ ${b} ＝（　　）`,a:String(a+b)}:{q:`${a+b} － ${a} ＝（　　）`,a:String(b)};
+      if(kind==='word') return {q:`${nm}有 ${a} 張貼紙，${nm2}又給他 ${b} 張，現在${nm}共有幾張貼紙？`,a:`${a} + ${b} = ${a+b}（張）`};
+      if(kind==='match') return {q:'二位數加減配對',pairs:[['25 ＋ 13','38'],['46 － 12','34'],['30 ＋ 28','58'],['59 － 24','35']]};
+      return {q:`算式「${a} ＋ ${b}」的正確答案是多少？`,opts:uniqueOpts(a+b,[a+b+10,a+b-1,a-b]),a:String(a+b),exp:`${a}＋${b}＝${a+b}。`};
+    }
+    if(uIdx===2){ // 單元三：認識錢幣與購物
+      const c10=rnd(1,3), c5=rnd(0,1), c1=rnd(1,3), tot=50+c10*10+c5*5+c1;
+      if(kind==='tf'){const c=isTrue?5:4;return {q:`如圖，1 個 50 元硬幣可以換成 ${c} 個 10 元硬幣。`,svg:svgCoins(1,0,0,0),a:isTrue?'○':'✕',exp:`50 元可換 5 個 10 元。`};}
+      if(kind==='fill') return {q:`數一數圖中的硬幣，合起來一共有（　　）元。`,svg:svgCoins(1,c10,c5,c1),a:String(tot)};
+      if(kind==='calc'){const price=rnd(15,45);return {q:`付 1 個 50 元硬幣買 ${price} 元的筆記本，可找回（　　）元。`,svg:svgCoins(1,0,0,0),a:String(50-price)};}
+      if(kind==='word'){const price=rnd(18,42);return {q:`一本畫冊賣 ${price} 元，${nm}付了圖中的硬幣共 ${tot} 元，買完後還剩下多少元？`,svg:svgCoins(1,c10,c5,c1),a:`${tot} - ${price} = ${tot-price}（元）`};}
+      if(kind==='match') return {q:'錢幣換算配對',pairs:[['1 個 50 元','5 個 10 元'],['1 個 10 元','2 個 5 元'],['2 個 50 元','100 元'],['3 個 10 元和 2 個 1 元','32 元']]};
+      const p=rnd(2,4)*10+5;
+      return {q:`買一個 ${p} 元的麵包，最少要付幾個 10 元硬幣才夠？`,svg:svgCoins(0,Math.ceil(p/10),0,0),opts:uniqueOpts(`${Math.ceil(p/10)} 個`,[`${Math.floor(p/10)} 個`,`${Math.ceil(p/10)+1} 個`,'1 個']),a:`${Math.ceil(p/10)} 個`,exp:`需付 ${Math.ceil(p/10)} 個 10 元（${Math.ceil(p/10)*10} 元）。`};
+    }
+    // uIdx===3 單元四：長度測量與統計
+    const s=0, len=rnd(4,8), v1=rnd(4,9), v2=rnd(5,10), v3=rnd(3,8);
+    if(kind==='tf') return {q:`看直尺圖，藍色彩帶從刻度 0 對齊到 ${len}，長度是 ${isTrue?len:len+1} 公分。`,svg:svgRulerMeasure(0,len),a:isTrue?'○':'✕',exp:`從 0 到 ${len} 是 ${len} 公分。`};
+    if(kind==='fill') return {q:`看統計圖回答：喜歡蘋果的有 ${v1} 人、香蕉 ${v2} 人、橘子 ${v3} 人，全班共有（　　）人。`,svg:svgBarChart(['蘋果','香蕉','橘子'],[v1,v2,v3]),a:String(v1+v2+v3)};
+    if(kind==='calc') return {q:`看統計圖算算看：喜歡蘋果和香蕉的共有（　　）人。`,svg:svgBarChart(['蘋果','香蕉','橘子'],[v1,v2,v3]),a:String(v1+v2)};
+    if(kind==='word') return {q:`如圖，藍色彩帶長 ${len} 公分，紅色彩帶比藍色彩帶長 3 公分，紅色彩帶長幾公分？`,svg:svgRulerMeasure(0,len),a:`${len} + 3 = ${len+3}（公分）`};
+    if(kind==='match') return {q:'星期順序配對',pairs:[['星期一的明天','星期二'],['星期五的明天','星期六'],['星期日的昨天','星期六'],['一星期共有','7 天']]};
+    return {q:`看下面的直尺測量圖，藍色彩帶的長度是幾公分？`,svg:svgRulerMeasure(0,len),opts:uniqueOpts(`${len} 公分`,[`${len-1} 公分`,`${len+1} 公分`,`${len+2} 公分`]),a:`${len} 公分`,exp:`從刻度 0 到 ${len} 共 ${len} 公分。`};
+  }
+
+  // --- 2年級 ---
+  if(g===2){
+    if(sem==='上'){
+      if(uIdx===0){ // 單元一：200～1000以內的數
+        const h=rnd(2,8), t0=rnd(0,9), u=rnd(1,9), n=h*100+t0*10+u;
+        if(kind==='tf') return {q:`「${h} 個百、${t0} 個十和 ${u} 個一」合起來寫作 ${isTrue?n:h*10+u}。`,a:isTrue?'○':'✕',exp:`合起來是 ${n}。`};
+        if(kind==='fill'){const st=rnd(200,600);return {q:`看數列火車圖，一百一數：空格應填入（　　）。`,svg:svgSeqTrain([st,st+100,st+200,st+300],2),a:String(st+200)};}
+        if(kind==='calc') return {q:`${h*100} ＋ ${t0*10} ＋ ${u} ＝（　　）`,a:String(n)};
+        if(kind==='word'){const c100=rnd(2,5),c10=rnd(1,3),c1=rnd(1,4);return {q:`存錢筒裡有 ${c100} 張百元鈔票、${c10} 個 10 元和 ${c1} 個 1 元，共有多少元？`,svg:svgCoins(0,c10,0,c1),a:`${c100*100 + c10*10 + c1} 元`};}
+        if(kind==='match') return {q:'三位數合成配對',pairs:[['3 個百和 5 個一','305'],['3 個百和 5 個十','350'],['5 個百和 3 個十','530'],['5 個百和 3 個一','503']]};
+        return {q:`「${h} 個百和 ${u} 個一」合起來是多少？`,opts:uniqueOpts(h*100+u,[h*10+u,h*100+u*10,u*100+h]),a:String(h*100+u),exp:`十位補 0，寫作 ${h*100+u}。`};
+      }
+      if(uIdx===1){ // 單元二：二、三位數加減法
+        const a=rnd(140,480), b=rnd(115,320);
+        if(kind==='tf') return {q:`算式「${a} ＋ ${b}」的結果是 ${isTrue?a+b:a+b+10}。`,a:isTrue?'○':'✕',exp:`${a}＋${b}＝${a+b}。`};
+        if(kind==='fill') return {q:`完成加減計算：${a} ＋ ${b} ＝（　　）；${a+b} － ${a} ＝（　　）。`,a:`${a+b}；${b}`};
+        if(kind==='calc') return v(2)===0?{q:`${a} ＋ ${b} ＝（　　）`,a:String(a+b)}:{q:`${a+b} － ${b} ＝（　　）`,a:String(a)};
+        if(kind==='word') return {q:`果園昨天採收 ${a} 顆橘子，今天比昨天多採收 ${b} 顆，今天採收了幾顆橘子？`,a:`${a} + ${b} = ${a+b}（顆）`};
+        if(kind==='match') return {q:'三位數加減配對',pairs:[['250 ＋ 150','400'],['500 － 180','320'],['340 ＋ 210','550'],['620 － 120','500']]};
+        return {q:`「${a} ＋ ${b}」的正確答案是多少？`,opts:uniqueOpts(a+b,[a+b+10,a+b-10,a-b]),a:String(a+b),exp:`${a}＋${b}＝${a+b}。`};
+      }
+      if(uIdx===2){ // 單元三：公分與公尺
+        const s=rnd(1,3), len=rnd(4,7), m=rnd(2,6), cm=rnd(15,85);
+        if(kind==='tf') return {q:`${m} 公尺 ${cm} 公分合起來等於 ${isTrue?m*100+cm:m*10+cm} 公分。`,a:isTrue?'○':'✕',exp:`1 公尺＝100 公分，共 ${m*100+cm} 公分。`};
+        if(kind==='fill') return {q:`看下面的直尺測量圖，藍色彩帶從刻度 ${s} 到 ${s+len}，長度是（　）公分。`,svg:svgRulerMeasure(s,s+len),a:String(len)};
+        if(kind==='calc') return {q:`${m} 公尺 ${cm} 公分 ＝（　　）公分`,a:String(m*100+cm)};
+        if(kind==='word') return {q:`一條紅繩長 ${m} 公尺 ${cm} 公分，也就是幾公分？如果剪掉 ${cm} 公分，還剩幾公分？`,svg:svgRulerMeasure(1,6),a:`${m*100+cm} 公分；剩 ${m*100} 公分`};
+        if(kind==='match') return {q:'公尺與公分換算配對',pairs:[['1 公尺','100 公分'],['2 公尺 5 公分','205 公分'],['2 公尺 50 公分','250 公分'],['300 公分','3 公尺']]};
+        return {q:`看直尺圖，彩帶從刻度 ${s} 對齊到刻度 ${s+len}，彩帶長幾公分？`,svg:svgRulerMeasure(s,s+len),opts:uniqueOpts(`${len} 公分`,[`${s+len} 公分`,`${len+1} 公分`,`${len-1} 公分`]),a:`${len} 公分`,exp:`${s+len} － ${s} ＝ ${len} 公分。`};
+      }
+      // uIdx===3 單元四：乘法（2、4、5、8）
+      const r0=pick([2,4,5]), c0=rnd(3,7);
+      if(kind==='tf') return {q:`如圖，每排有 ${c0} 個圓點，共有 ${r0} 排，全部有 ${isTrue?r0*c0:r0+c0} 個圓點。`,svg:svgArrayDots(r0,c0),a:isTrue?'○':'✕',exp:`${c0}×${r0}＝${r0*c0}。`};
+      if(kind==='fill') return {q:`看點陣圖填填看：每排有 ${c0} 個圓點，共有 ${r0} 排，乘法算式記作 ${c0} × ${r0} ＝（　　）。`,svg:svgArrayDots(r0,c0),a:String(r0*c0)};
+      if(kind==='calc') return {q:`看點陣圖計算：${c0} × ${r0} ＝（　　）`,svg:svgArrayDots(r0,c0),a:String(r0*c0)};
+      if(kind==='word') return {q:`1 盒蘋果有 ${c0} 顆，媽媽買了 ${r0} 盒，如點陣圖所示，總共有幾顆蘋果？`,svg:svgArrayDots(r0,c0),a:`${c0} × ${r0} = ${c0*r0}（顆）`};
+      if(kind==='match') return {q:'乘法算式配對',pairs:[['2 × 7','14'],['4 × 6','24'],['5 × 8','40'],['8 × 3','24']]};
+      return {q:`看點陣圖，哪一個算式可以算出圓點的總數（${r0} 排、每排 ${c0} 個）？`,svg:svgArrayDots(r0,c0),opts:uniqueOpts(`${c0} × ${r0} ＝ ${c0*r0}`,[`${c0} ＋ ${r0} ＝ ${c0+r0}`,`${c0} － ${r0}`,`${c0} × ${r0+1}`]),a:`${c0} × ${r0} ＝ ${c0*r0}`,exp:`每排 ${c0} 個有 ${r0} 排，共 ${c0*r0} 個。`};
+    }
+    // 2年級下
+    if(uIdx===0){ // 單元一：乘法（3、6、7、9）與兩步驟
+      const m1=pick([3,6,7,9]), m2=rnd(3,8), ex=rnd(5,15);
+      if(kind==='tf') return {q:`「${m1} 的 ${isTrue?0:1} 倍」答案是 0。`,a:isTrue?'○':'✕',exp:`任何數乘以 0 都是 0。`};
+      if(kind==='fill') return {q:`看點陣圖：每排 ${m2} 個、共 3 排，再加上 ${ex} 個，共有（　　）個。`,svg:svgArrayDots(3,m2),a:String(m2*3+ex)};
+      if(kind==='calc') return {q:`${m1} × ${m2} ＋ ${ex} ＝（　　）`,a:String(m1*m2+ex)};
+      if(kind==='word') return {q:`一枝鉛筆賣 ${m1} 元，買 ${m2} 枝付了 100 元，可找回多少元？`,svg:svgCoins(2,0,0,0),a:`100 - ${m1} × ${m2} = ${100-m1*m2}（元）`};
+      if(kind==='match') return {q:'九九乘法配對',pairs:[['6 × 7','42'],['7 × 8','56'],['9 × 6','54'],['3 × 9','27']]};
+      return {q:`「${m1} 的 6 倍」比「${m1} 的 4 倍」多幾個 ${m1}？`,opts:uniqueOpts('2 個',['10 個','4 個','6 個']),a:'2 個',exp:`6 倍減 4 倍等於多 2 個 ${m1}。`};
+    }
+    if(uIdx===1){ // 單元二：分裝與平分、單位分數
+      const d=rnd(3,8), q0=rnd(3,6);
+      if(kind==='tf') return {q:`如圖，把 1 個長條平分成 ${d} 等份，塗色部分是 ${isTrue?`1/${d}`:`1/${d+1}`}。`,svg:svgFraction(1,d),a:isTrue?'○':'✕',exp:`平分成 ${d} 等份，每份是 1/${d}。`};
+      if(kind==='fill') return {q:`看塗色圖填分數：平分成 ${d} 等份，塗色的 1 份是（　　）條。`,svg:svgFraction(1,d),a:`1/${d}`};
+      if(kind==='calc') return {q:`把 ${d*q0} 顆糖果，每 ${d} 顆裝一袋，可以裝成（　　）袋。`,a:String(q0)};
+      if(kind==='word') return {q:`把 ${d*q0} 張貼紙平分給 ${d} 位小朋友，每人可以分到幾張貼紙？`,a:`${d*q0} 平分給 ${d} 人，每人 ${q0} 張`};
+      if(kind==='match') return {q:'單位分數塗色配對',pairs:[['平分成 4 份中的 1 份','1/4'],['平分成 6 份中的 1 份','1/6'],['平分成 8 份中的 1 份','1/8'],['平分成 10 份中的 1 份','1/10']]};
+      return {q:`如圖，把 1 個披薩平分成 ${d} 片，其中的 1 片是幾個披薩？`,svg:svgFraction(1,d),opts:uniqueOpts(`1/${d} 個`,[`${d} 個`,`1/${d+1} 個`,'1 個']),a:`1/${d} 個`,exp:`平分成 ${d} 份，每份是 1/${d}。`};
+    }
+    if(uIdx===2){ // 單元三：時間、重量與容量
+      const hr=rnd(1,11), yr=rnd(1,2), mo=rnd(2,9);
+      if(kind==='tf') return {q:`一年有 ${isTrue?12:10} 個月，閏年的 2 月有 29 天。`,a:isTrue?'○':'✕',exp:`一年有 12 個月。`};
+      if(kind==='fill') return {q:`看時鐘填時間：現在是（　）點（　　）分；另外 ${yr} 年 ${mo} 個月＝（　　）個月。`,svg:svgClock(hr,30),a:`${hr}；30；${yr*12+mo}`};
+      if(kind==='calc') return {q:`${yr} 年 ${mo} 個月 ＝（　　）個月`,a:String(yr*12+mo)};
+      if(kind==='word') return {q:`如圖，小華從 ${hr} 點 30 分開始練琴，練了 1 小時後，結束時是幾點幾分？`,svg:svgClock(hr,30),a:`${hr+1} 點 30 分`};
+      if(kind==='match') return {q:'時間單位配對',pairs:[['1 年','12 個月'],['平年全年','365 天'],['閏年全年','366 天'],['1 星期','7 天']]};
+      return {q:`看時鐘回答：短針在 ${hr} 和 ${hr+1} 中間，長針指著 6，是幾點幾分？`,svg:svgClock(hr,30),opts:uniqueOpts(`${hr} 點 30 分`,[`${hr} 點整`,`${hr+1} 點 30 分`,`6 點 ${hr} 分`]),a:`${hr} 點 30 分`,exp:`長針指 6 代表 30 分。`};
+    }
+    // uIdx===3 單元四：平面圖形與立體形體
+    const w=rnd(5,12), h=rnd(3,8);
+    if(kind==='tf') return {q:isTrue?`如圖，長方形的對邊一樣長，且 4 個角都是直角。`:`長方形的 4 條邊一定都一樣長。`,svg:svgRectDim(w,h,'公分'),a:isTrue?'○':'✕',exp:`長方形對邊等長、四角皆為直角。`};
+    if(kind==='fill') return {q:`看圖填填看：正方體有（　）個面、（　）個頂點和（　　）條邊。`,svg:svgBox3D(5,5,5),a:'6；8；12'};
+    if(kind==='calc') return {q:`如圖，長方形長 ${w} 公分、寬 ${h} 公分，4 條邊合起來共長（　　）公分。`,svg:svgRectDim(w,h,'公分'),a:String((w+h)*2)};
+    if(kind==='word') return {q:`用竹籤做一個邊長 ${w} 公分的正方形相框，一共需要幾公分長的竹籤？`,svg:svgRectDim(w,w,'公分'),a:`${w} × 4 = ${w*4}（公分）`};
+    if(kind==='match') return {q:'圖形構成要素配對',pairs:[['三角形','3 個角、3 條邊'],['長方形','4 個直角、對邊等長'],['正方形','4 個直角、4 邊等長'],['正方體','6 個正方形的面']]};
+    return {q:`如圖，長方形和正方形都有幾個「直角」？`,svg:svgRectDim(w,h,'公分'),opts:uniqueOpts('4 個直角',['2 個直角','3 個直角','6 個直角']),a:'4 個直角',exp:`長方形與正方形四個角皆為直角。`};
+  }
+
+  // --- 3年級 ---
+  if(g===3){
+    if(sem==='上'){
+      if(uIdx===0){ // 單元一：一萬以內的數與加減
+        const th=rnd(1,8), h=rnd(0,9), t0=rnd(1,9), u=rnd(1,9), n=th*1000+h*100+t0*10+u, b=rnd(1200,3500);
+        if(kind==='tf') return {q:`四位數「${n}」的千位數字是 ${isTrue?th:t0}，代表 ${isTrue?th*1000:t0*1000}。`,a:isTrue?'○':'✕',exp:`${n} 的千位是 ${th}，表示 ${th*1000}。`};
+        if(kind==='fill') return {q:`「${th} 個千、${h} 個百、${t0} 個十和 ${u} 個一」合起來寫作（　　　）。`,a:String(n)};
+        if(kind==='calc') return v(2)===0?{q:`${n} ＋ ${b} ＝（　　　）`,a:String(n+b)}:{q:`${n+b} － ${b} ＝（　　　）`,a:String(n)};
+        if(kind==='word') return {q:`圖書館原有 ${n} 本書，今年又新購進 ${b} 本書，現在圖書館共有幾本書？`,a:`${n} + ${b} = ${n+b}（本）`};
+        if(kind==='match') return {q:'四位數合成配對',pairs:[['3 個千和 5 個百','3500'],['3 個千和 5 個十','3050'],['3 個千和 5 個一','3005'],['5 個千和 3 個百','5300']]};
+        return {q:`下列哪一個數「比 ${n} 大，又比 ${n+500} 小」？`,opts:uniqueOpts(n+200,[n-100,n+600,n-500]),a:String(n+200),exp:`${n+200} 介於 ${n} 與 ${n+500} 之間。`};
+      }
+      if(uIdx===1){ // 單元二：乘法與除法直式計算
+        const d=rnd(4,9), q0=rnd(12,35), r=rnd(1,d-1), a=rnd(24,85);
+        if(kind==='tf'){const rem=isTrue?d-1:d+1;return {q:`除法計算「□ ÷ ${d}」中，餘數有可能是 ${rem}。`,a:isTrue?'○':'✕',exp:`餘數一定要比除數（${d}）小。`};}
+        if(kind==='fill') return {q:`在「${d*q0+r} ÷ ${d} ＝（　　）…（　）」算式中，商是（　　），餘數是（　）。`,a:`${q0}；${r}`};
+        if(kind==='calc') return v(2)===0?{q:`${a} × ${d} ＝（　　）`,a:String(a*d)}:{q:`${d*q0+r} ÷ ${d} ＝（　　）…（　）`,a:`${q0} 餘 ${r}`};
+        if(kind==='word') return {q:`把 ${d*q0+r} 顆水餃平分裝成 ${d} 盤，每盤最多有幾顆？還剩下幾顆？`,a:`${d*q0+r} ÷ ${d} = ${q0} … ${r}（每盤 ${q0} 顆，剩 ${r} 顆）`};
+        if(kind==='match') return {q:'乘除算式配對',pairs:[['25 × 4','100'],['36 ÷ 3','12'],['48 ÷ 4','12'],['15 × 6','90']]};
+        return {q:`在「□ ÷ ${d} ＝ ${q0} … △」算式中，餘數 △ 最大可能是多少？`,opts:uniqueOpts(d-1,[d,d+1,q0]),a:String(d-1),exp:`餘數必小於除數 ${d}，最大為 ${d-1}。`};
+      }
+      if(uIdx===2){ // 單元三：公里、公尺與毫米
+        const km=rnd(2,8), m=rnd(100,850), cm=rnd(3,9), mm=rnd(2,8);
+        if(kind==='tf') return {q:`${km} 公里 ${m} 公尺合起來等於 ${isTrue?km*1000+m:km*100+m} 公尺。`,a:isTrue?'○':'✕',exp:`1 公里＝1000 公尺，共 ${km*1000+m} 公尺。`};
+        if(kind==='fill') return v(2)===0
+          ? {q:`${km} 公里 ${m} 公尺 ＝（　　　）公尺。`,a:String(km*1000+m)}
+          : {q:`看直尺圖，${cm} 公分 ${mm} 毫米 ＝（　　）毫米。`,svg:svgRulerMeasure(0,cm),a:String(cm*10+mm)};
+        if(kind==='calc') return {q:`${km} 公里 ${m} 公尺 ＋ 500 公尺 ＝（　　　）公尺`,a:String(km*1000+m+500)};
+        if(kind==='word') return {q:`腳踏車道第一段長 ${km} 公里 ${m} 公尺，第二段長 1 公里 200 公尺，兩段共長幾公尺？`,a:`${km*1000+m} + 1200 = ${km*1000+m+1200}（公尺）`};
+        if(kind==='match') return {q:'長度單位換算配對',pairs:[['1 公里','1000 公尺'],['1 公分','10 毫米'],['3 公里 50 公尺','3050 公尺'],['5 公分 8 毫米','58 毫米']]};
+        return {q:`「${km} 公里 ${m} 公尺」換算成公尺是多少？`,opts:uniqueOpts(`${km*1000+m} 公尺`,[`${km*100+m} 公尺`,`${km+m} 公尺`,`${km*10000+m} 公尺`]),a:`${km*1000+m} 公尺`,exp:`1 公里＝1000 公尺。`};
+      }
+      // uIdx===3 單元四：角、正方形、長方形與圓
+      const s=rnd(5,14), w=rnd(7,15), h=rnd(4,9), r0=rnd(4,12), deg=pick([45,60,90,120]);
+      if(kind==='tf') return v(2)===0
+        ? {q:`如圖，半徑 ${r0} 公分的圓，它的直徑是 ${isTrue?r0*2:r0} 公分。`,svg:svgCircle(r0,false),a:isTrue?'○':'✕',exp:`直徑＝半徑×2＝${r0*2} 公分。`}
+        : {q:`如圖，邊長 ${s} 公分的正方形，周長是 ${isTrue?s*4:s*s} 公分。`,svg:svgRectDim(s,s,'公分'),a:isTrue?'○':'✕',exp:`正方形周長＝邊長×4＝${s*4} 公分。`};
+      if(kind==='fill') return v(2)===0
+        ? {q:`如圖，這個角張開 ${deg}°，它是一個（　）角（填銳、直或鈍）；另外半徑 ${r0} 公分的圓，直徑是（　　）公分。`,svg:svgAngleArc(deg),a:`${deg<90?'銳':(deg===90?'直':'鈍')}；${r0*2}`}
+        : {q:`如圖，長 ${w} 公分、寬 ${h} 公分的長方形，周長是（　　）公分。`,svg:svgRectDim(w,h,'公分'),a:String((w+h)*2)};
+      if(kind==='calc') return {q:`看圖計算長方形周長：（${w} ＋ ${h}）× 2 ＝（　　）公分`,svg:svgRectDim(w,h,'公分'),a:String((w+h)*2)};
+      if(kind==='word') return {q:`如圖，長方形菜園長 ${w} 公尺、寬 ${h} 公尺，沿著周圍走一圈是多少公尺？`,svg:svgRectDim(w,h,'公尺'),a:`(${w} + ${h}) × 2 = ${(w+h)*2}（公尺）`};
+      if(kind==='match') return {q:'幾何圖形性質配對',pairs:[['直角','90 度'],['銳角','比直角小'],['鈍角','比直角大'],['圓的直徑','半徑的 2 倍']]};
+      return v(2)===0
+        ? {q:`如圖，半徑 ${r0} 公分的圓，直徑是多少公分？`,svg:svgCircle(r0,false),opts:uniqueOpts(`${r0*2} 公分`,[`${r0} 公分`,`${r0*4} 公分`,`${r0+2} 公分`]),a:`${r0*2} 公分`,exp:`直徑＝半徑×2＝${r0*2} 公分。`}
+        : {q:`如圖，張開 ${deg}° 的角稱為什麼角？`,svg:svgAngleArc(deg),opts:uniqueOpts(deg<90?'銳角':(deg===90?'直角':'鈍角'),['銳角','直角','鈍角','平角']),a:deg<90?'銳角':(deg===90?'直角':'鈍角'),exp:`${deg}° 為${deg<90?'銳角':(deg===90?'直角':'鈍角')}。`};
+    }
+    // 3年級下
+    if(uIdx===0){ // 單元一：分數的認識與加減
+      const den=rnd(5,10), a=rnd(1,den-3), b=rnd(1,den-a-1);
+      if(kind==='tf') return {q:`如圖，分數「${a}/${den}」讀作「${isTrue?`${den}分之${a}`:`${a}分之${den}`}」。`,svg:svgFraction(a,den),a:isTrue?'○':'✕',exp:`分母先讀，讀作 ${den}分之${a}。`};
+      if(kind==='fill') return {q:`看塗色圖計算：${a}/${den} ＋ ${b}/${den} ＝（　　）；1 － ${a}/${den} ＝（　　）。`,svg:svgFraction(a,den,b),a:`${a+b}/${den}；${den-a}/${den}`};
+      if(kind==='calc') return {q:`看塗色部分，${a}/${den} ＋ ${b}/${den} ＝（　　）`,svg:svgFraction(a,den,b),a:`${a+b}/${den}`};
+      if(kind==='word') return {q:`一盒披薩平分成 ${den} 片，哥哥吃了 ${a} 片，妹妹吃了 ${b} 片，兩人共吃了幾盒披薩？`,svg:svgFraction(a,den,b),a:`${a}/${den} + ${b}/${den} = ${a+b}/${den}（盒）`};
+      if(kind==='match') return {q:'同分母分數計算配對',pairs:[['1/5 ＋ 2/5','3/5'],['1 － 3/7','4/7'],['2/9 ＋ 5/9','7/9'],['1 － 1/6','5/6']]};
+      return {q:`看圖計算，「${a}/${den} ＋ ${b}/${den}」的結果是多少？`,svg:svgFraction(a,den,b),opts:uniqueOpts(`${a+b}/${den}`,[`${a+b}/${den*2}`,`${den}/${a+b}`,`1/${den}`]),a:`${a+b}/${den}`,exp:`同分母分數相加，分子相加得 ${a+b}/${den}。`};
+    }
+    if(uIdx===1){ // 單元二：小數的認識與加減
+      const x=(rnd(12,65)/10), y=(rnd(11,48)/10), ans=(x+y).toFixed(1), n1=rnd(2,8);
+      if(kind==='tf') return {q:`「3 個 1 和 ${n1} 個 0.1」合起來是 ${isTrue?`3.${n1}`:`${n1}.3`}。`,a:isTrue?'○':'✕',exp:`合起來是 3.${n1}。`};
+      if(kind==='fill') return {q:`${n1} 個「0.1」和 4 個「1」合起來是（　　）；再加 0.5 是（　　）。`,a:`4.${n1}；${(4+n1/10+0.5).toFixed(1)}`};
+      if(kind==='calc') return {q:`${x.toFixed(1)} ＋ ${y.toFixed(1)} ＝（　　）`,a:ans};
+      if(kind==='word') return {q:`甲彩帶長 ${x.toFixed(1)} 公尺，乙彩帶長 ${y.toFixed(1)} 公尺，兩條彩帶接在一起共長幾公尺？`,a:`${x.toFixed(1)} + ${y.toFixed(1)} = ${ans}（公尺）`};
+      if(kind==='match') return {q:'小數換算配對',pairs:[['5 個 0.1','0.5'],['10 個 0.1','1'],['2 個 1 和 4 個 0.1','2.4'],['1.8 － 0.6','1.2']]};
+      return {q:`「${x.toFixed(1)} ＋ ${y.toFixed(1)}」的結果是多少？`,opts:uniqueOpts(ans,[(+ans+1).toFixed(1),(+ans-0.5).toFixed(1),(x*10+y).toFixed(1)]),a:ans,exp:`小數點對齊相加得 ${ans}。`};
+    }
+    if(uIdx===2){ // 單元三：時間、重量與容量計算
+      const ml=pick([200,400,600,800]), L=rnd(2,5), kg=rnd(2,6), g0=rnd(150,850), hr=rnd(2,9);
+      if(kind==='tf') return {q:`如圖，量杯裡有 ${ml} 毫公升的水，再加 ${isTrue?1000-ml:500} 毫公升就剛好是 1 公升。`,svg:svgBeaker(ml),a:isTrue?'○':'✕',exp:`1 公升＝1000 毫公升，1000－${ml}＝${1000-ml}。`};
+      if(kind==='fill') return v(2)===0
+        ? {q:`看量杯刻度：杯子裡的水量是（　　）毫公升；若再倒入 ${1000-ml} 毫公升就是 1 公升。`,svg:svgBeaker(ml),a:String(ml)}
+        : {q:`${kg} 公斤 ${g0} 公克 ＝（　　　）公克；下午 ${hr} 時用 24 時制表示是（　　）時。`,a:`${kg*1000+g0}；${hr+12}`};
+      if(kind==='calc') return {q:`${L} 公升 ${ml} 毫公升 ＝（　　　）毫公升`,svg:svgBeaker(ml),a:String(L*1000+ml)};
+      if(kind==='word'){const h1=rnd(8,10),m1=rnd(20,45),dur=rnd(40,75),tot=h1*60+m1+dur;return {q:`電影上午 ${h1} 時 ${m1} 分開演，片長 ${dur} 分鐘，請問幾時幾分結束？`,svg:svgClock(h1,30),a:`${Math.floor(tot/60)} 時 ${tot%60} 分`};}
+      if(kind==='match') return {q:'時間重量容量換算配對',pairs:[['1 公升','1000 毫公升'],['1 公斤','1000 公克'],['下午 3 時','15 時'],['1 小時 20 分','80 分鐘']]};
+      return {q:`下午 ${hr} 時 30 分，用「24 時制」表示是幾時幾分？`,svg:svgClock(hr,30),opts:uniqueOpts(`${hr+12} 時 30 分`,[`${hr} 時 30 分`,`${hr+10} 時 30 分`,`24 時 ${hr} 分`]),a:`${hr+12} 時 30 分`,exp:`下午時間加 12 小時。`};
+    }
+    // uIdx===3 單元四：面積與乘除兩步驟應用
+    const w0=rnd(6,12), h0=rnd(3,7), box=rnd(3,6), per=rnd(6,10), price=rnd(8,12);
+    if(kind==='tf') return {q:`如圖，長 ${w0} 公分、寬 ${h0} 公分的長方形，面積是 ${isTrue?w0*h0:(w0+h0)*2} 平方公分。`,svg:svgRectDim(w0,h0,'公分'),a:isTrue?'○':'✕',exp:`長方形面積＝長×寬＝${w0*h0} 平方公分。`};
+    if(kind==='fill') return {q:`如圖，長 ${w0} 公分、寬 ${h0} 公分的長方形，面積是（　　）平方公分。`,svg:svgRectDim(w0,h0,'公分'),a:String(w0*h0)};
+    if(kind==='calc') return {q:`${per} × ${box} × ${price} ＝（　　　）`,a:String(per*box*price)};
+    if(kind==='word') return {q:`一盒餅乾有 ${per} 片，買了 ${box} 盒，每片賣 ${price} 元，共要付多少元？`,a:`${per} × ${box} × ${price} = ${per*box*price}（元）`};
+    if(kind==='match') return {q:'圖形面積配對',pairs:[['長 6cm 寬 4cm 長方形','24 平方公分'],['邊長 5cm 正方形','25 平方公分'],['長 8cm 寬 5cm 長方形','40 平方公分'],['邊長 6cm 正方形','36 平方公分']]};
+    return {q:`如圖，長 ${w0} 公分、寬 ${h0} 公分的長方形，面積是多少平方公分？`,svg:svgRectDim(w0,h0,'公分'),opts:uniqueOpts(`${w0*h0} 平方公分`,[`${(w0+h0)*2} 平方公分`,`${w0+h0} 平方公分`,`${w0*h0+10} 平方公分`]),a:`${w0*h0} 平方公分`,exp:`面積＝長×寬＝${w0*h0} 平方公分。`};
+  }
+
+  // --- 4年級 ---
+  if(g===4){
+    if(sem==='上'){
+      if(uIdx===0){ // 單元一：一億以內的數與概數
+        const n=rnd(24,89)*1000+rnd(120,890), ans=Math.round(n/1000)*1000;
+        if(kind==='tf') return {q:`10 個「一千萬」合起來是${isTrue?'一億':'一千萬'}。`,a:isTrue?'○':'✕',exp:`10 個一千萬是一億。`};
+        if(kind==='fill') return {q:`將 ${n} 用「四捨五入法」取概數到千位是（　　　）。`,a:String(ans)};
+        if(kind==='calc') return {q:`${rnd(2,6)}萬 ＋ ${rnd(1,3)}萬5000 ＝（　　　）`,a:'依題意相加'};
+        if(kind==='word'){const p1=rnd(32,68)*1000,p2=rnd(15,29)*1000;return {q:`甲城市人口有 ${p1} 人，乙城市有 ${p2} 人，兩城市共約幾萬人（先四捨五入到萬位再相加）？`,a:`約 ${Math.round(p1/10000)+Math.round(p2/10000)} 萬人`};}
+        if(kind==='match') return {q:'大數位值與概數配對',pairs:[['10 個一千萬','1 億'],['10 個十萬','100 萬'],['38200 四捨五入到千位','38000'],['38600 四捨五入到千位','39000']]};
+        return {q:`將 ${n} 用「四捨五入法」取概數到千位是多少？`,opts:uniqueOpts(ans,[ans+1000,ans-1000,Math.floor(n/100)*100]),a:String(ans),exp:`看百位數字四捨五入得 ${ans}。`};
+      }
+      if(uIdx===1){ // 單元二：多位數乘除法
+        const a=rnd(120,320), b=rnd(12,26), d=rnd(12,24), q0=rnd(11,28);
+        if(kind==='tf') return {q:`算式「${d*q0} ÷ ${d}」的商是 ${isTrue?q0:q0+10}。`,a:isTrue?'○':'✕',exp:`${d*q0}÷${d}＝${q0}。`};
+        if(kind==='fill') return {q:`完成計算：${a} × ${b} ＝（　　　）；${d*q0} ÷ ${d} ＝（　　）。`,a:`${a*b}；${q0}`};
+        if(kind==='calc') return v(2)===0?{q:`${a} × ${b} ＝（　　　）`,a:String(a*b)}:{q:`${d*q0} ÷ ${d} ＝（　　）`,a:String(q0)};
+        if(kind==='word') return {q:`果農採收了 ${d*q0} 顆水蜜桃，每 ${d} 顆裝成一盒，全部可以裝滿幾盒？`,a:`${d*q0} ÷ ${d} = ${q0}（盒）`};
+        if(kind==='match') return {q:'乘除算式配對',pairs:[['125 × 8','1000'],['360 ÷ 12','30'],['240 × 20','4800'],['450 ÷ 15','30']]};
+        return {q:`果農採收 ${d*q0} 顆蘋果，每 ${d} 顆裝一箱，共可裝幾箱？`,opts:uniqueOpts(`${q0} 箱`,[`${q0+2} 箱`,`${q0-2} 箱`,`${d} 箱`]),a:`${q0} 箱`,exp:`${d*q0}÷${d}＝${q0} 箱。`};
+      }
+      if(uIdx===2){ // 單元三：角度與三角形
+        const a1=rnd(40,70), a2=rnd(35,65), a3=180-a1-a2, deg=rnd(40,135);
+        if(kind==='tf') return {q:`一個三角形的三個內角分別是 ${a1}°、${a2}° 和 ${isTrue?a3:a3+10}°。`,a:isTrue?'○':'✕',exp:`三角形內角和必為 180°。`};
+        if(kind==='fill') return v(2)===0
+          ? {q:`如圖，一個平角 180° 減去 ${deg}° 後，剩下的角是（　　）°。`,svg:svgAngleArc(deg),a:String(180-deg)}
+          : {q:`三角形的兩個內角分別為 ${a1}° 和 ${a2}°，第三個內角是（　　）°。`,a:String(a3)};
+        if(kind==='calc') return {q:`看圖計算角度：180° － ${deg}° ＝（　　）°`,svg:svgAngleArc(deg),a:String(180-deg)};
+        if(kind==='word') return {q:`一個等腰三角形的頂角是 ${a1*2<=100?a1*2:80}°，請問它的每一個底角是多少度？`,a:`(180° - ${a1*2<=100?a1*2:80}°) ÷ 2 = ${(180-(a1*2<=100?a1*2:80))/2}°`};
+        if(kind==='match') return {q:'角度與三角形配對',pairs:[['直角','90°'],['平角','180°'],['周角','360°'],['正三角形每個內角','60°']]};
+        return v(2)===0
+          ? {q:`三邊等長、三個角都是 60° 的三角形稱為什麼？`,opts:uniqueOpts('正三角形',['直角三角形','鈍角三角形','不等邊三角形']),a:'正三角形',exp:`三邊等長即正三角形。`}
+          : {q:`如圖，平角 180° 減去 ${deg}° 的角後，剩下的角是幾度？`,svg:svgAngleArc(deg),opts:uniqueOpts(`${180-deg}°`,[`${deg}°`,`${90-deg}°`,`${180+deg}°`]),a:`${180-deg}°`,exp:`180°－${deg}°＝${180-deg}°。`};
+      }
+      // uIdx===3 單元四：假分數、帶分數與公里計算
+      const w=rnd(2,5), d=rnd(3,7), n=rnd(1,d-1), imp=w*d+n, km=rnd(2,5), m0=rnd(150,750);
+      if(kind==='tf') return {q:`分子大於或等於分母的分數（如 ${imp}/${d}）稱為${isTrue?'假分數':'真分數'}。`,svg:svgFraction(n,d),a:isTrue?'○':'✕',exp:`分子≧分母為假分數。`};
+      if(kind==='fill') return {q:`將假分數「${imp}/${d}」化成帶分數是（　　　　）。`,svg:svgFraction(n,d),a:`${w} 又 ${n}/${d}`};
+      if(kind==='calc') return {q:`把帶分數「${w} 又 ${n}/${d}」化成假分數 ＝（　　）`,a:`${imp}/${d}`};
+      if(kind==='word') return {q:`登山步道第一段長 ${km} 公里 ${m0} 公尺，第二段長 1 公里 200 公尺，兩段共長幾公尺？`,a:`${km*1000+m0} + 1200 = ${km*1000+m0+1200}（公尺）`};
+      if(kind==='match') return {q:'假分數與帶分數互換配對',pairs:[['7/3','2 又 1/3'],['11/4','2 又 3/4'],['9/5','1 又 4/5'],['13/6','2 又 1/6']]};
+      return {q:`把帶分數「${w} 又 ${n}/${d}」化成假分數是多少？`,svg:svgFraction(n,d),opts:uniqueOpts(`${imp}/${d}`,[`${w+n}/${d}`,`${w*n}/${d}`,`${imp-1}/${d}`]),a:`${imp}/${d}`,exp:`${w}×${d}＋${n}＝${imp}，得 ${imp}/${d}。`};
+    }
+    // 4年級下
+    if(uIdx===0){ // 單元一：整數四則混合運算
+      const a=rnd(12,35), b=rnd(3,8), c=rnd(15,50), ans=c+a*b;
+      if(kind==='tf') return {q:isTrue?`計算「${c} ＋ ${a} × ${b}」時，應該先算乘法再算加法。`:`計算「${c} ＋ ${a} × ${b}」時，要由左到右先算 ${c} 加 ${a}。`,a:isTrue?'○':'✕',exp:`四則混合運算要先乘除後加減。`};
+      if(kind==='fill') return {q:`先乘除後加減：${c} ＋ ${a} × ${b} ＝（　　　）。`,a:String(ans)};
+      if(kind==='calc') return v(2)===0?{q:`${c} ＋ ${a} × ${b} ＝（　　　）`,a:String(ans)}:{q:`(${c} ＋ ${a}) × ${b} ＝（　　　）`,a:String((c+a)*b)};
+      if(kind==='word'){const p1=rnd(25,55),p2=rnd(15,35),n0=rnd(3,6);return {q:`筆記本每本 ${p1} 元、原子筆每枝 ${p2} 元，買 ${n0} 本筆記本和 1 枝筆，付 500 元可找回幾元？`,a:`500 - (${p1} × ${n0} + ${p2}) = ${500-(p1*n0+p2)}（元）`};}
+      if(kind==='match') return {q:'四則運算結果配對',pairs:[['10 ＋ 5 × 4','30'],['(10 ＋ 5) × 4','60'],['40 － 12 ÷ 3','36'],['(40 － 12) ÷ 4','7']]};
+      return {q:`算式「${c} ＋ ${a} × ${b}」的正確答案為何？`,opts:uniqueOpts(ans,[(c+a)*b,ans+10,ans-5]),a:String(ans),exp:`先算 ${a}×${b}＝${a*b}，再加 ${c} 得 ${ans}。`};
+    }
+    if(uIdx===1){ // 單元二：二位小數與小數乘法
+      const w=rnd(2,8), h=rnd(1,9), u=rnd(1,9), x=(rnd(12,48)/10), n0=rnd(3,8);
+      if(kind==='tf') return {q:`「${w} 個 1、${h} 個 0.1 和 ${u} 個 0.01」合起來是 ${isTrue?`${w}.${h}${u}`:`${w}.${u}${h}`}。`,a:isTrue?'○':'✕',exp:`合起來是 ${w}.${h}${u}。`};
+      if(kind==='fill') return {q:`「${w} 個 1、${h} 個 0.1 和 ${u} 個 0.01」合起來記作（　　　）。`,a:`${w}.${h}${u}`};
+      if(kind==='calc') return {q:`${x.toFixed(1)} × ${n0} ＝（　　　）`,a:(x*n0).toFixed(1)};
+      if(kind==='word') return {q:`一瓶柳橙汁有 ${x.toFixed(1)} 公升，媽媽買了 ${n0} 瓶，共有幾公升？`,svg:svgBeaker(600),a:`${x.toFixed(1)} × ${n0} = ${(x*n0).toFixed(1)}（公升）`};
+      if(kind==='match') return {q:'二位小數配對',pairs:[['3 個 0.01','0.03'],['3 個 0.1','0.3'],['0.25 × 4','1'],['1.2 × 3','3.6']]};
+      return {q:`「${w} 個 1、${h} 個 0.1 和 ${u} 個 0.01」合起來是多少？`,opts:uniqueOpts(`${w}.${h}${u}`,[`${w}.0${h}${u}`,`${w}${h}.${u}`,`0.${w}${h}${u}`]),a:`${w}.${h}${u}`,exp:`個位 ${w}、十分位 ${h}、百分位 ${u}。`};
+    }
+    if(uIdx===2){ // 單元三：周長與面積公式
+      const w1=rnd(4,8), h1=rnd(6,10), w2=rnd(4,7), h2=rnd(3,5), m2=rnd(3,9), s=rnd(6,14);
+      if(kind==='tf') return {q:`${m2} 平方公尺等於 ${isTrue?m2*10000:m2*100} 平方公分。`,a:isTrue?'○':'✕',exp:`1 平方公尺＝10000 平方公分。`};
+      if(kind==='fill') return v(2)===0
+        ? {q:`看圖計算這個 L 形複合圖形的面積是（　　）平方公分。`,svg:svgLShape(w1,h1,w2,h2),a:String(w1*h1+w2*h2)}
+        : {q:`${m2} 平方公尺 ＝（　　　　）平方公分。`,a:String(m2*10000)};
+      if(kind==='calc') return {q:`看圖計算複合圖形面積：${w1}×${h1} ＋ ${w2}×${h2} ＝（　　）平方公分`,svg:svgLShape(w1,h1,w2,h2),a:String(w1*h1+w2*h2)};
+      if(kind==='word'){const w0=rnd(12,22),h0=rnd(8,14);return {q:`如圖，長方形木板長 ${w0} 公分、寬 ${h0} 公分，它的面積與周長各是多少？`,svg:svgRectDim(w0,h0,'公分'),a:`面積 ${w0*h0} 平方公分；周長 ${(w0+h0)*2} 公分`};}
+      if(kind==='match') return {q:'面積與周長配對',pairs:[['1 平方公尺','10000 平方公分'],['邊長 8cm 正方形面積','64 平方公分'],['邊長 8cm 正方形周長','32 公分'],['長 10m 寬 5m 面積','50 平方公尺']]};
+      return {q:`如圖，邊長 ${s} 公分的正方形，面積是多少平方公分？`,svg:svgRectDim(s,s,'公分'),opts:uniqueOpts(s*s,[s*4,s*2,s*s+10]),a:String(s*s),exp:`正方形面積＝邊長×邊長＝${s*s}。`};
+    }
+    // uIdx===3 單元四：統計圖表與規律
+    const v1=rnd(8,16), v2=rnd(14,24), v3=rnd(6,15), v4=rnd(10,20), vs=[v1,v2,v3,v4], mx=Math.max(...vs);
+    if(kind==='tf') return {q:`看長條圖，甲、乙、丙、丁四組中，人數最多的是 ${isTrue?['甲','乙','丙','丁'][vs.indexOf(mx)]:'丙'} 組。`,svg:svgBarChart(['甲','乙','丙','丁'],vs),a:isTrue?'○':'✕',exp:`最高長條為 ${mx} 人。`};
+    if(kind==='fill') return {q:`看長條統計圖回答：數量最多的是（　）組，四組合起來共有（　　）人。`,svg:svgBarChart(['甲','乙','丙','丁'],vs),a:`${['甲','乙','丙','丁'][vs.indexOf(mx)]}；${v1+v2+v3+v4}`};
+    if(kind==='calc') return {q:`看長條圖計算四組總人數：${v1} ＋ ${v2} ＋ ${v3} ＋ ${v4} ＝（　　）`,svg:svgBarChart(['甲','乙','丙','丁'],vs),a:String(v1+v2+v3+v4)};
+    if(kind==='word') return {q:`看長條圖回答：人數最多的那一組（${mx} 人）比人數最少的那一組（${Math.min(...vs)} 人）多幾人？`,svg:svgBarChart(['甲','乙','丙','丁'],vs),a:`${mx} - ${Math.min(...vs)} = ${mx-Math.min(...vs)}（人）`};
+    if(kind==='match') return {q:'統計圖表功能配對',pairs:[['長條圖','比較不同項目的數量多少'],['折線圖','觀察數量隨時間的變化趨勢'],['橫軸與縱軸','標示項目名稱與數量刻度'],['省略符號 ≈','濃縮沒有資料的數值區間']]};
+    return {q:`看長條統計圖，甲（${v1}）、乙（${v2}）、丙（${v3}）、丁（${v4}）四組合起來共有幾人？`,svg:svgBarChart(['甲','乙','丙','丁'],vs),opts:uniqueOpts(`${v1+v2+v3+v4} 人`,[`${v1+v2+v3+v4+5} 人`,`${mx} 人`,`${v1+v2} 人`]),a:`${v1+v2+v3+v4} 人`,exp:`四組相加共 ${v1+v2+v3+v4} 人。`};
+  }
+
+  // --- 5年級 ---
+  if(g===5){
+    if(sem==='上'){
+      if(uIdx===0){ // 單元一：因數、倍數與公因公倍
+        const a=rnd(2,5)*6, b=rnd(2,5)*8, n0=pick([12,18,24,30]);
+        if(kind==='tf') return {q:`${n0} 的最小因數是 1，最大因數是 ${isTrue?n0:n0/2}。`,a:isTrue?'○':'✕',exp:`最小因數是 1，最大因數是自己。`};
+        if(kind==='fill') return {q:`${a} 和 ${b} 的最大公因數是（　　），最小公倍數是（　　）。`,a:`${gcd(a,b)}；${lcm(a,b)}`};
+        if(kind==='calc') return {q:`求最大公因數與最小公倍數：(${a}, ${b}) ＝（　　）；[${a}, ${b}] ＝（　　）`,a:`${gcd(a,b)}；${lcm(a,b)}`};
+        if(kind==='word') return {q:`有 ${a} 顆糖果和 ${b} 塊餅乾，要平分裝袋且每袋糖果、餅乾數量都一樣多又沒有剩下，最多可分裝成幾袋？`,a:`最大公因數 (${a}, ${b}) = ${gcd(a,b)}（袋）`};
+        if(kind==='match') return {q:'因數與倍數配對',pairs:[['12 和 18 的最大公因數','6'],['4 和 6 的最小公倍數','12'],['同時是 2 和 5 的倍數','個位數是 0'],['3 的倍數判別法','各位數字和為 3 的倍數']]};
+        return {q:`下列哪一個數「同時是 2 和 3 的倍數」？`,opts:uniqueOpts(24,[25,27,32]),a:'24',exp:`偶數且各位數字和為 3 的倍數。`};
+      }
+      if(uIdx===1){ // 單元二：擴分、約分與異分母分數加減
+        const d1=rnd(2,5), d2=rnd(3,7);
+        const realD2 = d1===d2 ? d2+1 : d2;
+        const L=lcm(d1,realD2), n1=rnd(1,d1-1), n2=rnd(1,realD2-1), num=n1*(L/d1)+n2*(L/realD2), g0=gcd(num,L);
+        if(kind==='tf'){const k=rnd(2,5);return {q:`把分數的分子和分母同乘以 ${k}，分數的值${isTrue?'不會改變（等值分數）':'會變大 '+k+' 倍'}。`,svg:svgFraction(n1,d1),a:isTrue?'○':'✕',exp:`擴分後為等值分數。`};}
+        if(kind==='fill') return {q:`完成通分與加法：${n1}/${d1} ＋ ${n2}/${realD2} ＝（　　　）。`,svg:svgFraction(n1,d1),a:`${num/g0}/${L/g0}`};
+        if(kind==='calc') return {q:`${n1}/${d1} ＋ ${n2}/${realD2} ＝（　　　）`,a:`${num/g0}/${L/g0}`};
+        if(kind==='word') return {q:`紅絲帶長 ${n1}/${d1} 公尺，藍絲帶長 ${n2}/${realD2} 公尺，兩條絲帶合起來共長幾公尺？`,a:`${n1}/${d1} + ${n2}/${realD2} = ${num/g0}/${L/g0}（公尺）`};
+        if(kind==='match') return {q:'等值分數與加減配對',pairs:[['1/2 ＋ 1/3','5/6'],['1/2 － 1/4','1/4'],['3/4 擴分後','9/12'],['12/18 約成最簡分數','2/3']]};
+        return {q:`計算異分母分數加法「${n1}/${d1} ＋ ${n2}/${realD2}」的結果為何？`,opts:uniqueOpts(`${num/g0}/${L/g0}`,[`${n1+n2}/${d1+realD2}`,`${n1*n2}/${L}`,`1/${L}`]),a:`${num/g0}/${L/g0}`,exp:`通分後相加得 ${num/g0}/${L/g0}。`};
+      }
+      if(uIdx===2){ // 單元三：多邊形與面積公式、線對稱
+        const b0=rnd(8,16), h0=rnd(4,12)*2, up=rnd(4,10), dn=rnd(8,16), n=rnd(3,8);
+        if(kind==='tf') return {q:`如圖，底 ${b0} 公分、高 ${h0} 公分的三角形，面積是 ${isTrue?(b0*h0)/2:b0*h0} 平方公分。`,svg:svgTriangle(b0,h0),a:isTrue?'○':'✕',exp:`三角形面積＝底×高÷2＝${(b0*h0)/2}。`};
+        if(kind==='fill') return v(2)===0
+          ? {q:`看圖計算：上底 ${up}、下底 ${dn}、高 ${h0/2} 公分的梯形面積是（　　）平方公分。`,svg:svgTrapezoid(up,dn,h0/2),a:String((up+dn)*(h0/2)/2)}
+          : {q:`看圖計算：底 ${b0} 公分、高 ${h0/2} 公分的平行四邊形面積是（　　）平方公分。`,svg:svgParallelogram(b0,h0/2),a:String(b0*(h0/2))};
+        if(kind==='calc') return {q:`看圖計算梯形面積：（${up} ＋ ${dn}）× ${h0/2} ÷ 2 ＝（　　）`,svg:svgTrapezoid(up,dn,h0/2),a:String((up+dn)*(h0/2)/2)};
+        if(kind==='word') return {q:`如圖，一塊底 ${b0} 公尺、高 ${h0/2} 公尺的平行四邊形草地，面積是多少平方公尺？`,svg:svgParallelogram(b0,h0/2),a:`${b0} × ${h0/2} = ${b0*(h0/2)}（平方公尺）`};
+        if(kind==='match') return {q:'面積公式與對稱軸配對',pairs:[['平行四邊形面積','底 × 高'],['三角形面積','底 × 高 ÷ 2'],['梯形面積','(上底＋下底) × 高 ÷ 2'],['正五邊形的對稱軸','5 條']]};
+        return v(2)===0
+          ? {q:`看圖計算，底 ${b0} 公分、高 ${h0} 公分的三角形面積是多少平方公分？`,svg:svgTriangle(b0,h0),opts:uniqueOpts((b0*h0)/2,[b0*h0,b0+h0,(b0*h0)/2+10]),a:String((b0*h0)/2),exp:`底×高÷2＝${(b0*h0)/2}。`}
+          : {q:`正 ${n} 邊形一共有幾條對稱軸？`,opts:uniqueOpts(`${n} 條`,[`${n*2} 條`,'1 條','2 條']),a:`${n} 條`,exp:`正 N 邊形有 N 條對稱軸。`};
+      }
+      // uIdx===3 單元四：整數與小數乘除、折線圖
+      const vs=[rnd(18,21),rnd(23,26),rnd(28,32),rnd(22,25)], diffT=Math.max(...vs)-Math.min(...vs), a0=(rnd(12,38)/10), b0=rnd(3,9);
+      if(kind==='tf') return {q:`看氣溫折線圖，最高溫是 15 時的 ${vs[2]} 度，最低溫是 9 時的 ${vs[0]} 度，相差 ${isTrue?diffT:diffT+3} 度。`,svg:svgLineGraph(['9時','12時','15時','18時'],vs),a:isTrue?'○':'✕',exp:`${vs[2]}－${vs[0]}＝${diffT} 度。`};
+      if(kind==='fill') return {q:`看氣溫折線圖回答：最高溫與最低溫相差（　　）度。`,svg:svgLineGraph(['9時','12時','15時','18時'],vs),a:String(diffT)};
+      if(kind==='calc') return {q:`${a0.toFixed(1)} × ${b0} ＝（　　）`,a:(a0*b0).toFixed(1)};
+      if(kind==='word') return {q:`看折線圖回答：從上午 9 時（${vs[0]}°C）到下午 15 時（${vs[2]}°C），氣溫上升了幾度？`,svg:svgLineGraph(['9時','12時','15時','18時'],vs),a:`${vs[2]} - ${vs[0]} = ${vs[2]-vs[0]}（度）`};
+      if(kind==='match') return {q:'小數與分配律計算配對',pairs:[['25 × 38 ＋ 25 × 62','2500'],['1.25 × 8','10'],['3.6 ＋ 2.45','6.05'],['5 － 1.38','3.62']]};
+      return {q:`看氣溫折線圖，9 時到 18 時之間最高溫與最低溫相差幾度？`,svg:svgLineGraph(['9時','12時','15時','18時'],vs),opts:uniqueOpts(`${diffT} 度`,[`${diffT+2} 度`,`${diffT-2} 度`,`${vs[2]} 度`]),a:`${diffT} 度`,exp:`最高 ${Math.max(...vs)} 度減最低 ${Math.min(...vs)} 度＝${diffT} 度。`};
+    }
+    // 5年級下
+    if(uIdx===0){ // 單元一：分數乘法與小數乘法
+      const a0=(rnd(12,35)/10), b0=rnd(3,8);
+      if(kind==='tf') return {q:`「0.85 × 0.9」的乘積會比被乘數 0.85 還要${isTrue?'小':'大'}。`,a:isTrue?'○':'✕',exp:`乘以小於 1 的數，積比被乘數小。`};
+      if(kind==='fill') return {q:`小數乘法：${a0.toFixed(1)} × ${b0} ＝（　　　）；0.5 × 0.4 ＝（　　）。`,a:`${(a0*b0).toFixed(1)}；0.2`};
+      if(kind==='calc') return {q:`${a0.toFixed(1)} × ${b0} ＝（　　　）`,a:(a0*b0).toFixed(1)};
+      if(kind==='word') return {q:`每公尺鐵絲重 ${a0.toFixed(1)} 公斤，買 ${b0} 公尺鐵絲共重幾公斤？`,a:`${a0.toFixed(1)} × ${b0} = ${(a0*b0).toFixed(1)}（公斤）`};
+      if(kind==='match') return {q:'分數與小數乘法配對',pairs:[['2/3 × 3/4','1/2'],['0.25 × 0.4','0.1'],['1.5 × 0.6','0.9'],['3/5 × 5/6','1/2']]};
+      return {q:`「0.85 × 0.9」的積與被乘數 0.85 比較，結果如何？`,opts:uniqueOpts('比 0.85 小',['比 0.85 大','等於 0.85','無法比較']),a:'比 0.85 小',exp:`乘數 0.9＜1，積比被乘數小。`};
+    }
+    if(uIdx===1){ // 單元二：小數的除法
+      const a=rnd(12,48), b=pick([2,4,5,8]);
+      if(kind==='tf') return {q:`整數除以整數「${a} ÷ ${b}」的商是 ${isTrue?a/b:(a/b+1)}。`,a:isTrue?'○':'✕',exp:`${a}÷${b}＝${a/b}。`};
+      if(kind==='fill') return {q:`小數除法計算：${a} ÷ ${b} ＝（　　　）。`,a:String(a/b)};
+      if(kind==='calc') return {q:`小數除法：${a} ÷ ${b} ＝（　　　）`,a:String(a/b)};
+      if(kind==='word') return {q:`把長 ${a} 公尺的繩子平分成 ${b} 段，每一段長多少公尺（以小數表示）？`,a:`${a} ÷ ${b} = ${a/b}（公尺）`};
+      if(kind==='match') return {q:'小數除法配對',pairs:[['3 ÷ 4','0.75'],['7 ÷ 5','1.4'],['9 ÷ 2','4.5'],['1 ÷ 8','0.125']]};
+      return {q:`計算「${a} ÷ ${b}」並以小數表示，答案是多少？`,opts:uniqueOpts(String(a/b),[String(a/b+0.5),String(a/b-0.25),String(a*b)]),a:String(a/b),exp:`${a}÷${b}＝${a/b}。`};
+    }
+    if(uIdx===2){ // 單元三：體積、容積與表面積
+      const l=rnd(6,12), w=rnd(4,8), h=rnd(3,7), e=rnd(3,6), L=rnd(15,45)/10;
+      if(kind==='tf') return {q:`如圖，邊長 ${e} 公分的正方體，體積是 ${isTrue?e*e*e:e*e*6} 立方公分。`,svg:svgBox3D(e,e,e),a:isTrue?'○':'✕',exp:`正方體體積＝${e}×${e}×${e}＝${e*e*e}。`};
+      if(kind==='fill') return v(2)===0
+        ? {q:`${L.toFixed(1)} 公升 ＝（　　　）毫公升 ＝（　　　）立方公分。`,svg:svgBeaker(600),a:`${L*1000}；${L*1000}`}
+        : {q:`邊長 ${e} 公尺的正方體，體積是（　　）立方公尺，表面積是（　　）平方公尺。`,svg:svgBox3D(e,e,e),a:`${e*e*e}；${e*e*6}`};
+      if(kind==='calc') return {q:`看圖計算這個長方體的體積是多少立方公分？`,svg:svgBox3D(l,w,h),a:String(l*w*h)};
+      if(kind==='word') return {q:`如圖，水箱內部尺寸長 ${l} 公分、寬 ${w} 公分、高 ${h} 公分，最多可裝幾毫公升的水？`,svg:svgBox3D(l,w,h),a:`${l} × ${w} × ${h} = ${l*w*h}（毫公升）`};
+      if(kind==='match') return {q:'體積與容積單位配對',pairs:[['1 立方公尺','1000000 立方公分'],['1 公升','1000 立方公分'],['1 毫公升','1 立方公分'],['正方體表面積','邊長×邊長×6']]};
+      return v(2)===0
+        ? {q:`如圖，長 ${l}cm、寬 ${w}cm、高 ${h}cm 的長方體體積是多少？`,svg:svgBox3D(l,w,h),opts:uniqueOpts(`${l*w*h} 立方公分`,[`${(l+w+h)*4} 立方公分`,`${l*w*2} 立方公分`,`${l*w*h+20} 立方公分`]),a:`${l*w*h} 立方公分`,exp:`長×寬×高＝${l*w*h} 立方公分。`}
+        : {q:`邊長 ${e} 公分的正方體，表面積是多少平方公分？`,svg:svgBox3D(e,e,e),opts:uniqueOpts(e*e*6,[e*e*e,e*e*4,e*6]),a:String(e*e*6),exp:`邊長×邊長×6＝${e*e*6}。`};
+    }
+    // uIdx===3 單元四：比率、百分率與大單位
+    const pct=pick([20,25,40,75,80]), t0=rnd(2,9), orig=rnd(4,12)*100, off=pick([75,80,85,90]);
+    if(kind==='tf') return {q:`將百分率「${pct}%」化成小數是 ${isTrue?(pct/100).toFixed(2):(pct/10).toFixed(1)}。`,svg:svgPieChart(pct,'甲項',100-pct,'乙項'),a:isTrue?'○':'✕',exp:`${pct}% ＝ ${(pct/100).toFixed(2)}。`};
+    if(kind==='fill') return v(2)===0
+      ? {q:`${t0} 公噸 ＝（　　　）公斤；${t0} 公頃 ＝（　　　）公畝。`,a:`${t0*1000}；${t0*100}`}
+      : {q:`看圓形圖，將百分率「${pct}%」化為最簡分數是（　　），化為小數是（　　）。`,svg:svgPieChart(pct,'項目A',100-pct,'其他'),a:`${pct/gcd(pct,100)}/${100/gcd(pct,100)}；${(pct/100).toFixed(2).replace(/0$/,'')}`};
+    if(kind==='calc') return {q:`原價 ${orig} 元打 ${off%10===0?off/10:off} 折（${off}%）後的售價 ＝（　　　）元`,a:String(orig*off/100)};
+    if(kind==='word') return {q:`外套原價 ${orig} 元，週年慶打 ${off%10===0?off/10:off} 折（${off}%），現在買需付幾元？`,a:`${orig} × ${off}% = ${orig*off/100}（元）`};
+    if(kind==='match') return {q:'百分率與大單位換算配對',pairs:[['0.25','25%'],['3/4','75%'],['1 公噸','1000 公斤'],['1 公頃','100 公畝']]};
+    return {q:`小數 ${(pct/100).toFixed(2)} 化成百分率是多少？`,svg:svgPieChart(pct,'A',100-pct,'B'),opts:uniqueOpts(`${pct}%`,[`${pct/10}%`,`${pct*10}%`,`0.${pct}%`]),a:`${pct}%`,exp:`小數乘 100 加上 %。`};
+  }
+
+  // --- 6年級 ---
+  if(sem==='上'){
+    if(uIdx===0){ // 單元一：最大公因數與最小公倍數進階、質數
+      const p=pick([2,3,5,7,11,13,17,19]), n=pick([12,18,20,28,30,45]);
+      const pf=[]; let tmp=n; for(let k=2;k<=tmp;k++){while(tmp%k===0){pf.push(k);tmp/=k;}}
+      if(kind==='tf') return {q:isTrue?`所有的質數中，唯一的偶數是 2，且 1 不是質數也不是合數。`:`1 是最小的質數，所有的奇數都是質數。`,a:isTrue?'○':'✕',exp:`最小的質數是 2，1 不是質數。`};
+      if(kind==='fill') return {q:`將 ${n} 做質因數分解：${n} ＝（　　　　　）。`,a:pf.join(' × ')};
+      if(kind==='calc') return {q:`將 ${n} 質因數分解，並求出 ${n} 與 24 的最大公因數 ＝（　　）`,a:`${pf.join('×')}；最大公因數 ${gcd(n,24)}`};
+      if(kind==='word'){const a=rnd(2,4)*12,b=rnd(2,4)*18;return {q:`長 ${a} 公分、寬 ${b} 公分的長方形紙張，要剪成大小相同且邊長為最大整數公分的正方形，正方形邊長最大是幾公分？`,svg:svgRectDim(a,b,'公分'),a:`(${a}, ${b}) = ${gcd(a,b)}（公分）`};}
+      if(kind==='match') return {q:'質數與質因數分解配對',pairs:[['最小的質數','2'],['最小的合數','4'],['12 的質因數分解','2 × 2 × 3'],['18 的質因數分解','2 × 3 × 3']]};
+      return {q:`下列哪一個數是「質數」？`,opts:uniqueOpts(p,[1,15,21,27]),a:String(p),exp:`${p} 只有 1 和自己兩個因數。`};
+    }
+    if(uIdx===1){ // 單元二：分數除法與小數除法
+      const a=rnd(2,5), b=rnd(3,7), d1=rnd(2,5), d2=rnd(3,7);
+      if(kind==='tf') return {q:`計算分數除法「÷ ${d1}/${d2}」時，可以改寫成「× ${isTrue?`${d2}/${d1}`:`${d1}/${d2}`}」來計算。`,a:isTrue?'○':'✕',exp:`除以分數等於乘以它的倒數。`};
+      if(kind==='fill') return {q:`分數除法計算：${a} ÷ ${b}/${a+b} ＝（　　　）。`,a:`${a*(a+b)}/${b}`};
+      if(kind==='calc') return {q:`分數除法：${a} ÷ ${b}/${a+b} ＝（　　　）`,a:`${a*(a+b)}/${b}`};
+      if(kind==='word') return {q:`把 ${a} 公升的果汁，每 1/${b} 公升裝成一杯，全部可以裝滿幾杯？`,svg:svgBeaker(800),a:`${a} ÷ 1/${b} = ${a*b}（杯）`};
+      if(kind==='match') return {q:'分數與小數除法配對',pairs:[['2 ÷ 1/3','6'],['3/4 ÷ 3/8','2'],['1.2 ÷ 0.4','3'],['0.48 ÷ 0.6','0.8']]};
+      return {q:`計算「${a} ÷ 1/${b}」的答案是多少？`,opts:uniqueOpts(String(a*b),[String(a/b),`${a}/${b}`,`1/${a*b}`]),a:String(a*b),exp:`${a}×${b}＝${a*b}。`};
+    }
+    if(uIdx===2){ // 單元三：比、比值與正比
+      const a=rnd(2,5)*3, b=rnd(2,5)*4, g0=gcd(a,b), sc=pick([1000,5000,10000]), cm=rnd(2,6);
+      if(kind==='tf') return {q:isTrue?`「${a} ： ${b}」的最簡單整數比是「${a/g0} ： ${b/g0}」，且成正比的兩數量比值固定。`:`甲和乙成正比時，甲變大 3 倍，乙會變小 1/3 倍。`,a:isTrue?'○':'✕',exp:`前後項同除以 ${g0} 得最簡整數比。`};
+      if(kind==='fill') return v(2)===0
+        ? {q:`比例尺 1：${sc} 的地圖上，長 ${cm} 公分的路線實際長度是（　　）公尺。`,svg:svgCompassRose(),a:String(cm*sc/100)}
+        : {q:`甲、乙兩數的比是 ${a/g0}：${b/g0}，若甲數是 ${a*2}，則乙數是（　　）。`,a:String(b*2)};
+      if(kind==='calc') return {q:`化為最簡單整數比：「${a} ： ${b}」＝（　　　）`,a:`${a/g0} ： ${b/g0}`};
+      if(kind==='word'){const r1=2,r2=3,tot=rnd(3,9)*100;return {q:`把 ${tot} 元按照 ${r1} ： ${r2} 的比例分給${nm}和${nm2}，兩人各分得多少元？`,a:`${nm} ${tot*r1/5} 元，${nm2} ${tot*r2/5} 元`};}
+      if(kind==='match') return {q:'比與比值配對',pairs:[['3 ： 4 的比值','3/4（或 0.75）'],['12 ： 18 最簡比','2 ： 3'],['比例尺 1:100','圖上 1cm 代表實際 1m'],['圓周長與直徑','成正比']]};
+      return v(2)===0
+        ? {q:`「${a} ： ${b}」的比值是多少？`,opts:uniqueOpts(`${a/g0}/${b/g0}`,[`${b/g0}/${a/g0}`,`${a+b}`,`${a*b}`]),a:`${a/g0}/${b/g0}`,exp:`比值＝前項÷後項。`}
+        : {q:`甲和乙兩個數量成正比，當甲變為原來的 3 倍時，乙會如何變化？`,opts:uniqueOpts('變為原來的 3 倍',['變為原來的 1/3 倍','維持不變','變為原來的 6 倍']),a:'變為原來的 3 倍',exp:`成正比時同乘以 3 倍。`};
+    }
+    // uIdx===3 單元四：圓周長、圓面積與扇形（5種不同子題型輪替）
+    const r0=rnd(4,10), deg=pick([60,90,120,180]), fr={60:'1/6',90:'1/4',120:'1/3',180:'1/2'}[deg], sub=v(5);
+    if(kind==='tf'){
+      if(sub===0) return {q:`如圖，半徑 ${r0} 公分的圓，圓周長大約是 ${isTrue?(r0*2*3.14).toFixed(2):(r0*3.14).toFixed(2)} 公分（π＝3.14）。`,svg:svgCircle(r0,false),a:isTrue?'○':'✕',exp:`圓周長＝直徑×3.14＝${(r0*2*3.14).toFixed(2)}。`};
+      if(sub===1) return {q:`如圖，圓心角 ${deg}° 的扇形，是 ${isTrue?fr:'1/5'} 個圓。`,svg:svgSector(10,deg),a:isTrue?'○':'✕',exp:`${deg}°÷360°＝${fr}。`};
+      if(sub===2) return {q:isTrue?`當圓的半徑變為原來的 2 倍時，圓周長也會變為原來的 2 倍。`:`當圓的半徑變為原來的 2 倍時，圓周率 π 也會變為 2 倍。`,a:isTrue?'○':'✕',exp:`圓周率固定約 3.14，半徑變 2 倍則周長變 2 倍、面積變 4 倍。`};
+      if(sub===3) return {q:`圓心角 180° 的扇形就是半圓，它的面積是整個圓面積的 ${isTrue?'1/2':'1/4'}。`,a:isTrue?'○':'✕',exp:`180°÷360°＝1/2。`};
+      return {q:`直徑 ${r0*2} 公分的圓，半徑是 ${isTrue?r0:r0*4} 公分，圓面積約 ${(r0*r0*3.14).toFixed(2)} 平方公分。`,svg:svgCircle(r0*2,true),a:isTrue?'○':'✕',exp:`半徑＝直徑÷2＝${r0} 公分。`};
+    }
+    if(kind==='fill'){
+      if(sub===0) return {q:`如圖，半徑 10 公分、圓心角 ${deg}° 的扇形，面積約（　　　）平方公分。（π＝3.14）`,svg:svgSector(10,deg),a:(314*(deg/360)).toFixed(1).replace(/\.0$/,'')};
+      if(sub===1) return {q:`如圖，直徑 ${r0*2} 公分的圓，圓周長約（　　　）公分。（π＝3.14）`,svg:svgCircle(r0*2,true),a:(r0*2*3.14).toFixed(2).replace(/\.00$/,'')};
+      if(sub===2) return {q:`一個圓周長為 ${(r0*2*3.14).toFixed(2)} 公分的圓，它的直徑約（　　）公分，半徑約（　　）公分。`,a:`${r0*2}；${r0}`};
+      if(sub===3) return {q:`圓心角 ${deg}° 的扇形是（　　）個圓（填最簡分數），弧長約為圓周長的（　　）。`,svg:svgSector(10,deg),a:`${fr}；${fr}`};
+      return {q:`如圖，半徑 ${r0} 公分的圓，圓面積約（　　　）平方公分。（π＝3.14）`,svg:svgCircle(r0,false),a:(r0*r0*3.14).toFixed(2).replace(/\.00$/,'')};
+    }
+    if(kind==='calc') return v(2)===0
+      ? {q:`看圖計算，半徑 ${r0} 公分的圓面積大約是多少平方公分？（π＝3.14）`,svg:svgCircle(r0,false),a:(r0*r0*3.14).toFixed(2).replace(/\.00$/,'')}
+      : {q:`看圖計算，半徑 10cm、圓心角 ${deg}° 的扇形弧長約多少公分？（π＝3.14）`,svg:svgSector(10,deg),a:(20*3.14*deg/360).toFixed(2).replace(/\.00$/,'')};
+    if(kind==='word') return v(2)===0
+      ? {q:`如圖，一個半徑 10 公分、圓心角 ${deg}° 的扇形花圃，面積大約是多少平方公分？（π＝3.14）`,svg:svgSector(10,deg),a:`10 × 10 × 3.14 × (${deg}/360) = ${(314*deg/360).toFixed(1)}（平方公分）`}
+      : {q:`用一條長 ${(r0*2*3.14).toFixed(2)} 公分的繩子圍成一個最大的圓，這個圓的半徑大約是幾公分？（π＝3.14）`,svg:svgCircle(r0,false),a:`${(r0*2*3.14).toFixed(2)} ÷ 3.14 ÷ 2 = ${r0}（公分）`};
+    if(kind==='match') return {q:'圓與扇形公式配對',pairs:[['圓周長公式','直徑 × 3.14'],['圓面積公式','半徑 × 半徑 × 3.14'],['圓心角 90° 扇形','1/4 圓'],['圓心角 120° 扇形','1/3 圓']]};
+    if(sub===0) return {q:`如圖，圓心角 ${deg}° 的扇形面積是整個圓面積的幾分之幾？`,svg:svgSector(10,deg),opts:uniqueOpts(fr,['1/2','1/3','1/4','1/6','1/8']),a:fr,exp:`${deg}°÷360°＝${fr}。`};
+    if(sub===1) return {q:`如圖，半徑 ${r0} 公分的圓，面積大約是多少平方公分？（π＝3.14）`,svg:svgCircle(r0,false),opts:uniqueOpts((r0*r0*3.14).toFixed(2),[(r0*2*3.14).toFixed(2),(r0*r0).toFixed(2),(r0*3.14).toFixed(2)]),a:(r0*r0*3.14).toFixed(2),exp:`圓面積＝半徑×半徑×3.14。`};
+    if(sub===2) return {q:`如圖，直徑 ${r0*2} 公分的圓，圓周長大約是多少公分？（π＝3.14）`,svg:svgCircle(r0*2,true),opts:uniqueOpts((r0*2*3.14).toFixed(2),[(r0*3.14).toFixed(2),(r0*r0*3.14).toFixed(2),String(r0*2)]),a:(r0*2*3.14).toFixed(2),exp:`圓周長＝直徑×3.14。`};
+    if(sub===3){const f0=pick([[1,4,90],[1,2,180],[1,6,60],[1,3,120]]);return {q:`「${f0[0]}/${f0[1]} 圓」的扇形，它的圓心角是幾度？`,svg:svgSector(10,f0[2]),opts:uniqueOpts(`${f0[2]}°`,['45°','60°','90°','120°','180°']),a:`${f0[2]}°`,exp:`360° × ${f0[0]}/${f0[1]} ＝ ${f0[2]}°。`};}
+    return {q:`當圓的半徑變為原來的 3 倍時，圓面積會變為原來的幾倍？`,opts:uniqueOpts('9 倍',['3 倍','6 倍','3.14 倍']),a:'9 倍',exp:`面積與半徑平方成正比，3×3＝9 倍。`};
+  }
+  // 6年級下
+  if(uIdx===0){ // 單元一：分數與小數四則混合、成本加成
+    const base=rnd(200,500), pct=pick([20,25,30]);
+    if(kind==='tf') return {q:`成本 ${base} 元的商品加計 ${pct}% 作為定價，定價是 ${isTrue?base*(100+pct)/100:base+pct} 元。`,a:isTrue?'○':'✕',exp:`${base}×(1＋${pct}%)＝${base*(100+pct)/100} 元。`};
+    if(kind==='fill') return {q:`一件成本 ${base} 元的外套，加計 ${pct}% 作為定價，定價是（　　　）元。`,a:String(base*(100+pct)/100)};
+    if(kind==='calc') return {q:`${base} × (1 ＋ ${pct}%) ＝（　　　）`,a:String(base*(100+pct)/100)};
+    if(kind==='word') return {q:`一件襯衫成本 ${base} 元，老闆加計 ${pct}% 作為定價，請問定價是多少元？`,a:`${base} × (1 + ${pct}%) = ${base*(100+pct)/100}（元）`};
+    if(kind==='match') return {q:'分數小數四則互化配對',pairs:[['0.75 ＋ 1/4','1'],['1.2 × 5/6','1'],['加計二成五','乘以 125%'],['打八折','乘以 80%']]};
+    return {q:`成本 ${base} 元的商品，加計 ${pct}% 後的定價是多少元？`,opts:uniqueOpts(`${base*(100+pct)/100} 元`,[`${base+pct} 元`,`${base*pct/100} 元`,`${base*2} 元`]),a:`${base*(100+pct)/100} 元`,exp:`${base}×(1+${pct}%)＝${base*(100+pct)/100} 元。`};
+  }
+  if(uIdx===1){ // 單元二：速率問題
+    const v0=rnd(50,90), hr=rnd(2,5), s1=rnd(55,75), s2=rnd(45,65);
+    if(kind==='tf') return {q:isTrue?`當速率固定時，行駛的距離和所花的時間成正比。`:`走相同的距離，速率越快，所花的時間就越長。`,a:isTrue?'○':'✕',exp:`距離＝速率×時間。`};
+    if(kind==='fill') return {q:`每秒 10 公尺 ＝ 每分鐘（　　　）公尺 ＝ 時速（　　）公里。`,a:'600；36'};
+    if(kind==='calc') return {q:`時速 ${v0} 公里行駛 ${hr} 小時的距離 ＝（　　　）公里`,a:String(v0*hr)};
+    if(kind==='word') return v(2)===0
+      ? {q:`兩車從同一地點同時反方向出發，甲車時速 ${s1} 公里、乙車時速 ${s2} 公里，3 小時後兩車相距幾公里？`,a:`(${s1} + ${s2}) × 3 = ${(s1+s2)*3}（公里）`}
+      : {q:`火車以時速 ${v0} 公里行駛 ${hr} 小時，共行駛了幾公里？`,a:`${v0} × ${hr} = ${v0*hr}（公里）`};
+    if(kind==='match') return {q:'速率公式與換算配對',pairs:[['距離 ÷ 時間','速率'],['速率 × 時間','距離'],['分速 60 公尺','秒速 1 公尺'],['時速 60 公里','分速 1 公里']]};
+    return {q:`汽車以時速 ${v0} 公里行駛 ${hr} 小時，共走了幾公里？`,opts:uniqueOpts(`${v0*hr} 公里`,[`${Math.round(v0/hr)} 公里`,`${v0*hr+v0} 公里`,`${v0+hr} 公里`]),a:`${v0*hr} 公里`,exp:`距離＝速率×時間＝${v0*hr} 公里。`};
+  }
+  if(uIdx===2){ // 單元三：柱體體積、表面積與統計圖
+    const r0=rnd(3,8), h0=rnd(5,12), n=rnd(5,8), tot=200, pA=pick([35,40,45]), pB=pick([25,30]);
+    if(kind==='tf') return {q:isTrue?`如圖，角柱與圓柱的體積都可以用「底面積 × 柱高」來計算。`:`圓柱的側面展開後是一個圓形。`,svg:svgCylinder(r0,h0),a:isTrue?'○':'✕',exp:`柱體體積＝底面積×高；圓柱側面展開為長方形。`};
+    if(kind==='fill') return {q:`看社團圓形圖：若全校有 ${tot} 人，參加籃球社（${pA}%）的有（　　）人，音樂社（${pB}%）有（　　）人。`,svg:svgPieChart(pA,'籃球',pB,'音樂'),a:`${tot*pA/100}；${tot*pB/100}`};
+    if(kind==='calc') return {q:`看圖計算圓柱體積（π＝3.14）：底面半徑 ${r0}cm、高 ${h0}cm ＝（　　　）立方公分`,svg:svgCylinder(r0,h0),a:(r0*r0*3.14*h0).toFixed(1).replace(/\.0$/,'')};
+    if(kind==='word') return {q:`如圖，底面半徑 ${r0} 公分、高 ${h0} 公分的圓柱體罐子，體積約多少立方公分？（π＝3.14）`,svg:svgCylinder(r0,h0),a:`${r0}×${r0}×3.14×${h0} = ${(r0*r0*3.14*h0).toFixed(1)}（立方公分）`};
+    if(kind==='match') return {q:'柱體與圓形圖性質配對',pairs:[['圓柱體積','底面積 × 柱高'],['圓柱側面展開圖','長方形'],['五角柱的面數','7 個面'],['圓形圖各扇形百分率總和','100%']]};
+    return v(2)===0
+      ? {q:`${n} 角柱共有幾個面、幾個頂點？`,opts:uniqueOpts(`${n+2} 個面、${n*2} 個頂點`,[`${n} 個面、${n} 個頂點`,`${n+1} 個面、${n+1} 個頂點`,`${n*2} 個面、${n+2} 個頂點`]),a:`${n+2} 個面、${n*2} 個頂點`,exp:`N 角柱有 N+2 個面、2N 個頂點。`}
+      : {q:`看圓形圖，若全班有 40 人，參加籃球（40%）比音樂（35%）多幾人？`,svg:svgPieChart(40,'籃球',35,'音樂'),opts:uniqueOpts('2 人',['4 人','5 人','8 人']),a:'2 人',exp:`40 × (40% - 35%) ＝ 2 人。`};
+  }
+  // uIdx===3 單元四：未知數列式與總複習
+  const x=rnd(4,16), k=rnd(3,8), c=rnd(5,20);
+  if(kind==='tf') return {q:`在方程式「${k} × x ＋ ${c} ＝ ${k*x+c}」中，未知數 x 的值是 ${isTrue?x:x+2}。`,a:isTrue?'○':'✕',exp:`${k}×${x}＋${c}＝${k*x+c}，故 x＝${x}。`};
+  if(kind==='fill') return {q:`若 y ＝ x ＋ ${c}，當 x ＝ ${x} 時，y ＝（　　）；當 y ＝ ${x+c+10} 時，x ＝（　　）。`,a:`${x+c}；${x+10}`};
+  if(kind==='calc') return {q:`解方程式：${k} × x ＋ ${c} ＝ ${k*x+c}，x ＝（　　）`,a:String(x)};
+  if(kind==='word') return {q:`一盒鉛筆有 x 枝，老師買了 ${k} 盒又多送 ${c} 枝，共有 ${k*x+c} 枝，請問一盒鉛筆有幾枝？`,a:`(${k*x+c} - ${c}) ÷ ${k} = ${x}（枝）`};
+  if(kind==='match') return {q:'未知數列式配對',pairs:[['x ＋ 15 ＝ 40','x ＝ 25'],['3 × x ＝ 36','x ＝ 12'],['x ÷ 4 ＝ 9','x ＝ 36'],['50 － x ＝ 18','x ＝ 32']]};
+  return {q:`解方程式「${k} × x ＋ ${c} ＝ ${k*x+c}」，請問 x 是多少？`,opts:uniqueOpts(x,[x+2,x-1,k+c]),a:String(x),exp:`(${k*x+c}－${c})÷${k}＝${x}。`};
+}
+
+// ===== 1. 動態數學出題引擎（每年級各題型 7～10 組不同概念模板，不重複輪替）=====
+function genMath(grade, diff, kind, vIdx=0){
+  const g=+grade, hard=diff==='hard', easy=diff==='easy';
+  const nm=pick(NAMES), nm2=pick(NAMES.filter(x=>x!==nm)), it=pick(ITEMS);
+  const v=n=>(vIdx+randSeed)%n;
+
+  if(kind==='tf'){
+    const t=v(8), isTrue=Math.random()<0.5;
+    if(g===1){
+      if(t===0){const d1=rnd(1,6),d2=rnd(1,6),sum=isTrue?d1+d2:d1+d2+pick([1,-1,2]);return {q:`如圖，兩顆骰子的點數合起來是 ${sum}。`,svg:svgDicePair(d1,d2),a:isTrue?'○':'✕',exp:`${d1}＋${d2}＝${d1+d2}。`};}
+      if(t===1){const t10=rnd(2,8),u1=rnd(1,9);if(t10===u1)return genMath(g,diff,kind,vIdx+1);const n=t10*10+u1;return {q:`「${n}」的十位數字是 ${isTrue?t10:u1}，個位數字是 ${isTrue?u1:t10}。`,a:isTrue?'○':'✕',exp:`${n} 是 ${t10} 個十和 ${u1} 個一。`};}
+      if(t===2){const hr=rnd(1,11);return {q:`鐘面上長針指著 12，短針指著 ${hr}，代表現在是 ${isTrue?hr:hr+1} 點整。`,a:isTrue?'○':'✕',exp:`長針指 12、短針指 ${hr} 是 ${hr} 點整。`};}
+      if(t===3){const c=isTrue?5:pick([3,4,6]);return {q:`1 個 50 元硬幣可以換成 ${c} 個 10 元硬幣。`,a:isTrue?'○':'✕',exp:`50 元可換 5 個 10 元。`};}
+      if(t===4){return {q:isTrue?`皮球和圓罐比方盒更容易在地板上滾動。`:`正方體積木比皮球更容易在地板上滾動。`,a:isTrue?'○':'✕',exp:`有彎曲面或球體較容易滾動。`};}
+      if(t===5){const k=rnd(4,9);return {q:`排隊時${nm}排在第 ${k} 個，代表他前面有 ${isTrue?k-1:k} 個人。`,a:isTrue?'○':'✕',exp:`排第 ${k} 個，前面有 ${k-1} 個人。`};}
+      if(t===6){const n=rnd(20,79);return {q:`從 ${n} 往後數 1 個數是 ${isTrue?n+1:n-1}。`,a:isTrue?'○':'✕',exp:`${n} 往後數 1 是 ${n+1}。`};}
+      const a0=rnd(4,9),b0=rnd(3,8);return {q:`「${a0} ＋ ${b0}」和「${b0} ＋ ${a0}」合起來的答案${isTrue?'一樣大':'不一樣大'}。`,a:isTrue?'○':'✕',exp:`加法交換位置答案相同。`};
+    }
+    if(g===2){
+      if(t===0){const a=rnd(2,9),b=rnd(3,9),ans=isTrue?a*b:a*b+pick([a,-b,2]);return {q:`「${a} × ${b}」的答案是 ${ans}。`,a:isTrue?'○':'✕',exp:`${a}×${b}＝${a*b}。`};}
+      if(t===1){const m=rnd(2,6),cm=rnd(15,85);return {q:`${m} 公尺 ${cm} 公分合起來等於 ${isTrue?m*100+cm:m*10+cm} 公分。`,a:isTrue?'○':'✕',exp:`1 公尺＝100 公分，共 ${m*100+cm} 公分。`};}
+      if(t===2){return {q:isTrue?`正方形的 4 條邊都一樣長，且 4 個角都是直角。`:`長方形的 4 條邊一定都一樣長。`,a:isTrue?'○':'✕',exp:`長方形是對邊等長，正方形才是四邊等長。`};}
+      if(t===3){const a=rnd(3,8);return {q:`「${a} 的 ${isTrue?0:1} 倍」答案是 0。`,a:isTrue?'○':'✕',exp:`任何數乘以 0 都是 0。`};}
+      if(t===4){const yr=isTrue?12:10;return {q:`一年有 ${yr} 個月，一星期有 7 天。`,a:isTrue?'○':'✕',exp:`一年有 12 個月。`};}
+      if(t===5){const n=rnd(3,7)*4;return {q:`把 ${n} 顆糖果平分給 4 人，每人可得 ${isTrue?n/4:n/4+1} 顆。`,a:isTrue?'○':'✕',exp:`${n}÷4＝${n/4}。`};}
+      if(t===6){const h=rnd(2,8),u=rnd(1,9);return {q:`「${h} 個百和 ${u} 個一」合起來寫作 ${isTrue?h*100+u:h*10+u}。`,a:isTrue?'○':'✕',exp:`十位沒有要補 0，寫作 ${h*100+u}。`};}
+      const d0=rnd(4,8);return {q:`1 個蛋糕平分成 ${d0} 塊，其中的 1 塊是 ${isTrue?`1/${d0}`:`1/${d0+1}`} 個蛋糕。`,a:isTrue?'○':'✕',exp:`平分成 ${d0} 份，每份是 1/${d0}。`};
+    }
+    if(g===3){
+      if(t===0){const s=rnd(4,12),p=isTrue?s*4:s*s;return {q:`邊長 ${s} 公分的正方形，周長是 ${p} 公分。`,a:isTrue?'○':'✕',exp:`周長＝邊長×4＝${s*4} 公分。`};}
+      if(t===1){const r=rnd(3,10);return {q:`一個圓的半徑是 ${r} 公分，它的直徑就是 ${isTrue?r*2:r} 公分。`,a:isTrue?'○':'✕',exp:`直徑＝半徑×2＝${r*2} 公分。`};}
+      if(t===2){const d=rnd(4,9),rem=isTrue?d-1:d+1;return {q:`除法計算中，除數是 ${d} 時，餘數有可能是 ${rem}。`,a:isTrue?'○':'✕',exp:`餘數一定要比除數（${d}）小。`};}
+      if(t===3){const kg=rnd(2,6);return {q:`${kg} 公斤和 ${isTrue?kg*1000:kg*100} 公克一樣重。`,a:isTrue?'○':'✕',exp:`1 公斤＝1000 公克。`};}
+      if(t===4){const den=rnd(5,10),a=rnd(1,den-2);return {q:`分數「${a}/${den}」讀作「${isTrue?`${den}分之${a}`:`${a}分之${den}`}」。`,a:isTrue?'○':'✕',exp:`分母先讀，讀作 ${den}分之${a}。`};}
+      if(t===5){return {q:isTrue?`比直角小的角稱為銳角，比直角大的角（小於180度）稱為鈍角。`:`鈍角比直角還要小。`,a:isTrue?'○':'✕',exp:`銳角＜直角(90°)＜鈍角。`};}
+      if(t===6){const hr=rnd(1,9);return {q:`下午 ${hr} 時用 24 時制表示是 ${isTrue?hr+12:hr+10} 時。`,a:isTrue?'○':'✕',exp:`下午時間加 12 即為 24 時制。`};}
+      const L0=rnd(2,6);return {q:`${L0} 公升的水和 ${isTrue?L0*1000:L0*100} 毫公升的水一樣多。`,a:isTrue?'○':'✕',exp:`1 公升＝1000 毫公升。`};
+    }
+    if(g===4){
+      if(t===0){const a1=rnd(40,70),a2=rnd(35,65),a3=isTrue?180-a1-a2:180-a1-a2+10;return {q:`一個三角形的三個內角分別是 ${a1}°、${a2}° 和 ${a3}°。`,a:isTrue?'○':'✕',exp:`三角形內角和必為 180°。`};}
+      if(t===1){return {q:isTrue?`計算「50 － 12 × 3」時，應該先算乘法再算減法。`:`計算「50 － 12 × 3」時，要由左到右先算 50 減 12。`,a:isTrue?'○':'✕',exp:`四則運算規則為先乘除後加減。`};}
+      if(t===2){const m2=rnd(2,8);return {q:`${m2} 平方公尺等於 ${isTrue?m2*10000:m2*100} 平方公分。`,a:isTrue?'○':'✕',exp:`1 平方公尺＝10000 平方公分。`};}
+      if(t===3){return {q:isTrue?`等腰三角形有兩條邊一樣長，且兩個底角也一樣大。`:`直角三角形裡面可以有兩個直角。`,a:isTrue?'○':'✕',exp:`三角形內角和 180°，最多只能有一個直角。`};}
+      if(t===4){const d=rnd(3,8),n=rnd(d+1,d*3-1);return {q:`分子大於或等於分母的分數（如 ${n}/${d}）稱為${isTrue?'假分數':'真分數'}。`,a:isTrue?'○':'✕',exp:`分子≧分母為假分數。`};}
+      if(t===5){const km=rnd(3,9);return {q:`${km} 公里等於 ${isTrue?km*1000:km*10000} 公尺。`,a:isTrue?'○':'✕',exp:`1 公里＝1000 公尺。`};}
+      if(t===6){return {q:isTrue?`兩條平行線之間的垂直距離處處相等。`:`平行四邊形的四個角一定都是直角。`,a:isTrue?'○':'✕',exp:`平行線間距離處處相等。`};}
+      const w0=rnd(5,12),h0=rnd(4,9);return {q:`長 ${w0} 公分、寬 ${h0} 公分的長方形，面積是 ${isTrue?w0*h0:(w0+h0)*2} 平方公分。`,a:isTrue?'○':'✕',exp:`長方形面積＝長×寬＝${w0*h0}。`};
+    }
+    if(g===5){
+      if(t===0){const b0=rnd(6,14),h0=rnd(4,10),area=isTrue?(b0*h0)/2:b0*h0;return {q:`底 ${b0} 公分、高 ${h0} 公分的三角形，面積是 ${area} 平方公分。`,a:isTrue?'○':'✕',exp:`三角形面積＝底×高÷2＝${(b0*h0)/2}。`};}
+      if(t===1){const n=pick([12,18,24,30]);return {q:`${n} 的最小因數是 1，最大因數是 ${isTrue?n:n/2}。`,a:isTrue?'○':'✕',exp:`任何正整數最小因數是 1，最大因數是自己。`};}
+      if(t===2){const pct=pick([25,50,75,80]);return {q:`將百分率「${pct}%」化成小數是 ${isTrue?(pct/100).toFixed(2):(pct/10).toFixed(1)}。`,a:isTrue?'○':'✕',exp:`${pct}% ＝ ${(pct/100).toFixed(2)}。`};}
+      if(t===3){const e=rnd(3,6);return {q:`邊長 ${e} 公分的正方體，體積是 ${isTrue?e*e*e:e*e*6} 立方公分。`,a:isTrue?'○':'✕',exp:`正方體體積＝邊長×邊長×邊長＝${e*e*e}。`};}
+      if(t===4){return {q:isTrue?`平行四邊形的面積公式是「底 × 高」。`:`梯形的面積公式是「上底 ＋ 下底 × 高」。`,a:isTrue?'○':'✕',exp:`梯形面積＝(上底＋下底)×高÷2。`};}
+      if(t===5){const d=rnd(3,7),k=rnd(2,5);return {q:`把分數的分子和分母同乘以 ${k}，分數的值${isTrue?'不會改變（等值分數）':'會變大 '+k+' 倍'}。`,a:isTrue?'○':'✕',exp:`擴分後為等值分數，其值不變。`};}
+      if(t===6){return {q:isTrue?`正方體有 6 個全等的正方形面、8 個頂點和 12 條等長的邊。`:`長方體的 6 個面一定都是正方形。`,a:isTrue?'○':'✕',exp:`正方體 6 個面皆為全等正方形。`};}
+      const t0=rnd(2,8);return {q:`${t0} 公噸的鐵和 ${isTrue?t0*1000:t0*100} 公斤的棉花一樣重。`,a:isTrue?'○':'✕',exp:`1 公噸＝1000 公斤。`};
+    }
+    // g===6
+    if(t===0){const r=rnd(3,9);return {q:`半徑 ${r} 公分的圓，圓周長大約是 ${isTrue?(r*2*3.14).toFixed(2):(r*3.14).toFixed(2)} 公分（π＝3.14）。`,a:isTrue?'○':'✕',exp:`圓周長＝直徑×3.14＝${(r*2*3.14).toFixed(2)}。`};}
+    if(t===1){return {q:isTrue?`所有的質數中，唯一的偶數是 2，且 1 不是質數也不是合數。`:`1 是最小的質數，所有的奇數都是質數。`,a:isTrue?'○':'✕',exp:`最小的質數是 2，1 不是質數。`};}
+    if(t===2){const a=rnd(2,5),b=rnd(3,7),k=rnd(2,4);return {q:`「${a} ： ${b}」和「${a*k} ： ${b*k}」是相等的比，它們的比值相同。`,a:'○',exp:`前後項同乘以 ${k}，比值不變。`};}
+    if(t===3){return {q:isTrue?`當速率固定時，行駛的距離和所花的時間成正比。`:`走相同的距離，速率越快，所花的時間就越長。`,a:isTrue?'○':'✕',exp:`距離固定時，速率越快所需時間越短。`};}
+    if(t===4){return {q:isTrue?`角柱與圓柱的體積都可以用「底面積 × 柱高」來計算。`:`圓柱的側面展開後是一個圓形。`,a:isTrue?'○':'✕',exp:`圓柱側面展開圖是長方形。`};}
+    if(t===5){const d1=rnd(2,5),d2=rnd(3,7);return {q:`計算分數除法「÷ ${d1}/${d2}」時，可以改寫成「× ${isTrue?`${d2}/${d1}`:`${d1}/${d2}`}」來計算。`,a:isTrue?'○':'✕',exp:`除以一個分數等於乘以它的倒數。`};}
+    if(t===6){const s0=pick([100,200,500]);return {q:`在比例尺 1：${s0} 的地圖上，1 公分代表實際長度 ${isTrue?s0:s0*10} 公分。`,a:isTrue?'○':'✕',exp:`1：${s0} 代表圖上 1 公分等於實際 ${s0} 公分。`};}
+    return {q:isTrue?`圓形圖中各扇形百分率的總和一定是 100%。`:`圓形圖的半徑越大，各項目所占的百分率就越大。`,a:isTrue?'○':'✕',exp:`圓形圖百分率總和必為 100%。`};
+  }
+
+  if(kind==='match'){
+    const pairs=[];
+    if(g<=2){
+      const used=new Set();
+      while(pairs.length<4){
+        const a=rnd(g===1?3:2,9),b=rnd(2,9),expr=g===1?`${a} ＋ ${b}`:`${a} × ${b}`,val=String(g===1?a+b:a*b);
+        if(!used.has(val)){used.add(val);pairs.push([expr,val]);}
+      }
+    }else if(g<=4){
+      const m=rnd(2,5),L=rnd(2,4),km=rnd(1,3),kg=rnd(2,6);
+      pairs.push([`${m} 公尺`,`${m*100} 公分`],[`${L} 公升`,`${L*1000} 毫公升`],[`${km} 公里`,`${km*1000} 公尺`],[`${kg} 公斤`,`${kg*1000} 公克`]);
+    }else{
+      const opts=shuffle([['0.15','15%'],['0.25','25%'],['0.40','40%'],['0.50','50%'],['3/4','75%'],['4/5','80%']]).slice(0,4);
+      pairs.push(...opts);
+    }
+    return {q:'數學等值配對（將對應的代號填入括號中）',pairs};
+  }
+
+  if(g===1){
+    const maxN=easy?10:(hard?99:20);
+    const a=rnd(3,Math.max(6,Math.floor(maxN*0.6))), b=rnd(2,Math.max(4,maxN-a));
+    if(kind==='calc'){
+      const t=v(5);
+      if(t===0) return {q:`${a} ＋ ${b} ＝（　　）`,a:String(a+b)};
+      if(t===1){const x=Math.max(a,b)+rnd(2,9),y=rnd(1,x-1);return {q:`${x} － ${y} ＝（　　）`,a:String(x-y)};}
+      if(t===2) return {q:`${a} ＋（　　）＝ ${a+b}`,a:String(b)};
+      if(t===3){const c=rnd(2,6);return {q:`${a} ＋ ${b} ＋ ${c} ＝（　　）`,a:String(a+b+c)};}
+      const c=rnd(1,a+b-1);return {q:`${a} ＋ ${b} － ${c} ＝（　　）`,a:String(a+b-c)};
+    }
+    if(kind==='word'){
+      const t=v(6);
+      if(t===0){const tot=rnd(7,10),dir=pick(['左','右']),k=rnd(2,tot-1);return {q:`★ 看看下面的圓圈，從「${dir}邊」算起第 ${k} 個，如果改從另一邊算起是第幾個？`,svg:svgRowCount(tot),a:`從另一邊數為第 ${tot-k+1} 個`};}
+      if(t===1) return {q:`盒子裡有 ${a+b} 個${it}，拿走 ${b} 個後，還剩下幾個${it}？`,a:`${a+b} - ${b} = ${a}（個）`};
+      if(t===2){const price=rnd(15,45);return {q:`一本小畫冊賣 ${price} 元，${nm}付了 1 個 50 元硬幣，可找回多少元？`,a:`50 - ${price} = ${50-price}（元）`};}
+      if(t===3){const big=rnd(11,18),sm=rnd(4,big-2);return {q:`${nm}有 ${big} 張貼紙，${nm2}有 ${sm} 張貼紙，${nm}比${nm2}多幾張貼紙？`,a:`${big} - ${sm} = ${big-sm}（張）`};}
+      if(t===4){const f=rnd(3,7),bk=rnd(2,6);return {q:`排隊買門票，${nm}前面有 ${f} 個人，後面有 ${bk} 個人，這一排共有幾個人？`,a:`${f} + 1 + ${bk} = ${f+bk+1}（人）`};}
+      return {q:`公車上原本有 ${a} 個人，到站後上來 ${b} 個人，現在公車上有幾個人？`,a:`${a} + ${b} = ${a+b}（人）`};
+    }
+    if(kind==='fill'){
+      const t=v(8);
+      if(t===0){const tot=rnd(6,10),l=rnd(1,tot-1);return {q:`在分合表中填入正確的數字：`,svg:svgSplitBox(tot,l,'□'),a:String(tot-l)};}
+      if(t===1) return {q:`數一數下面的機器人圖形：三角形有（　）個，圓形有（　）個，長方形有（　）個。`,svg:svgShapeRobot(),a:'2；1；3'};
+      if(t===2){const st=rnd(5,10),nums=[st,st-1,st-2,st-3,st-4],bi=rnd(1,3);return {q:`依照順序，空格裡應該填入哪一個數字？`,svg:svgSeqTrain(nums,bi),a:String(nums[bi])};}
+      if(t===3){const t10=rnd(1,6),u1=rnd(1,7);return {q:`看定位板上的算珠填填看：十位有 ${t10} 顆、個位有 ${u1} 顆，合起來是（　　）。`,svg:svgAbacus(t10,u1),a:String(t10*10+u1)};}
+      if(t===4){const c10=rnd(1,3),c5=rnd(0,1),c1=rnd(1,3);return {q:`數一數圖中的硬幣，合起來一共有（　　）元。`,svg:svgCoins(1,c10,c5,c1),a:String(50+c10*10+c5*5+c1)};}
+      if(t===5) return {q:`數一數下面的小屋圖形：三角形有（　）個，圓形有（　）個，長方形有（　）個。`,svg:svgShapeHouse(),a:'1；2；2'};
+      if(t===6){const tot=10,l=rnd(2,8);return {q:`看圖填填看，蝴蝶翅膀上的兩個數合起來是 10，問號應該填（　）。`,svg:svgButterfly(10,l,'?'),a:String(10-l)};}
+      return {q:`看圖分辨直線與曲線：屬於「直線」的有（　　），屬於「曲線」的有（　　）。（填代號）`,svg:svgLinesFour(),a:'①、③；②、④'};
+    }
+    const t=v(8);
+    if(t===0){const x=rnd(3,8),y=rnd(2,7),ans=x+y;return {q:`數一數，左右兩邊的積木合起來共有幾個？`,svg:svgBlockAdd(x,y),opts:uniqueOpts(`${ans} 個`,[`${ans-1} 個`,`${ans+1} 個`,`${ans+2} 個`]),a:`${ans} 個`,exp:`${x}＋${y}＝${ans} 個。`};}
+    if(t===1){const n=rnd(15,89);return {q:`哪個數「比 ${n} 大，又比 ${n+8} 小」？`,opts:uniqueOpts(n+4,[n-2,n,n+10]),a:String(n+4),exp:`${n+4} 介於 ${n} 和 ${n+8} 之間。`};}
+    if(t===2){const hr=rnd(1,11),min=pick([0,30]),ans=`${hr} 點${min?' 30 分':'整'}`;return {q:`看圖回答，現在鐘面上的時間是幾點幾分？`,svg:svgClock(hr,min),opts:uniqueOpts(ans,[`${hr} 點${min?'整':' 30 分'}`,`${hr+1} 點${min?' 30 分':'整'}`,`6 點 ${hr} 分`]),a:ans,exp:`短針指 ${hr}，長針指 ${min?6:12}，是 ${ans}。`};}
+    if(t===3){const t10=rnd(2,8),u1=rnd(1,9),ans=t10*10+u1;return {q:`「${t10} 個十和 ${u1} 個一」合起來是多少？`,opts:uniqueOpts(ans,[u1*10+t10,t10+u1,ans+10]),a:String(ans),exp:`${t10}×10＋${u1}＝${ans}。`};}
+    if(t===4){const x=rnd(12,18),y=rnd(4,9),ans=x-y;return {q:`算式「${x} － ${y}」的答案是多少？`,opts:uniqueOpts(ans,[ans+1,ans-1,x+y]),a:String(ans),exp:`${x}-${y}=${ans}。`};}
+    if(t===5){const p=rnd(2,4)*10+5;return {q:`買一個 ${p} 元的麵包，最少要付幾個 10 元硬幣才夠？`,opts:uniqueOpts(`${Math.ceil(p/10)} 個`,[`${Math.floor(p/10)} 個`,`${Math.ceil(p/10)+1} 個`,'1 個']),a:`${Math.ceil(p/10)} 個`,exp:`${Math.floor(p/10)} 個 10 元只有 ${Math.floor(p/10)*10} 元不夠，需 ${Math.ceil(p/10)} 個。`};}
+    if(t===6){const ord=shuffle([0,1,2]),longest=ord.indexOf(0)+1;return {q:`看圖比一比，下面哪一枝鉛筆最長？`,svg:svgLengthCompare(ord),opts:uniqueOpts(`(${longest})`,['(1)','(2)','(3)','一樣長']),a:`(${longest})`,exp:`第 (${longest}) 枝鉛筆最長。`};}
+    const k=rnd(3,8);return {q:`從第 1 頁讀到第 ${k} 頁，總共讀了幾頁？`,opts:uniqueOpts(`${k} 頁`,[`${k-1} 頁`,`${k+1} 頁`,'1 頁']),a:`${k} 頁`,exp:`第 1 頁到第 ${k} 頁共 ${k} 頁。`};
+  }
+
+  if(g===2){
+    const m1=rnd(2,9), m2=rnd(2,9);
+    if(kind==='calc'){
+      const t=v(5);
+      if(t===0) return {q:`${m1} × ${m2} ＝（　　）`,a:String(m1*m2)};
+      const a=rnd(120,650), b=rnd(105,340);
+      if(t===1) return {q:`${a} ＋ ${b} ＝（　　）`,a:String(a+b)};
+      if(t===2) return {q:`${a+b} － ${b} ＝（　　）`,a:String(a)};
+      if(t===3){const c=rnd(10,35);return {q:`${m1} × ${m2} ＋ ${c} ＝（　　）`,a:String(m1*m2+c)};}
+      return {q:`（　　）× ${m1} ＝ ${m1*m2}`,a:String(m2)};
+    }
+    if(kind==='word'){
+      const t=v(5);
+      if(t===0){const k=rnd(3,9),each=rnd(4,9),extra=rnd(5,18);return {q:`一盒${it}有 ${each} 個，${nm}買了 ${k} 盒又多送 ${extra} 個，共有幾個？`,a:`${each} × ${k} + ${extra} = ${each*k+extra}（個）`};}
+      if(t===1) return {q:`1 袋蘋果有 ${m1} 顆，媽媽買了 ${m2} 袋，總共有幾顆蘋果？`,a:`${m1} × ${m2} = ${m1*m2}（顆）`};
+      if(t===2){const total=m1*m2;return {q:`把 ${total} 張貼紙平分給 ${m1} 位小朋友，每人分到幾張？`,a:`${total} ÷ ${m1} = ${m2}（張）`};}
+      if(t===3){const a=rnd(150,380),b=rnd(120,260);return {q:`果園昨天採收 ${a} 顆橘子，今天比昨天多採收 ${b} 顆，今天採收了幾顆？`,a:`${a} + ${b} = ${a+b}（顆）`};}
+      const p=rnd(6,9),q=rnd(4,8),pay=100;return {q:`每枝鉛筆 ${p} 元，買 ${q} 枝付 100 元，可找回多少元？`,a:`100 - ${p} × ${q} = ${100-p*q}（元）`};
+    }
+    if(kind==='fill'){
+      const t=v(8), m=rnd(2,7), cm=rnd(10,85);
+      if(t===0){const s=easy?0:rnd(1,3),len=rnd(4,7);return {q:`看下面的直尺，藍色彩帶的長度是（　）公分。`,svg:svgRulerMeasure(s,s+len),a:String(len)};}
+      if(t===1){const r0=rnd(2,4),c0=rnd(3,6);return {q:`看圖填填看：每排有 ${c0} 個圓點，共有 ${r0} 排，合起來共有（　　）個圓點。`,svg:svgArrayDots(r0,c0),a:String(r0*c0)};}
+      if(t===2){const h=rnd(3,8),t0=rnd(1,9),u=rnd(1,9);return {q:`「${h} 個百、${t0} 個十、${u} 個一」合起來是（　　）。`,a:String(h*100+t0*10+u)};}
+      if(t===3){const yr=rnd(1,3),mo=rnd(2,10);return {q:`${yr} 年 ${mo} 個月 ＝（　　）個月。`,a:String(yr*12+mo)};}
+      if(t===4) return {q:`正方體有（　）個面、（　）個頂點和（　）條邊。`,a:'6；8；12'};
+      if(t===5){const st=rnd(200,700);return {q:`一百一數：${st}、${st+100}、（　　）、${st+300}。`,a:String(st+200)};}
+      if(t===6){return {q:`${m} 公尺 ${cm} 公分 ＝（　　）公分。`,a:String(m*100+cm)};}
+      const c10=rnd(2,4),c5=rnd(1,2),c1=rnd(1,4);return {q:`數一數圖中的硬幣，共有（　　）元。`,svg:svgCoins(1,c10,c5,c1),a:String(50+c10*10+c5*5+c1)};
+    }
+    const t=v(8);
+    if(t===0) return {q:`哪一個算式和「${m1} × ${m2}」一樣大？`,opts:uniqueOpts(`${m2} × ${m1}`,[`${m1} ＋ ${m2}`,`${m1+1} × ${m2}`,`${m1} × ${m2+1}`]),a:`${m2} × ${m1}`,exp:`乘法交換律：${m1}×${m2}=${m2}×${m1}。`};
+    if(t===1){const cm=rnd(150,350);return {q:`繩子長 ${cm} 公分，等於幾公尺幾公分？`,opts:uniqueOpts(`${Math.floor(cm/100)} 公尺 ${cm%100} 公分`,[`${Math.floor(cm/10)} 公尺 ${cm%10} 公分`,`${cm} 公尺`,`1 公尺 ${cm} 公分`]),a:`${Math.floor(cm/100)} 公尺 ${cm%100} 公分`,exp:`1 公尺＝100 公分。`};}
+    if(t===2) return {q:`長方形和正方形都有幾個「直角」？`,opts:uniqueOpts('4 個直角',['2 個直角','3 個直角','6 個直角']),a:'4 個直角',exp:`長方形與正方形四個角皆為直角。`};
+    if(t===3){const h=rnd(2,8),u=rnd(2,9),ans=h*100+u;return {q:`「${h} 個百和 ${u} 個一」合起來是多少？`,opts:uniqueOpts(ans,[h*10+u,h*100+u*10,u*100+h]),a:String(ans),exp:`十位是 0，合起來是 ${ans}。`};}
+    if(t===4){const k=rnd(3,9);return {q:`「${k} 的 6 倍」比「${k} 的 4 倍」多幾個 ${k}？`,opts:uniqueOpts('2 個',['10 個','4 個','6 個']),a:'2 個',exp:`6 倍減 4 倍等於多 2 個 ${k}。`};}
+    if(t===5){return {q:`閏年的 2 月有幾天？全年共有幾天？`,opts:uniqueOpts('29 天，全年 366 天',['28 天，全年 365 天','30 天，全年 365 天','29 天，全年 365 天']),a:'29 天，全年 366 天',exp:`閏年 2 月有 29 天，全年 366 天。`};}
+    if(t===6){const d=rnd(3,9);return {q:`把 1 個披薩平分成 ${d} 片，其中的 1 片是幾個披薩？`,svg:svgFraction(1,d),opts:uniqueOpts(`1/${d} 個`,[`${d} 個`,`1/${d+1} 個`,'1 個']),a:`1/${d} 個`,exp:`平分成 ${d} 份，每份是 1/${d}。`};}
+    const hr=rnd(1,11);return {q:`看時鐘回答：短針在 ${hr} 和 ${hr+1} 中間，長針指著 6，是幾點幾分？`,svg:svgClock(hr,30),opts:uniqueOpts(`${hr} 點 30 分`,[`${hr} 點整`,`${hr+1} 點 30 分`,`6 點 ${hr} 分`]),a:`${hr} 點 30 分`,exp:`長針指 6 代表 30 分。`};
+  }
+
+  if(g===3){
+    if(kind==='calc'){
+      const t=v(5);
+      if(t===0){const a=rnd(24,98),b=rnd(3,9);return {q:`${a} × ${b} ＝（　　）`,a:String(a*b)};}
+      if(t===1){const d=rnd(3,9),q=rnd(12,45),r=hard?rnd(1,d-1):0;return {q:`${d*q+r} ÷ ${d} ＝（　　）${r?'…（　）':''}`,a:r?`${q} 餘 ${r}`:String(q)};}
+      if(t===2){const den=rnd(5,10),a=rnd(1,den-2),b=rnd(1,den-a);return {q:`看塗色部分，${a}/${den} ＋ ${b}/${den} ＝（　　）`,svg:svgFraction(a,den,b),a:`${a+b}/${den}`};}
+      if(t===3){const x=(rnd(15,85)/10).toFixed(1),y=(rnd(12,64)/10).toFixed(1);return {q:`${x} ＋ ${y} ＝（　　）`,a:(+x + +y).toFixed(1)};}
+      const a0=rnd(350,850),b0=rnd(120,340);return {q:`${a0} － ${b0} ＝（　　）`,a:String(a0-b0)};
+    }
+    if(kind==='word'){
+      const t=v(5);
+      if(t===0){const d=rnd(4,9),q=rnd(12,30),r=rnd(1,d-1);return {q:`${d*q+r} 顆糖果平分裝進 ${d} 袋，每袋最多裝幾顆？還剩幾顆？`,a:`${d*q+r} ÷ ${d} = ${q} … ${r}，每袋 ${q} 顆，剩 ${r} 顆`};}
+      if(t===1){const w=rnd(6,15),h=rnd(4,10);return {q:`如圖，長方形菜園長 ${w} 公尺、寬 ${h} 公尺，走一圈周長是多少公尺？`,svg:svgRectDim(w,h,'公尺'),a:`(${w} + ${h}) × 2 = ${(w+h)*2}（公尺）`};}
+      if(t===2){const m1=rnd(25,55),h1=rnd(8,10),dur=rnd(40,85),tot=h1*60+m1+dur;return {q:`電影上午 ${h1} 時 ${m1} 分開演，片長 ${dur} 分鐘，幾時幾分結束？`,a:`${Math.floor(tot/60)} 時 ${tot%60} 分`};}
+      if(t===3){const box=rnd(4,8),per=rnd(6,12),price=rnd(8,15);return {q:`一盒餅乾有 ${per} 片，買了 ${box} 盒，每片 ${price} 元，共要付多少元？`,a:`${per} × ${box} × ${price} = ${per*box*price}（元）`};}
+      const L1=rnd(1,3)*1000+rnd(200,700),L2=rnd(400,900);return {q:`水壺裡有 ${L1} 毫公升的水，喝掉 ${L2} 毫公升後，還剩下幾毫公升？`,a:`${L1} - ${L2} = ${L1-L2}（毫公升）`};
+    }
+    if(kind==='fill'){
+      const t=v(8),km=rnd(2,8),m=rnd(50,800);
+      if(t===0) return {q:`${km} 公里 ${m} 公尺 ＝（　　）公尺。`,a:String(km*1000+m)};
+      if(t===1){const s=rnd(6,15);return {q:`邊長 ${s} 公分的正方形，周長是（　）公分。`,a:String(4*s)};}
+      if(t===2){const ml=pick([200,400,600,800]);return {q:`看量杯上的刻度，杯子裡的水量是（　　）毫公升；如果再倒入 ${1000-ml} 毫公升就剛好是 1 公升。`,svg:svgBeaker(ml),a:String(ml)};}
+      if(t===3){const kg=rnd(2,7),g0=rnd(120,850);return {q:`${kg} 公斤 ${g0} 公克 ＝（　　）公克。`,a:String(kg*1000+g0)};}
+      if(t===4){const deg=pick([45,60,90,120]),tp=deg<90?'銳角':(deg===90?'直角':'鈍角');return {q:`如圖，這個角張開 ${deg}°，它是一個（　　）角。（填銳、直或鈍）`,svg:svgAngleArc(deg),a:tp.slice(0,1)};}
+      if(t===5){const d=rnd(6,11),n=rnd(2,d-1);return {q:`1 － ${n}/${d} ＝（　　）。`,a:`${d-n}/${d}`};}
+      if(t===6){const cm=rnd(3,9),mm=rnd(2,8);return {q:`${cm} 公分 ${mm} 毫米 ＝（　　）毫米。`,a:String(cm*10+mm)};}
+      const r0=rnd(4,12);return {q:`如圖，半徑 ${r0} 公分的圓，直徑是（　　）公分。`,svg:svgCircle(r0,false),a:String(r0*2)};
+    }
+    const t=v(8);
+    if(t===0){const s=rnd(5,14),ans=s*4;return {q:`邊長 ${s} 公尺的正方形花圃，周長是多少？`,opts:uniqueOpts(`${ans} 公尺`,[`${s*s} 公尺`,`${s*2} 公尺`,`${ans+4} 公尺`]),a:`${ans} 公尺`,exp:`周長＝邊長×4＝${ans} 公尺。`};}
+    if(t===1){const r=rnd(4,12);return {q:`半徑 ${r} 公分的圓，直徑是多少公分？`,opts:uniqueOpts(`${r*2} 公分`,[`${r} 公分`,`${r*4} 公分`,`${r+2} 公分`]),a:`${r*2} 公分`,exp:`直徑＝半徑×2＝${r*2} 公分。`};}
+    if(t===2){const a=rnd(12,35)/10,b=rnd(11,29)/10,ans=(a+b).toFixed(1);return {q:`「${a.toFixed(1)} ＋ ${b.toFixed(1)}」的結果是多少？`,opts:uniqueOpts(ans,[(+ans+1).toFixed(1),(+ans-0.5).toFixed(1),(a*10+b).toFixed(1)]),a:ans,exp:`小數點對齊相加得 ${ans}。`};}
+    if(t===3){const d=rnd(5,9);return {q:`在「□ ÷ ${d} ＝ 12 … △」算式中，餘數 △ 最大可能是多少？`,opts:uniqueOpts(d-1,[d,d+1,11]),a:String(d-1),exp:`餘數必小於除數 ${d}，最大為 ${d-1}。`};}
+    if(t===4){const hr=rnd(2,9);return {q:`下午 ${hr} 時 30 分，用「24 時制」表示是幾時幾分？`,opts:uniqueOpts(`${hr+12} 時 30 分`,[`${hr} 時 30 分`,`${hr+10} 時 30 分`,`24 時 ${hr} 分`]),a:`${hr+12} 時 30 分`,exp:`下午時間加 12 小時。`};}
+    if(t===5){const n1=rnd(2,7);return {q:`${n1} 個「0.1」和 3 個「1」合起來是多少？`,opts:uniqueOpts(`3.${n1}`,[`${n1}.3`,`0.3${n1}`,`30.${n1}`]),a:`3.${n1}`,exp:`3 個 1 是 3，${n1} 個 0.1 是 0.${n1}，合起來是 3.${n1}。`};}
+    if(t===6){const deg=pick([50,90,130]),ans=deg<90?'銳角':(deg===90?'直角':'鈍角');return {q:`如圖，張開 ${deg}° 的角稱為什麼角？`,svg:svgAngleArc(deg),opts:uniqueOpts(ans,['銳角','直角','鈍角','平角']),a:ans,exp:`${deg}° 為${ans}。`};}
+    const w0=rnd(6,12),h0=rnd(3,5);return {q:`長 ${w0} 公分、寬 ${h0} 公分的長方形，面積是多少平方公分？`,opts:uniqueOpts(`${w0*h0} 平方公分`,[`${(w0+h0)*2} 平方公分`,`${w0+h0} 平方公分`,`${w0*h0+10} 平方公分`]),a:`${w0*h0} 平方公分`,exp:`面積＝長×寬＝${w0*h0} 平方公分。`};
+  }
+
+  if(g===4){
+    if(kind==='calc'){
+      const t=v(5);
+      if(t===0){const a=rnd(12,45),b=rnd(3,9),c=rnd(15,60);return {q:`${c} ＋ ${a} × ${b} ＝（　　）`,a:String(c+a*b)};}
+      if(t===1){const x=(rnd(11,55)/10).toFixed(1),y=(rnd(12,48)/10).toFixed(1);return {q:`${x} ＋ ${y} ＝（　　）`,a:(+x + +y).toFixed(1)};}
+      if(t===2){const a=rnd(120,350),b=rnd(12,28);return {q:`${a} × ${b} ＝（　　）`,a:String(a*b)};}
+      if(t===3){const d=rnd(12,25),q=rnd(11,32);return {q:`${d*q} ÷ ${d} ＝（　　）`,a:String(q)};}
+      const a0=rnd(35,85),b0=rnd(12,28),c0=rnd(4,9);return {q:`(${a0} － ${b0}) × ${c0} ＝（　　）`,a:String((a0-b0)*c0)};
+    }
+    if(kind==='word'){
+      const t=v(5);
+      if(t===0){const p1=rnd(25,60),p2=rnd(15,40),n=rnd(3,7);return {q:`筆記本 ${p1} 元、原子筆 ${p2} 元，買 ${n} 本筆記本和 1 枝筆，付 500 元可找回幾元？`,a:`500 - (${p1} × ${n} + ${p2}) = ${500-(p1*n+p2)}（元）`};}
+      if(t===1){const w=rnd(12,25),h=rnd(8,15);return {q:`如圖，長方形木板長 ${w} 公分、寬 ${h} 公分，面積與周長各是多少？`,svg:svgRectDim(w,h,'公分'),a:`面積 ${w*h} 平方公分；周長 ${(w+h)*2} 公分`};}
+      if(t===2){const d=rnd(12,35)/10,n=rnd(4,9);return {q:`一瓶果汁 ${d.toFixed(1)} 公升，買 ${n} 瓶共有幾公升？`,a:`${d.toFixed(1)} × ${n} = ${(d*n).toFixed(1)}（公升）`};}
+      if(t===3){const tot=rnd(15,30)*12;return {q:`果農採收了 ${tot} 顆水蜜桃，每 12 顆裝成一盒，全部可以裝滿幾盒？`,a:`${tot} ÷ 12 = ${tot/12}（盒）`};}
+      const km=rnd(2,5),m0=rnd(150,750);return {q:`登山步道第一段長 ${km} 公里 ${m0} 公尺，第二段長 1 公里 200 公尺，兩段共長幾公尺？`,a:`${km*1000+m0} + 1200 = ${km*1000+m0+1200}（公尺）`};
+    }
+    if(kind==='fill'){
+      const t=v(8);
+      if(t===0){const v1=rnd(8,18),v2=rnd(12,24),v3=rnd(6,16),v4=rnd(10,22),mx=Math.max(v1,v2,v3,v4);return {q:`看長條圖回答：數量最多的是（　）組，四組合起來共有（　　）人。`,svg:svgBarChart(['甲','乙','丙','丁'],[v1,v2,v3,v4]),a:`${['甲','乙','丙','丁'][[v1,v2,v3,v4].indexOf(mx)]}；${v1+v2+v3+v4}`};}
+      if(t===1){const a1=rnd(40,70),a2=rnd(35,65);return {q:`三角形兩角分別為 ${a1}° 和 ${a2}°，第三角是（　）°。`,a:String(180-a1-a2)};}
+      if(t===2){const imp=rnd(11,23),den=rnd(3,5);return {q:`假分數 ${imp}/${den} 化成帶分數是（　　　）。`,a:`${Math.floor(imp/den)} 又 ${imp%den}/${den}`};}
+      if(t===3){const m2=rnd(3,9);return {q:`${m2} 平方公尺 ＝（　　　）平方公分。`,a:String(m2*10000)};}
+      if(t===4){const w=rnd(2,8),h=rnd(1,9),u=rnd(1,9);return {q:`「${w} 個 1、${h} 個 0.1 和 ${u} 個 0.01」合起來是（　　）。`,a:`${w}.${h}${u}`};}
+      if(t===5){const w1=rnd(4,8),h1=rnd(6,10),w2=rnd(4,7),h2=rnd(3,5);return {q:`看圖計算這個 L 形複合圖形的面積是（　　）平方公分。`,svg:svgLShape(w1,h1,w2,h2),a:String(w1*h1+w2*h2)};}
+      if(t===6){const deg=rnd(35,140);return {q:`如圖，一個平角 180° 減去 ${deg}° 後，剩下的角是（　　）°。`,svg:svgAngleArc(deg),a:String(180-deg)};}
+      const w0=rnd(6,18),h0=rnd(4,12);return {q:`長 ${w0} 公尺、寬 ${h0} 公尺的長方形，面積是（　　）平方公尺。`,a:String(w0*h0)};
+    }
+    const t=v(8);
+    if(t===0){const a=rnd(15,45),b=rnd(2,6),c=rnd(10,30),ans=c+a*b;return {q:`「${c} ＋ ${a} × ${b}」的正確答案為何？`,opts:uniqueOpts(ans,[(c+a)*b,ans+10,ans-5]),a:String(ans),exp:`先乘除後加減得 ${ans}。`};}
+    if(t===1) return {q:`三邊等長、三角皆 60° 的三角形稱為什麼？`,opts:uniqueOpts('正三角形',['直角三角形','鈍角三角形','不等邊三角形']),a:'正三角形',exp:`三邊等長即正三角形。`};
+    if(t===2){const n=rnd(24,89)*1000+rnd(100,900),ans=Math.round(n/1000)*1000;return {q:`${n} 用「四捨五入法」取概數到千位是多少？`,opts:uniqueOpts(ans,[ans+1000,ans-1000,Math.floor(n/100)*100]),a:String(ans),exp:`看百位數四捨五入得 ${ans}。`};}
+    if(t===3){const s=rnd(6,15);return {q:`邊長 ${s} 公分的正方形，面積是多少平方公分？`,opts:uniqueOpts(s*s,[s*4,s*2,s*s+10]),a:String(s*s),exp:`正方形面積＝邊長×邊長＝${s*s}。`};}
+    if(t===4){const w=rnd(2,5),d=rnd(3,7),n=rnd(1,d-1);return {q:`把帶分數「${w} 又 ${n}/${d}」化成假分數是多少？`,opts:uniqueOpts(`${w*d+n}/${d}`,[`${w+n}/${d}`,`${w*n}/${d}`,`${w*d-n}/${d}`]),a:`${w*d+n}/${d}`,exp:`${w}×${d}＋${n}＝${w*d+n}。`};}
+    if(t===5) return {q:`一億是幾個「一千萬」合起來的？`,opts:uniqueOpts('10 個',['100 個','1000 個','1 個']),a:'10 個',exp:`10 個一千萬是一億。`};
+    if(t===6){const a1=rnd(40,75),a2=rnd(45,65),ans=180-a1-a2;return {q:`三角形的兩個內角分別是 ${a1}° 和 ${a2}°，第三個內角是幾度？`,opts:uniqueOpts(`${ans}°`,[`${ans+10}°`,`${180-a1}°`,`90°`]),a:`${ans}°`,exp:`180°－${a1}°－${a2}°＝${ans}°。`};}
+    return {q:`只有一雙對邊互相平行的四邊形稱為什麼？`,opts:uniqueOpts('梯形',['平行四邊形','長方形','菱形']),a:'梯形',exp:`只有一雙對邊平行的四邊形為梯形。`};
+  }
+
+  if(g===5){
+    if(kind==='calc'){
+      const t=v(5);
+      if(t===0){const d1=rnd(2,5),d2=rnd(3,7);if(d1===d2)return genMath(5,diff,kind,vIdx+1);const L=lcm(d1,d2);const n1=rnd(1,d1-1),n2=rnd(1,d2-1);const num=n1*(L/d1)+n2*(L/d2),g0=gcd(num,L);return {q:`${n1}/${d1} ＋ ${n2}/${d2} ＝（　　）`,a:`${num/g0}/${L/g0}`};}
+      if(t===1){const a=rnd(12,36)/10,b=rnd(2,9);return {q:`${a.toFixed(1)} × ${b} ＝（　　）`,a:(a*b).toFixed(1)};}
+      if(t===2){const l=rnd(6,14),w=rnd(4,9),h=rnd(3,8);return {q:`看圖計算這個長方體的體積是多少立方公分？`,svg:svgBox3D(l,w,h),a:String(l*w*h)};}
+      if(t===3){const a=rnd(12,48),b=pick([2,4,5,8]);return {q:`小數除法：${a} ÷ ${b} ＝（　　）`,a:String(a/b)};}
+      const up=rnd(4,9),dn=rnd(7,15),h=rnd(4,8);return {q:`看圖計算梯形面積：（${up} ＋ ${dn}）× ${h} ÷ 2 ＝（　　）`,svg:svgTrapezoid(up,dn,h),a:String((up+dn)*h/2)};
+    }
+    if(kind==='word'){
+      const t=v(5);
+      if(t===0){const orig=rnd(4,15)*100,off=pick([75,80,85,90]);return {q:`外套原價 ${orig} 元，週年慶打 ${off%10===0?off/10:off} 折（${off}%），現在買需付幾元？`,a:`${orig} × ${off}% = ${orig*off/100}（元）`};}
+      if(t===1){const l=rnd(10,20),w=rnd(8,14),h=rnd(5,10);return {q:`水箱內部尺寸長 ${l}、寬 ${w}、高 ${h} 公分，最多可裝幾毫公升水？`,a:`${l} × ${w} × ${h} = ${l*w*h}（毫公升）`};}
+      if(t===2){const a=rnd(2,5)*6,b=rnd(2,5)*8;return {q:`${a} 顆糖果和 ${b} 塊餅乾平分裝袋且無剩餘，最多可分幾袋？`,a:`最大公因數 (${a}, ${b}) = ${gcd(a,b)}（袋）`};}
+      if(t===3){const tot=rnd(20,50)*10,hit=Math.round(tot*pick([0.4,0.5,0.6,0.75]));return {q:`投籃練習中，${nm}投了 ${tot} 球，進了 ${hit} 球，他的投籃進球率是多少（以百分率表示）？`,a:`${hit} ÷ ${tot} = ${Math.round(hit*100/tot)}%`};}
+      const b0=rnd(8,16),h0=rnd(5,12);return {q:`如圖，一塊底 ${b0} 公尺、高 ${h0} 公尺的平行四邊形草地，面積是多少平方公尺？`,svg:svgParallelogram(b0,h0),a:`${b0} × ${h0} = ${b0*h0}（平方公尺）`};
+    }
+    if(kind==='fill'){
+      const t=v(8),a=rnd(2,6)*6,b=rnd(2,6)*9;
+      if(t===0) return {q:`${a} 和 ${b} 的最大公因數是（　），最小公倍數是（　）。`,a:`${gcd(a,b)}；${lcm(a,b)}`};
+      if(t===1){const L=rnd(15,45)/10;return {q:`${L.toFixed(1)} 公升 ＝（　　）毫公升 ＝（　　）立方公分。`,a:`${L*1000}；${L*1000}`};}
+      if(t===2){const up=rnd(4,10),dn=rnd(8,16),h=rnd(4,8);return {q:`看圖計算，上底 ${up}、下底 ${dn}、高 ${h} 公分的梯形面積是（　　）平方公分。`,svg:svgTrapezoid(up,dn,h),a:String((up+dn)*h/2)};}
+      if(t===3){const b0=rnd(6,15),h0=rnd(4,12);return {q:`看圖計算，底 ${b0} 公分、高 ${h0} 公分的平行四邊形面積是（　　）平方公分。`,svg:svgParallelogram(b0,h0),a:String(b0*h0)};}
+      if(t===4){const vs=[rnd(18,22),rnd(23,26),rnd(27,31),rnd(21,25)];return {q:`看氣溫折線圖回答：最高溫與最低溫相差（　）度。`,svg:svgLineGraph(['9時','12時','15時','18時'],vs),a:String(Math.max(...vs)-Math.min(...vs))};}
+      if(t===5){const n=rnd(2,5);return {q:`邊長 ${n} 公尺的正方體，體積是（　）立方公尺，合（　　　）立方公分。`,a:`${n*n*n}；${n*n*n*1000000}`};}
+      if(t===6){const t0=rnd(2,9);return {q:`${t0} 公噸 ＝（　　　）公斤；${t0} 公頃 ＝（　　　）公畝。`,a:`${t0*1000}；${t0*100}`};}
+      const p0=pick([20,25,40,75,80]);return {q:`將百分率「${p0}%」化為最簡分數是（　　），化為小數是（　　）。`,a:`${p0/gcd(p0,100)}/${100/gcd(p0,100)}；${(p0/100).toFixed(2).replace(/0$/,'')}`};
+    }
+    const t=v(8);
+    if(t===0){const b0=rnd(8,18),h0=rnd(5,12),ans=(b0*h0)/2;return {q:`看圖計算，這個三角形的面積是多少平方公分？`,svg:svgTriangle(b0,h0),opts:uniqueOpts(ans,[b0*h0,b0+h0,ans+10]),a:String(ans),exp:`面積＝底×高÷2＝${ans}。`};}
+    if(t===1) return {q:`下列哪一個數「同時是 2 和 3 的倍數」？`,opts:uniqueOpts(24,[25,27,32]),a:'24',exp:`偶數且各位數字和為 3 的倍數。`};
+    if(t===2){const pct=pick([25,40,60,75,80]);return {q:`小數 ${(pct/100).toFixed(2)} 化成百分率是多少？`,opts:uniqueOpts(`${pct}%`,[`${pct/10}%`,`${pct*10}%`,`0.${pct}%`]),a:`${pct}%`,exp:`小數乘 100 加上 %。`};}
+    if(t===3){const e=rnd(3,7);return {q:`邊長 ${e} 公分的正方體，表面積是多少平方公分？`,opts:uniqueOpts(e*e*6,[e*e*e,e*e*4,e*6]),a:String(e*e*6),exp:`邊長×邊長×6＝${e*e*6}。`};}
+    if(t===4){const n=rnd(3,8);return {q:`正 ${n} 邊形一共有幾條對稱軸？`,opts:uniqueOpts(`${n} 條`,[`${n*2} 條`,'1 條','2 條']),a:`${n} 條`,exp:`正 N 邊形有 N 條對稱軸。`};}
+    if(t===5) return {q:`「0.85 × 0.9」的積與被乘數 0.85 比較，結果如何？`,opts:uniqueOpts('比 0.85 小',['比 0.85 大','等於 0.85','無法比較']),a:'比 0.85 小',exp:`乘以小於 1 的數，積比被乘數小。`};
+    if(t===6){const l=rnd(5,10),w=rnd(4,8),h=rnd(3,6),ans=l*w*h;return {q:`如圖，長 ${l}cm、寬 ${w}cm、高 ${h}cm 的長方體體積是多少？`,svg:svgBox3D(l,w,h),opts:uniqueOpts(`${ans} 立方公分`,[`${(l+w+h)*4} 立方公分`,`${l*w*2} 立方公分`,`${ans+20} 立方公分`]),a:`${ans} 立方公分`,exp:`長×寬×高＝${ans} 立方公分。`};}
+    const c0=rnd(4,9);return {q:`圓錐有幾個頂點？幾個底面？`,opts:uniqueOpts('1 個頂點、1 個底面',['2 個頂點、2 個底面','0 個頂點、2 個底面','1 個頂點、2 個底面']),a:'1 個頂點、1 個底面',exp:`圓錐有 1 個頂點與 1 個圓形底面。`};
+  }
+
+  // grade 6
+  if(kind==='calc'){
+    const t=v(5);
+    if(t===0){const r=rnd(4,12);return {q:`看圖計算，這個圓的面積大約是多少平方公分？（π＝3.14）`,svg:svgCircle(r,false),a:(r*r*3.14).toFixed(2).replace(/\.00$/,'')};}
+    if(t===1){const a=rnd(2,5)*3,b=rnd(2,5)*5,g0=gcd(a,b);return {q:`「${a} ： ${b}」的最簡單整數比：（　　）`,a:`${a/g0} ： ${b/g0}`};}
+    if(t===2){const x=rnd(4,18),k=rnd(3,8),c=rnd(5,20);return {q:`解方程式：${k} × x ＋ ${c} ＝ ${k*x+c}，x ＝（　）`,a:String(x)};}
+    if(t===3){const a=rnd(2,5),b=rnd(3,7);return {q:`分數除法：${a} ÷ ${b}/${a+b} ＝（　　）`,a:`${a*(a+b)}/${b}`};}
+    const r0=rnd(3,8),h0=rnd(5,10);return {q:`看圖計算圓柱體積（π＝3.14）：底面半徑 ${r0}cm、高 ${h0}cm ＝（　　）立方公分`,svg:svgCylinder(r0,h0),a:(r0*r0*3.14*h0).toFixed(1).replace(/\.0$/,'')};
+  }
+  if(kind==='word'){
+    const t=v(5),v0=rnd(40,80),hr=rnd(2,5);
+    if(t===0) return hard
+      ? {q:`甲乙相距 ${v0*hr} 公里，去程時速 ${v0} 公里，回程花 ${hr+1} 小時，來回平均速率是每小時幾公里？`,a:`${v0*hr*2} ÷ ${hr+hr+1} ＝ ${((v0*hr*2)/(2*hr+1)).toFixed(1)} 公里/時`}
+      : {q:`火車以時速 ${v0} 公里行駛 ${hr} 小時，共行駛了幾公里？`,a:`${v0} × ${hr} = ${v0*hr}（公里）`};
+    if(t===1){const tot=rnd(4,12)*50,r1=rnd(2,4),r2=rnd(3,5),sum=r1+r2,realTot=Math.round(tot/sum)*sum;return {q:`把 ${realTot} 元按 ${r1} ： ${r2} 分給${nm}和${nm2}，各分得多少元？`,a:`${nm} ${realTot*r1/sum} 元，${nm2} ${realTot*r2/sum} 元`};}
+    if(t===2){const r=rnd(4,10),h0=rnd(8,15);return {q:`如圖，底面半徑 ${r} 公分、高 ${h0} 公分的圓柱體，體積約多少立方公分？（π＝3.14）`,svg:svgCylinder(r,h0),a:`${r}×${r}×3.14×${h0} = ${(r*r*3.14*h0).toFixed(1)}（立方公分）`};}
+    if(t===3){const base=rnd(200,500),pct=pick([20,25,30]);return {q:`一件襯衫成本 ${base} 元，老闆加計 ${pct}% 作為定價，定價是多少元？`,a:`${base} × (1 + ${pct}%) = ${base*(100+pct)/100}（元）`};}
+    const d0=rnd(12,25),s1=rnd(55,75),s2=rnd(45,65);return {q:`兩車從同一地點同時反方向出發，甲車時速 ${s1} 公里、乙車時速 ${s2} 公里，3 小時後兩車相距幾公里？`,a:`(${s1} + ${s2}) × 3 = ${(s1+s2)*3}（公里）`};
+  }
+  if(kind==='fill'){
+    const t=v(8),d=rnd(6,20);
+    if(t===0) return {q:`直徑 ${d} 公分的圓，圓周長約（　　）公分。（π＝3.14）`,a:(d*3.14).toFixed(2).replace(/\.00$/,'')};
+    if(t===1){const tot=200,pA=pick([35,40,45]),pB=pick([25,30]);return {q:`看社團圓形圖：若全校有 ${tot} 人，參加籃球社的有（　　）人，音樂社有（　　）人。`,svg:svgPieChart(pA,'籃球',pB,'音樂'),a:`${tot*pA/100}；${tot*pB/100}`};}
+    if(t===2) return {q:`每秒 10 公尺 ＝ 每分鐘（　　）公尺 ＝ 時速（　）公里。`,a:'600；36'};
+    if(t===3){const n=pick([12,18,20,28,30,45]);const pf=[];let tmp=n;for(let p=2;p<=tmp;p++){while(tmp%p===0){pf.push(p);tmp/=p;}}return {q:`將 ${n} 做質因數分解：${n} ＝（　　　　）。`,a:pf.join(' × ')};}
+    if(t===4){const sc=pick([1000,5000,10000]),cm=rnd(2,6);return {q:`比例尺 1：${sc} 的地圖上，長 ${cm} 公分的路線實際長度是（　　）公尺。`,a:String(cm*sc/100)};}
+    if(t===5){const r0=10,deg=pick([90,180]);return {q:`如圖，半徑 ${r0} 公分、圓心角 ${deg}° 的扇形，面積約（　　）平方公分。（π＝3.14）`,svg:svgSector(r0,deg),a:String(r0*r0*3.14*(deg/360))};}
+    if(t===6){const x0=rnd(5,15),add=rnd(4,12);return {q:`若 y ＝ x ＋ ${add}，當 x ＝ ${x0} 時，y ＝（　　）。`,a:String(x0+add)};}
+    const a0=rnd(4,9),b0=rnd(5,11);return {q:`甲、乙兩數的比是 ${a0}：${b0}，若甲數是 ${a0*6}，則乙數是（　　）。`,a:String(b0*6)};
+  }
+  const t=v(8);
+  if(t===0){const v0=rnd(50,90),t0=rnd(2,4),ans=v0*t0;return {q:`汽車時速 ${v0} 公里行駛 ${t0} 小時，共走幾公里？`,opts:uniqueOpts(`${ans} 公里`,[`${Math.round(v0/t0)} 公里`,`${ans+v0} 公里`,`${v0+t0} 公里`]),a:`${ans} 公里`,exp:`距離＝速率×時間＝${ans} 公里。`};}
+  if(t===1){const p=pick([2,3,5,7,11,13,17,19]);return {q:`下列哪一個數是「質數」？`,opts:uniqueOpts(p,[1,15,21,27]),a:String(p),exp:`${p} 只有 1 和自己兩個因數。`};}
+  if(t===2){const deg=pick([60,90,120,180]),fr={60:'1/6',90:'1/4',120:'1/3',180:'1/2'}[deg];return {q:`如圖，圓心角 ${deg}° 的扇形面積是整個圓面積的幾分之幾？`,svg:svgSector(10,deg),opts:uniqueOpts(fr,['1/2','1/3','1/4','1/6','1/8']),a:fr,exp:`${deg}°÷360°＝${fr}。`};}
+  if(t===3){const a=rnd(2,5)*3,b=rnd(2,5)*4;return {q:`「${a} ： ${b}」的比值是多少？`,opts:uniqueOpts(`${a/gcd(a,b)}/${b/gcd(a,b)}`,[`${b/gcd(a,b)}/${a/gcd(a,b)}`,`${a+b}`,`${a*b}`]),a:`${a/gcd(a,b)}/${b/gcd(a,b)}`,exp:`比值＝前項÷後項。`};}
+  if(t===4){return {q:`甲和乙兩個數量成正比，當甲變為原來的 3 倍時，乙會如何變化？`,opts:uniqueOpts('變為原來的 3 倍',['變為原來的 1/3 倍','維持不變','變為原來的 6 倍']),a:'變為原來的 3 倍',exp:`成正比時，比值固定，同乘以 3 倍。`};}
+  if(t===5){const n=rnd(5,9);return {q:`${n} 角柱共有幾個面、幾個頂點？`,opts:uniqueOpts(`${n+2} 個面、${n*2} 個頂點`,[`${n} 個面、${n} 個頂點`,`${n+1} 個面、${n+1} 個頂點`,`${n*2} 個面、${n+2} 個頂點`]),a:`${n+2} 個面、${n*2} 個頂點`,exp:`N 角柱有 N+2 個面、2N 個頂點、3N 條邊。`};}
+  if(t===6){const r0=rnd(3,8);return {q:`半徑 ${r0} 公分的圓，面積大約是多少平方公分？（π＝3.14）`,svg:svgCircle(r0,false),opts:uniqueOpts((r0*r0*3.14).toFixed(2),[(r0*2*3.14).toFixed(2),(r0*r0).toFixed(2),(r0*3.14).toFixed(2)]),a:(r0*r0*3.14).toFixed(2),exp:`圓面積＝半徑×半徑×3.14。`};}
+  const pA=40,pB=35;return {q:`看圓形圖，若全班有 40 人，參加籃球（${pA}%）比音樂（${pB}%）多幾人？`,svg:svgPieChart(pA,'籃球',pB,'音樂'),opts:uniqueOpts('2 人',['4 人','5 人','8 人']),a:'2 人',exp:`40 × (40% - 35%) ＝ 2 人。`};
+}
+
+// ===== 2c. 跨題型多變化數學題庫（確保 20 張懶人包題型與結構不重複，絕非單純改數字）=====
+function genMathVariety(grade, sem, diff, kind, vIdx=0){
+  const g=+grade, nm=pick(NAMES), nm2=pick(NAMES.filter(x=>x!==nm)), it=pick(ITEMS);
+  const scale = g<=1 ? 1 : (g===2 ? 2 : (g===3 ? 4 : (g===4 ? 6 : 10)));
+  const isTrue = (vIdx + randSeed) % 2 === 0;
+  const idx = (n) => ((vIdx % n) + n) % n;
+
+  if(kind==='tf'){
+    const t = idx(58);
+    if(t===0) return {q:`在整數中，偶數加上偶數的結果一定是${isTrue?'偶數':'奇數'}。`,a:isTrue?'○':'✕',exp:`偶數＋偶數＝偶數。`};
+    if(t===1) return {q:`奇數加上奇數的結果一定是${isTrue?'偶數':'奇數'}。`,a:isTrue?'○':'✕',exp:`例如 3＋5＝8，奇數＋奇數＝偶數。`};
+    if(t===2) return {q:`長方形的對角線${isTrue?'一樣長':'不一樣長'}，且四個角都是直角。`,a:isTrue?'○':'✕',exp:`長方形四角皆直角且兩對角線等長。`};
+    if(t===3) return {q:`用「正方形瓷磚」完全覆蓋桌面時，邊長越大的正方形需要的片數會越${isTrue?'少':'多'}。`,a:isTrue?'○':'✕',exp:`單片面積越大，所需總片數越少。`};
+    if(t===4) return {q:`分針在鐘面上走完一整圈（60 小格），剛好經過了 ${isTrue?'1 小時':'10 分鐘'}。`,a:isTrue?'○':'✕',exp:`分針走 1 圈為 60 分鐘＝1 小時。`};
+    if(t===5) return {q:`同一個月內，這個月的第一天（1日）和第 8 天的星期${isTrue?'一定相同':'一定不同'}。`,a:isTrue?'○':'✕',exp:`一星期有 7 天，相差 7 天的星期相同。`};
+    if(t===6){const d=rnd(3,9);return {q:`在一個有餘數的除法算式中，除數如果是 ${d}，餘數有可能是 ${isTrue?d-1:d+1}。`,a:isTrue?'○':'✕',exp:`餘數必須比除數 ${d} 小。`};}
+    if(t===7) return {q:`任何一個正整數乘以 1 之後，它的數值會${isTrue?'維持不變':'變成 1'}。`,a:isTrue?'○':'✕',exp:`任何數×1＝原數。`};
+    if(t===8) return {q:`「0 除以任何不等於 0 的整數」，所得的商都是 ${isTrue?'0':'原數'}。`,a:isTrue?'○':'✕',exp:`0 平均分給多人，每人依然得 0。`};
+    if(t===9) return {q:`若一條繩子對折再對折後變為相等的 4 段，每段佔全長的 ${isTrue?'1/4':'1/2'}。`,a:isTrue?'○':'✕',exp:`對折一次變 2 段，再對折變 4 段，每段為 1/4。`};
+    if(t===10) return {q:`當分子相同（皆為 1）時，分母越小的分數數值反而越${isTrue?'大':'小'}。`,a:isTrue?'○':'✕',exp:`切分越少份，單一份（如 1/2）比切越多份（如 1/8）大。`};
+    if(t===11){const s=rnd(4,9);return {q:`兩個邊長都是 ${s} 公分的正方形拼成一個長方形，拼成後的周長是原來兩個正方形周長總和減去 ${isTrue?2*s:4*s} 公分。`,a:isTrue?'○':'✕',exp:`相接處有 2 條邊重合，不再計入外圍周長。`};}
+    if(t===12) return {q:`量測教室黑板的長度，使用「${isTrue?'公尺':'毫米'}」作為單位會比「${isTrue?'毫米':'公尺'}」更適合。`,a:isTrue?'○':'✕',exp:`黑板約 3～4 公尺，以公尺最合適。`};
+    if(t===13) return {q:`一顆常見雞蛋的重量大約是 55 ${isTrue?'公克':'公斤'}。`,a:isTrue?'○':'✕',exp:`日常雞蛋重約 50～60 公克。`};
+    if(t===14) return {q:`當計算「先乘除、後加減」的兩步驟算式時，如果有小括號「( )」，就要${isTrue?'先把括號裡面的算出來':'忽略括號直接由左算到右'}。`,a:isTrue?'○':'✕',exp:`括號內的算式擁有最優先計算順序。`};
+    if(t===15) return {q:`在小數的末尾加上或去掉 0（例如 2.5 與 2.50），這兩個數的大小${isTrue?'完全相等':'差了 10 倍'}。`,a:isTrue?'○':'✕',exp:`小數末尾的 0 不影響大小。`};
+    if(t===16) return {q:`一年中，「7 月和 8 月」是連續的兩個${isTrue?'大月（都是 31 天）':'小月（都是 30 天）'}。`,a:isTrue?'○':'✕',exp:`7月、8月連續兩個月皆為 31 天大月。`};
+    if(t===17) return {q:`把一張正方形色紙沿對角線剪開，會得到兩個完全一樣的${isTrue?'等腰直角三角形':'鈍角三角形'}。`,a:isTrue?'○':'✕',exp:`正方形四角皆為 90°，對折剪開得等腰直角三角形。`};
+    if(t===18){const x=rnd(3,9),y=rnd(2,8);return {q:`在運算性質中，「(${x} ＋ ${y}) × 2」會等於「${x} × 2 ＋ ${y} × ${isTrue?2:1}」。`,a:isTrue?'○':'✕',exp:`乘法對加法的分配律。`};}
+    if(t===19){const kg0=rnd(2,5);return {q:`${kg0} 公斤的棉花和 ${isTrue?kg0*1000:kg0*100} 公克的鐵塊放在天平兩端，會呈${isTrue?'水平平衡':'向右傾斜'}狀態。`,a:isTrue?'○':'✕',exp:`${kg0} 公斤＝${kg0*1000} 公克，重量相等。`};}
+    if(t===20) return {q:`圓規兩腳張開的距離如果設定為 5 公分，畫出來的圓其「${isTrue?'半徑':'直徑'}」就是 5 公分。`,a:isTrue?'○':'✕',exp:`圓規兩腳距離決定圓的半徑。`};
+    if(t===21) return {q:`同一個圓裡面所有的直徑長度都相等，而且每一條直徑都會${isTrue?'通過圓心':'垂直於圓心旁邊'}。`,a:isTrue?'○':'✕',exp:`直徑必通過圓心且等長。`};
+    if(t===22) return {q:`奇數乘以奇數的乘積，結果一定會是「${isTrue?'奇數':'偶數'}」。`,a:isTrue?'○':'✕',exp:`例如 3×5＝15，奇×奇＝奇。`};
+    if(t===23) return {q:`一枝鉛筆的厚度大約是 7 ${isTrue?'毫米':'公尺'}。`,a:isTrue?'○':'✕',exp:`鉛筆直徑約 7 毫米（0.7 公分）。`};
+    if(t===24) return {q:`在直式加法計算時，如果某一位相加剛好滿 10，就要向前一位進 ${isTrue?'1':'10'}。`,a:isTrue?'○':'✕',exp:`十進位逢十進一。`};
+    if(t===25) return {q:`正方形與長方形的周長如果都是 24 公分，它們的每條邊長${isTrue?'不一定都一樣':'一定完全相等'}。`,a:isTrue?'○':'✕',exp:`正方形四邊皆 6cm，長方形可為長 8cm 寬 4cm 等多種組合。`};
+    if(t===26) return {q:`上午 11 時 30 分再過 1 小時，會變成「${isTrue?'下午 12 時 30 分（或 12:30）':'上午 12 時 30 分'}」。`,a:isTrue?'○':'✕',exp:`中午 12 時之後進入下午時段。`};
+    if(t===27) return {q:`把 1 公升的水倒進 2 個容量都是 500 毫公升的杯子裡，${isTrue?'剛好裝滿不會溢出':'會溢出來 200 毫公升'}。`,a:isTrue?'○':'✕',exp:`500＋500＝1000 毫公升＝1 公升。`};
+    if(t===28) return {q:`四邊形一定都有 4 條邊和 ${isTrue?'4 個角':'3 個角'}。`,a:isTrue?'○':'✕',exp:`四邊形定義為有 4 條邊與 4 個頂點、4 個角。`};
+    if(t===29){const a=rnd(15,40);return {q:`若「甲比乙多 ${a}」，那麼想要知道乙是多少，只要用「甲 ${isTrue?'減去':'加上'} ${a}」就可以算出來。`,a:isTrue?'○':'✕',exp:`乙比較少，故乙＝甲－${a}。`};}
+    if(t===30) return {q:`在分數比大小中，「${isTrue?'4/4':'3/4'}」剛好等於整數「1」。`,a:isTrue?'○':'✕',exp:`分子與分母相同時代表完整的一份，等於 1。`};
+    if(t===31) return {q:`用 1 公分積木排成一排長 1 公尺的直線，總共需要 ${isTrue?'100':'10'} 個積木。`,a:isTrue?'○':'✕',exp:`1 公尺＝100 公分。`};
+    if(t===32) return {q:`一個三角形裡面最多只可能出現「${isTrue?'1':'2'}」個直角。`,a:isTrue?'○':'✕',exp:`三角形內角和 180°，兩直角就已達 180° 無法組成三角形。`};
+    if(t===33) return {q:`平年一整年有 365 天，其中 2 月份固定有 ${isTrue?'28':'29'} 天。`,a:isTrue?'○':'✕',exp:`平年 2 月有 28 天，閏年 2 月有 29 天。`};
+    const extraTf = [
+      ['兩條互相垂直的直線相交所成的角，大小一定是 90 度直角。','兩條平行線相交所成的角是 90 度直角。','垂直兩線相交成 90° 直角。'],
+      ['把 300 公分換算成公尺，答案是 3 公尺。','把 300 公分換算成公尺，答案是 30 公尺。','100 公分＝1 公尺，300 公分＝3 公尺。'],
+      ['角的大小和角的兩條邊張開的程度有關，跟邊畫得多長無關。','角的兩條邊畫得越長，這個角就會變得越大。','角的大小取決於張開程度，與邊長無關。'],
+      ['同分母的分數相加時，只需把分子相加，分母保持不變。','同分母的分數相加時，分子和分母要分別相加。','同分母分數加減，分母不變、分子加減。'],
+      ['用直尺測量鉛筆時，若從刻度 2 公分對齊到刻度 9 公分，筆長是 7 公分。','用直尺從刻度 2 公分量到刻度 9 公分，表示這枝筆長 9 公分。','9－2＝7 公分。'],
+      ['在加減互逆驗算中，可以用「商×除數＋餘數」來檢查除法的答案對不對。','在除法驗算中，只要把「被除數×除數」就知道答案對不對。','除法驗算公式為：商×除數＋餘數＝被除數。'],
+      ['一位小數 0.9 再加上 0.1 就會進位成整數 1。','一位小數 0.9 再加上 0.1 會變成 0.10。','9 個 0.1 加 1 個 0.1 等於 10 個 0.1＝1。'],
+      ['正方形不僅四條邊等長，它同時也是一種特殊的長方形。','正方形的四條邊一樣長，但它完全不屬於四邊形。','正方形具備四直角與對邊平行等長特徵。'],
+      ['在標準時鐘上，分針從數字 12 順時針走到數字 6，剛好經過 30 分鐘。','分針從數字 12 走到數字 6，代表經過了 6 分鐘。','6 大格 × 5 分＝30 分鐘。'],
+      ['比較兩個四位數大小時，應該從最左邊的最高位（千位）開始比較。','比較兩個四位數大小時，要從最右邊的個位開始比最準。','比大小由最高位依序向右比。'],
+      ['把 1 公尺長的木條剪掉 25 公分後，剩下的長度是 75 公分。','把 1 公尺長的木條剪掉 25 公分後，還剩下 85 公分。','100－25＝75 公分。'],
+      ['在日曆上，1 月、3 月、5 月和 12 月都是 31 天的大月。','在日曆上，2 月、4 月、6 月和 9 月都有 31 天。','大月為 1、3、5、7、8、10、12 月。'],
+      ['三角形三條邊的長度相加，就是這個三角形的「周長」。','三角形底乘高的計算結果叫作「周長」。','多邊形外圍所有邊的總和為周長。'],
+      ['只要一個正方形的邊長是偶數公分，算出的周長也一定是偶數。','正方形邊長若是偶數公分，算出來的周長可能是奇數。','偶數 × 4 必為偶數。'],
+      ['24 時制裡的「18 時 10 分」等同於下午 6 時 10 分。','24 時制裡的「18 時 10 分」是指下午 8 時 10 分。','18－12＝6，為下午 6 時 10 分。'],
+      ['分母相同的兩個分數相減時，如果分子相等，答案就會等於 0。','分母相同的兩個分數相減時，只要分子相同就等於 1。','例如 3/5 － 3/5 ＝ 0。'],
+      ['拿 1 公升的水壺倒水，最多剛好能倒滿 10 個 100 毫公升的紙杯。','拿 1 公升的水壺最多只能倒滿 5 個 100 毫公升的紙杯。','1000 ÷ 100 ＝ 10 杯。'],
+      ['把一個圓平分對折兩次後，扇形的圓心角剛好是一個 90° 的直角。','把一個圓對折兩次後，扇形的角是 45° 的銳角。','360° ÷ 4 ＝ 90°。'],
+      ['三位數乘以 0 之後，所得的乘積一定比這個三位數本身還要小。','三位數乘以 0 之後，答案會跟原來的三位數一樣大。','任何正整數 × 0 ＝ 0。'],
+      ['體重 32 公斤的小學生與 32000 公克的書堆重量一樣重。','32 公斤的小學生比 32000 公克的貨物輕很多。','32 公斤 ＝ 32000 公克。'],
+      ['時針與分針在「下午 3 時正」所夾成的較小夾角是一個直角。','在「下午 3 時正」時，時針與分針重合在同一個方向。','3 時整兩針相差 3 大格 ＝ 90° 直角。'],
+      ['利用長方形長 10 公分、寬 6 公分的尺寸，可剪出最大邊長為 6 公分的正方形。','長 10 公分寬 6 公分的長方形，可以剪出邊長 10 公分的正方形。','正方形邊長受限於較短邊。'],
+      ['小數 3.4 中的「4」是在十分位，表示有 4 個 0.1。','小數 3.4 中的「4」是在百分位，代表 4 個 0.01。','小數點右邊第一位為十分位。'],
+      ['1 公里 50 公尺和 1050 公尺所代表的路程長度一模一樣。','1 公里 50 公尺換算成公尺是 1500 公尺。','1×1000＋50＝1050 公尺。']
+    ];
+    const et = extraTf[(t - 34) % extraTf.length];
+    return {q: isTrue ? et[0] : et[1], a: isTrue ? '○' : '✕', exp: et[2]};
+  }
+
+  if(kind==='mc'){
+    const t = idx(90);
+    if(t===0){
+      const ds = g<=1 ? [3,8,5] : [4,0,9,2];
+      const maxS = g<=1 ? '853' : '9420';
+      return {q:`用「${ds.join('、')}」這幾張數字卡排成一個不能重複數字的最大整數，應該是哪一個？`,opts:uniqueOpts(maxS, g<=1?['583','835','385']:['9402','9240','4920']),a:maxS,exp:`將較大數字依序放高位得 ${maxS}。`};
+    }
+    if(t===1){
+      const ds = g<=1 ? [2,7,4] : [6,0,3,8];
+      const minS = g<=1 ? '247' : '3068';
+      return {q:`用「${ds.join('、')}」排出一個最小整數（最高位不可為 0），應選哪個？`,opts:uniqueOpts(minS, g<=1?['274','427','742']:['0368','3086','3608']),a:minS,exp:`0 放次高位，由小到大排列得 ${minS}。`};
+    }
+    if(t===2){
+      const a=rnd(3,8)*scale, b=rnd(2,6)*scale, c=rnd(2,5);
+      const ans=`(${a} ＋ ${b}) × ${c}`;
+      return {q:`一盒鉛筆原本有 ${a} 枝，放進 ${b} 枝後，一共買了 ${c} 盒，要算總枝數可用哪個算式？`,opts:uniqueOpts(ans,[`${a} ＋ ${b} × ${c}`,`${a} × ${b} ＋ ${c}`,`${a} ＋ ${b} ＋ ${c}`]),a:ans,exp:`先算出每盒共有 ${a}＋${b} 枝，再乘以 ${c} 盒。`};
+    }
+    if(t===3){
+      const d=rnd(5,9), q0=rnd(6,14), r=rnd(1,d-1), tot=d*q0+r;
+      const vans = q0+1;
+      return {q:`有 ${tot} 顆巧克力，每 ${d} 顆裝成 1 袋，「最多可以裝滿」幾袋？`,opts:uniqueOpts(`${q0} 袋`,[`${vans} 袋`,`${q0-1} 袋`,`${r} 袋`]),a:`${q0} 袋`,exp:`${tot}÷${d}＝${q0}…${r}，餘數不足 1 袋捨去。`};
+    }
+    if(t===4){
+      const d=rnd(4,8), q0=rnd(5,12), r=rnd(1,d-1), tot=d*q0+r;
+      return {q:`全班 ${tot} 位同學去坐船，每條船最多坐 ${d} 人，「最少需要租」幾條船才夠全班搭？`,opts:uniqueOpts(`${q0+1} 條`,[`${q0} 條`,`${q0-1} 條`,`${r} 條`]),a:`${q0+1} 條`,exp:`${tot}÷${d}＝${q0}…${r}，剩下的 ${r} 人還須再多租 1 條。`};
+    }
+    if(t===5) return {q:`下列哪一個生活物品的長度最適合使用「公里」來當作單位？`,opts:uniqueOpts('高速公路的長度',['鉛筆的長度','課本的寬度','橡皮擦的厚度']),a:'高速公路的長度',exp:`長距離道路以公里（km）表示。`};
+    if(t===6){
+      const hrs=rnd(1,3), mins=pick([20,30,45]), totMin=hrs*60+mins;
+      return {q:`一部卡通片長「${hrs} 小時 ${mins} 分鐘」，相當於多少分鐘？`,opts:uniqueOpts(`${totMin} 分鐘`,[`${hrs*100+mins} 分鐘`,`${hrs*10+mins} 分鐘`,`${totMin+30} 分鐘`]),a:`${totMin} 分鐘`,exp:`1 小時＝60 分，${hrs}×60＋${mins}＝${totMin} 分。`};
+    }
+    if(t===7){
+      const w=rnd(6,12), h=rnd(3,7), p=(w+h)*2;
+      return {q:`長方形花圃周長為 ${p} 公尺，已知它的長是 ${w} 公尺，請問寬是多少公尺？`,opts:uniqueOpts(`${h} 公尺`,[`${p-w} 公尺`,`${h*2} 公尺`,`${w} 公尺`]),a:`${h} 公尺`,exp:`周長÷2－長 ＝ ${p/2}－${w} ＝ ${h} 公尺。`};
+    }
+    if(t===8){
+      const den=pick([5,6,8,10]), a0=rnd(2,den-2);
+      return {q:`分數「${a0}/${den}」裡面有幾個「1/${den}」？`,opts:uniqueOpts(`${a0} 個`,[`${den} 個`,`${den-a0} 個`,`${a0+den} 個`]),a:`${a0} 個`,exp:`${a0}/${den} 是 ${a0} 個 1/${den} 合起來的數。`};
+    }
+    if(t===9){
+      const n=rnd(2,7)*100+rnd(1,9);
+      return {q:`數「${n}」中，十位數字是 0，代表十位數字佔的數值是多少？`,opts:uniqueOpts('0',['10','100','無法表示']),a:'0',exp:`十位數字是 0 表示有 0 個十，數值為 0。`};
+    }
+    if(t===10){
+      const a=rnd(15,45), b=rnd(12,35);
+      return {q:`若「甲 ＋ ${a} ＝ ${a+b}」，且「甲 × 2 ＝ 乙」，則乙是多少？`,opts:uniqueOpts(b*2,[b,(a+b)*2,b+2]),a:String(b*2),exp:`先求甲＝${b}，再算乙＝${b}×2＝${b*2}。`};
+    }
+    if(t===11){
+      const price=rnd(2,6)*10+5;
+      return {q:`${nm}買了一本 ${price} 元的筆記本，最少要用「幾個錢幣」（50元、10元、5元、1元不限張數）才能剛好付清？`,opts:uniqueOpts(`${Math.floor(price/50)+Math.floor((price%50)/10)+((price%10)>=5?1:0)+(price%5)} 個`,['1 個','10 個','15 個']),a:`${Math.floor(price/50)+Math.floor((price%50)/10)+((price%10)>=5?1:0)+(price%5)} 個`,exp:`盡量先用最大面額硬幣搭配。`};
+    }
+    if(t===12){
+      const st=rnd(3,9), step=rnd(4,7);
+      return {q:`觀察數列的變化規律：${st}、${st+step}、${st+step*2}、（　）、${st+step*4}，括號內該填？`,opts:uniqueOpts(st+step*3,[st+step*3+1,st+step*2+1,st+step*4-1]),a:String(st+step*3),exp:`每次多 ${step}，因此應為 ${st+step*3}。`};
+    }
+    if(t===13){
+      const deg=pick([35,55,75,115,135]), ans=deg<90?'銳角':'鈍角';
+      return {q:`時鐘張開形成的角度如果是 ${deg}°，這是一個什麼角？`,opts:uniqueOpts(ans,['直角','平角','周角']),a:ans,exp:`小於 90° 為銳角，大於 90° 小於 180° 為鈍角。`};
+    }
+    if(t===14){
+      const k=rnd(3,7), n=rnd(4,9);
+      return {q:`關於奇偶數的判斷，下列哪一個算式的得數一定是「偶數」？`,opts:uniqueOpts(`${k*2} ＋ ${n*2}`,[`${k*2+1} ＋ ${n*2}`,`${k*2} ＋ ${n*2+1}`,`3 ＋ 4`]),a:`${k*2} ＋ ${n*2}`,exp:`兩個偶數相加結果必為偶數。`};
+    }
+    if(t===15){
+      const a=rnd(12,35), b=rnd(11,29);
+      return {q:`比較「${a} ＋ ${b}」與「${a+5} ＋ ${b-3}」兩者得數的大小關係？`,opts:uniqueOpts('後者比較大',['前者比較大','兩者一樣大','無法比較']),a:'後者比較大',exp:`前者得 ${a+b}，後者等於 ${a+b+2}，多了 2。`};
+    }
+    if(t===16){
+      const k=rnd(2,4), g0=rnd(250,750);
+      return {q:`${k} 公斤 ${g0} 公克 和下列哪一個重量相同？`,opts:uniqueOpts(`${k*1000+g0} 公克`,[`${k*100+g0} 公克`,`${k+g0} 公克`,`${k*10000+g0} 公克`]),a:`${k*1000+g0} 公克`,exp:`1 公斤＝1000 公克。`};
+    }
+    if(t===17){
+      const a=rnd(2,5), b=rnd(3,6);
+      return {q:`「紅緞帶長 ${a} 公分，藍緞帶的長度是紅緞帶的 ${b} 倍」，兩條緞帶接起來總長幾公分？`,opts:uniqueOpts(`${a*(b+1)} 公分`,[`${a*b} 公分`,`${a+b} 公分`,`${a*(b-1)} 公分`]),a:`${a*(b+1)} 公分`,exp:`${a} × (1＋${b}) ＝ ${a*(b+1)} 公分。`};
+    }
+    if(t===18){
+      const h1=rnd(8,11), dMin=pick([40,50,70]), tot=h1*60+dMin;
+      const ans=`${Math.floor(tot/60)} 時 ${String(tot%60).padStart(2,'0')} 分`;
+      return {q:`一堂音樂課從上午 ${h1} 時 00 分上課，共上了 ${dMin} 分鐘，下課時是幾時幾分？`,opts:uniqueOpts(ans,[`${h1} 時 ${dMin} 分`,`${h1+2} 時 00 分`,`${h1-1} 時 30 分`]),a:ans,exp:`每滿 60 分進位 1 小時。`};
+    }
+    if(t===19){
+      const x=rnd(3,8);
+      return {q:`正方形的邊長變為原來的 ${x} 倍時，周長會變為原來的幾倍？`,opts:uniqueOpts(`${x} 倍`,[`${x*x} 倍`,`${x*4} 倍`,`維持不變`]),a:`${x} 倍`,exp:`周長與邊長成正比，同放大為 ${x} 倍。`};
+    }
+    if(t===20){
+      const n=rnd(2,5)*1000+rnd(1,4)*100+50;
+      const ans=`${Math.floor(n/1000)}個千＋${Math.floor((n%1000)/100)}個百＋5個十`;
+      return {q:`把「${n}」改寫成幾千幾百的分解方式，何者正確？`,opts:uniqueOpts(ans,[`${Math.floor(n/1000)}個百＋5個十`,`${Math.floor(n/100)}個千＋5個一`,`${n}個十`]),a:ans,exp:`按位值拆解即可。`};
+    }
+    if(t===21) return {q:`關於直角、銳角、鈍角由小到大的排列順序，何者正確？`,opts:uniqueOpts('銳角 ＜ 直角 ＜ 鈍角',['直角 ＜ 銳角 ＜ 鈍角','鈍角 ＜ 直角 ＜ 銳角','銳角 ＜ 鈍角 ＜ 直角']),a:'銳角 ＜ 直角 ＜ 鈍角',exp:`角度分別為 <90°、＝90°、>90°。`};
+    if(t===22) return {q:`下列哪一個長度最長？`,opts:uniqueOpts('2 公里',['1500 公尺','80000 公分','900000 毫米']),a:'2 公里',exp:`2 公里＝2000 公尺，其餘皆小於 2000 公尺。`};
+    if(t===23) return {q:`下列哪一個時間最長？`,opts:uniqueOpts('2 小時 10 分鐘',['125 分鐘','7000 秒','1 小時 50 分鐘']),a:'2 小時 10 分鐘',exp:`2 小時 10 分＝130 分鐘，其餘皆小於 130 分。`};
+    if(t===24) return {q:`下列哪一個重量最重？`,opts:uniqueOpts('3 公斤 200 公克',['3050 公克','2900 公克','3 公斤 20 公克']),a:'3 公斤 200 公克',exp:`3 公斤 200 公克＝3200 公克，最重。`};
+    if(t===25) return {q:`要測量「十元硬幣的厚度」，使用哪一個單位最精確適當？`,opts:uniqueOpts('毫米 (mm)',['公分 (cm)','公尺 (m)','公里 (km)']),a:'毫米 (mm)',exp:`硬幣厚度極薄約 1～2 毫米。`};
+    if(t===26) return {q:`關於圓形的敘述，下列哪一項是正確的？`,opts:uniqueOpts('一個圓的直徑是半徑的 2 倍',['同一個圓有很多個圓心','半徑永遠比直徑長','圓周圍起來的是三角形']),a:'一個圓的直徑是半徑的 2 倍',exp:`直徑＝2×半徑。`};
+    if(t===27) return {q:`一隻大象大約重 4000 公斤，請問這相當於 1000 隻多少公斤的動物合起來的重量？`,opts:uniqueOpts('4 公斤',['40 公斤','400 公斤','0.4 公斤']),a:'4 公斤',exp:`4000÷1000＝4 公斤。`};
+    if(t===28){const b=rnd(2,5);return {q:`下面哪一張鈔票與「1 張 1000 元鈔票」不能換成等值的組合？`,opts:uniqueOpts('9 張 100 元',['10 張 100 元','2 張 500 元','20 張 50 元硬幣']),a:'9 張 100 元',exp:`9 張 100 元只有 900 元。`};}
+    if(t===29) return {q:`下面哪一個分數的數值「最小」？`,opts:uniqueOpts('1/9',['1/3','1/5','1/7']),a:'1/9',exp:`分子相同時，分母越大其值越小。`};
+    if(t===30) return {q:`下面哪一個算式的答案「最接近 1000」？`,opts:uniqueOpts('498 ＋ 501',['210 ＋ 450','890 － 300','610 ＋ 620']),a:'498 ＋ 501',exp:`498＋501＝999，最接近 1000。`};
+    if(t===31) return {q:`「把 36 顆草莓平分裝進 4 個盤子」，每盤有幾顆草莓？可以用哪一個乘法口訣來幫忙驗算？`,opts:uniqueOpts('四九三十六',['四八三十二','六六三十六','五七三十五']),a:'四九三十六',exp:`4×9＝36，故每盤 9 顆。`};
+    if(t===32){const a=rnd(2,5)*100;return {q:`用 100 元鈔票買一條 ${a-120} 元的跳繩，最少要拿出幾張 100 元才夠付？`,opts:uniqueOpts(`${Math.ceil((a-120)/100)} 張`,[`${Math.floor((a-120)/100)} 張`,`${Math.ceil((a-120)/100)+2} 張`,`1 張`]),a:`${Math.ceil((a-120)/100)} 張`,exp:`須大於或等於商品金額。`};}
+    if(t===33) return {q:`在一個大正方形裡面，剪掉一個小角落的小正方形後，新圖形的周長會怎麼變化？（兩條新凹邊與被剪掉的原邊等長）`,opts:uniqueOpts('跟原來一樣長',['一定會變短','一定會變長兩倍','變成原來的一半']),a:'跟原來一樣長',exp:`利用邊長平移性質，周長維持不變。`};
+    if(t===34) return {q:`一年當中，有 31 天的月份共有幾個月？`,opts:uniqueOpts('7 個月',['4 個月','5 個月','6 個月']),a:'7 個月',exp:`1、3、5、7、8、10、12 月，共 7 個大月。`};
+    if(t===35) return {q:`在「□ ÷ 6 ＝ 8 … ☆」這個算式裡，□ 最大可能是多少？`,opts:uniqueOpts('53',['48','49','54']),a:'53',exp:`餘數最大為 5，故 6×8＋5＝53。`};
+    if(t===36) return {q:`鐘面上的時針從數字 3 走到數字 5，經過了多少時間？`,opts:uniqueOpts('2 小時',['2 分鐘','10 分鐘','120 秒']),a:'2 小時',exp:`時針每走 1 大格是 1 小時。`};
+    if(t===37) return {q:`長 12 公分、寬 8 公分的長方形，要剪出一個「最大的正方形」，這個正方形的邊長是多少公分？`,opts:uniqueOpts('8 公分',['12 公分','4 公分','10 公分']),a:'8 公分',exp:`受限於較短邊（寬 8 公分）。`};
+    if(t===38) return {q:`下列哪一個算式的結果和「120 ÷ 6 ÷ 2」相等？`,opts:uniqueOpts('120 ÷ (6 × 2)',['120 ÷ (6 ÷ 2)','120 ÷ 6 × 2','(120 ÷ 6) ＋ 2']),a:'120 ÷ (6 × 2)',exp:`連除兩數等於除以兩數之積。`};
+    if(t===39) return {q:`有一個 4 位數，千位與個位都是 5，百位與十位都是 0，這個數讀作什麼？`,opts:uniqueOpts('五千零五',['五千五十','五百零五','五千五']),a:'五千零五',exp:`中間連續兩個 0 只讀一個零。`};
+    if(t===40) return {q:`「0.7」這個小數，如果加上幾個 0.1 會剛好等於 1？`,opts:uniqueOpts('3 個',['7 個','10 個','1 個']),a:'3 個',exp:`0.7＋0.3＝1.0，故須 3 個 0.1。`};
+    if(t===41) return {q:`小明面向北方站立，他向右轉 1 個直角後，現在他面向哪一個方向？`,opts:uniqueOpts('東方',['南方','西方','北方']),a:'東方',exp:`上北下南左西右東，面向北右轉即朝東。`};
+    if(t===42) return {q:`一盒水果糖有 12 顆，弟弟吃了整盒的「1/3」，他一共吃了幾顆？`,opts:uniqueOpts('4 顆',['3 顆','6 顆','1 顆']),a:'4 顆',exp:`12 平分 3 份，每份 4 顆。`};
+    if(t===43) return {q:`兩個數相乘的積是 0，下列哪一個說法一定是對的？`,opts:uniqueOpts('兩個數之中至少有一個是 0',['兩個數都是 1','兩數相加一定是 1','兩數都是奇數']),a:'兩個數之中至少有一個是 0',exp:`任何數乘 0 等於 0。`};
+    if(t===44) return {q:`書包重 3 公斤 400 公克，水壺重 600 公克，合起來一共重幾公斤？`,opts:uniqueOpts('4 公斤',['3 公斤','3.5 公斤','400 公克']),a:'4 公斤',exp:`3400＋600＝4000 公克＝4 公斤。`};
+    if(t===45) return {q:`一隻青蛙每天跳出井口 3 公尺但下滑 1 公尺，一天實際前進幾公尺？`,opts:uniqueOpts('2 公尺',['3 公尺','4 公尺','1 公尺']),a:'2 公尺',exp:`3－1＝2 公尺。`};
+    if(t===46) return {q:`下列哪一個圖形「沒有直角」？`,opts:uniqueOpts('圓形',['正方形','長方形','直角三角形']),a:'圓形',exp:`圓形邊緣為光滑曲線，無直角。`};
+    if(t===47) return {q:`在四則算式「56 － 18 ÷ 3」中，第一步應該先計算哪個部分？`,opts:uniqueOpts('18 ÷ 3',['56 － 18','56 ÷ 3','56 － 3']),a:'18 ÷ 3',exp:`先乘除後加減，先算除法。`};
+    const extraMc = [
+      ()=>{const n=rnd(2,7);return {q:`「${n} 條邊都一樣長、且有 ${n} 個一樣大的角」的多邊形，如果 ${n}＝4 就是哪種圖形？`,opts:uniqueOpts('正方形',['菱形','梯形','五邊形']),a:'正方形',exp:`4邊等長且4角皆為直角的四邊形是正方形。`};},
+      ()=>{const a=rnd(120,380);return {q:`把「${a} 個一」和「3 個十」合起來，這個整數是多少？`,opts:uniqueOpts(String(a+30),[String(a+3),String(a+300),String(a*10+3)]),a:String(a+30),exp:`${a}＋30＝${a+30}。`};},
+      ()=>{const v=pick([1500,2500,3500]);return {q:`量杯裡裝了 ${v} 毫公升的水，倒掉 1 公升後，還剩下多少毫公升？`,opts:uniqueOpts(`${v-1000} 毫公升`,[`${v-100} 毫公升`,`${v-10} 毫公升`,`${v+1000} 毫公升`]),a:`${v-1000} 毫公升`,exp:`1 公升＝1000 毫公升，${v}－1000＝${v-1000}。`};},
+      ()=>({q:`關於「平行線」的性質，下列哪一個描述是正確的？`,opts:uniqueOpts('兩條平行線之間的垂直距離處處相等',['平行線最後一定會相交於一點','平行線一定會垂直交叉','一條線段就能叫作平行線']),a:'兩條平行線之間的垂直距離處處相等',exp:`兩平行線永遠不相交且距離相等。`}),
+      ()=>({q:`如果要畫一個直徑是 12 公分的圓，圓規兩腳應該張開幾公分？`,opts:uniqueOpts('6 公分',['12 公分','24 公分','3 公分']),a:'6 公分',exp:`圓規張開半徑長＝12÷2＝6 公分。`}),
+      ()=>({q:`統計圖表中，哪一種圖表最能清楚比較「不同項目數量的多寡」？`,opts:uniqueOpts('長條圖',['折線圖','圓點明細','亂數表']),a:'長條圖',exp:`長條圖以長條高度直觀比較各類別數量。`}),
+      ()=>{const d=rnd(3,7),q0=rnd(5,11);return {q:`算式「${d*q0} ÷ ${d} ＝ ${q0}」中，「${d*q0}」在除法中稱為什麼名稱？`,opts:uniqueOpts('被除數',['除數','商數','餘數']),a:'被除數',exp:`被除數 ÷ 除數 ＝ 商。`};},
+      ()=>({q:`一天共有 24 小時，如果從中午 12 時開始經過半天，會是何時？`,opts:uniqueOpts('午夜 12 時（24時）',['下午 6 時','隔天上午 6 時','上午 10 時']),a:'午夜 12 時（24時）',exp:`半天為 12 小時，12＋12＝24 時。`}),
+      ()=>({q:`小數「0.05」代表幾個「0.01」合起來？`,opts:uniqueOpts('5 個',['50 個','1 個','0.5 個']),a:'5 個',exp:`百分位為 5，代表 5 個 0.01。`}),
+      ()=>{const m=rnd(2,5);return {q:`百貨公司週年慶「買千送百」，小明家買了 ${m*1000} 元家電，可獲贈多少元禮券？`,opts:uniqueOpts(`${m*100} 元`,[`${m*10} 元`,`100 元`,`${m*500} 元`]),a:`${m*100} 元`,exp:`每滿 1000 送 100，${m} 個千元送 ${m*100} 元。`};},
+      ()=>({q:`在算盤上或定位板中，從右邊數來第四個數位是什麼位？`,opts:uniqueOpts('千位',['百位','萬位','十位']),a:'千位',exp:`由右至左依序為個、十、百、千、萬。`}),
+      ()=>({q:`「三百二十萬零四百」寫成阿拉伯數字時，總共會出現幾個 0？`,opts:uniqueOpts('4 個',['2 個','3 個','5 個']),a:'4 個',exp:`寫作 3200400，共 4 個 0。`}),
+      ()=>{const a=rnd(4,9);return {q:`一個正六邊形每條邊長都是 ${a} 公分，繞它外圍走 1 圈是多少公分？`,opts:uniqueOpts(`${a*6} 公分`,[`${a*4} 公分`,`${a*5} 公分`,`${a*3} 公分`]),a:`${a*6} 公分`,exp:`6 邊等長，${a}×6＝${a*6} 公分。`};},
+      ()=>({q:`下列哪一個時間單位最適合用來計量「100 公尺短跑的成績」？`,opts:uniqueOpts('秒',['小時','天','年']),a:'秒',exp:`短跑約十幾秒，用「秒」計量。`}),
+      ()=>({q:`關於「等腰三角形」的特徵，下列哪一項一定是正確的？`,opts:uniqueOpts('有兩條邊一樣長，且兩個底角一樣大',['三條邊都絕對不等長','三個角一定都是直角','只有兩條邊和兩個頂點']),a:'有兩條邊一樣長，且兩個底角一樣大',exp:`等腰三角形兩腰等長、兩底角相等。`}),
+      ()=>({q:`把一條長 1 公尺的緞帶平分成 10 段，其中 3 段合起來可以用哪個小數表示？`,opts:uniqueOpts('0.3 公尺',['0.03 公尺','3.0 公尺','1.3 公尺']),a:'0.3 公尺',exp:`1/10 公尺＝0.1 公尺，3 段即 0.3 公尺。`}),
+      ()=>({q:`用 50 元、10 元和 5 元硬幣湊出 85 元，最少需要幾個硬幣？`,opts:uniqueOpts('5 個',['3 個','8 個','10 個']),a:'5 個',exp:`50×1 ＋ 10×3 ＋ 5×1 ＝ 85 元，共 5 個。`}),
+      ()=>({q:`一個數除以 7 得到商是 12、餘數是 4，這個被除數是多少？`,opts:uniqueOpts('88',['84','80','92']),a:'88',exp:`7×12＋4＝88。`}),
+      ()=>({q:`學校操場跑道一圈是 200 公尺，小華跑了 5 圈共跑了多少公里？`,opts:uniqueOpts('1 公里',['10 公里','100 公尺','5 公里']),a:'1 公里',exp:`200×5＝1000 公尺＝1 公里。`}),
+      ()=>({q:`在四邊形中，哪一種圖形「兩雙對邊互相平行，且鄰邊不一定要等長」？`,opts:uniqueOpts('平行四邊形',['等腰梯形','圓形','正三角形']),a:'平行四邊形',exp:`平行四邊形兩組對邊皆平行且等長。`}),
+      ()=>({q:`將「7/8」和「1」比較大小，兩者之間相差了多少？`,opts:uniqueOpts('1/8',['7/8','1/7','8/7']),a:'1/8',exp:`1 － 7/8 ＝ 8/8 － 7/8 ＝ 1/8。`}),
+      ()=>({q:`一輛貨車載重限制 3 公噸，相當於多少公斤？`,opts:uniqueOpts('3000 公斤',['300 公斤','30000 公斤','30 公斤']),a:'3000 公斤',exp:`1 公噸＝1000 公斤。`}),
+      ()=>({q:`上午 9 時 45 分到上午 10 時 20 分，中間一共經過了幾分鐘？`,opts:uniqueOpts('35 分鐘',['45 分鐘','25 分鐘','75 分鐘']),a:'35 分鐘',exp:`9:45 到 10:00 有 15 分，再加 20 分＝35 分。`}),
+      ()=>({q:`「304 × 5」的積裡面有幾個 0？`,opts:uniqueOpts('1 個',['2 個','3 個','0 個']),a:'1 個',exp:`304×5＝1520，尾數共有 1 個 0。`}),
+      ()=>({q:`下列哪一個分數和「1/2」的大小完全相等？`,opts:uniqueOpts('4/8',['2/5','3/4','5/8']),a:'4/8',exp:`分子分母同乘 4 得 4/8＝1/2。`}),
+      ()=>({q:`一個長方體盒子總共有幾個頂點和幾條邊？`,opts:uniqueOpts('8 個頂點、12 條邊',['6 個頂點、8 條邊','12 個頂點、6 條邊','4 個頂點、8 條邊']),a:'8 個頂點、12 條邊',exp:`長方體有 6 面、8 頂點、12 條邊。`}),
+      ()=>({q:`哪一個平面的四邊形，「四個角一定是直角，而且鄰邊不等長也成立」？`,opts:uniqueOpts('長方形',['正三角形','梯形','五邊形']),a:'長方形',exp:`長方形有四個直角且對邊等長。`}),
+      ()=>({q:`小美存了 3 張 500 元和 4 個 50 元硬幣，她一共有多少元？`,opts:uniqueOpts('1700 元',['1550 元','1900 元','700 元']),a:'1700 元',exp:`1500＋200＝1700 元。`}),
+      ()=>({q:`哪一個時間段代表「一天當中夜晚的 22 時 30 分」？`,opts:uniqueOpts('晚上 10 時 30 分',['上午 10 時 30 分','下午 2 時 30 分','晚上 8 時 30 分']),a:'晚上 10 時 30 分',exp:`22－12＝10，故為晚上 10 時 30 分。`}),
+      ()=>({q:`用 1 平方公分的小方格拼成寬 4 公分、長 7 公分的長方形，共用幾個方格？`,opts:uniqueOpts('28 個',['11 個','22 個','14 個']),a:'28 個',exp:`面積 4×7＝28 平方公分，需 28 個。`}),
+      ()=>({q:`計算「480 ÷ 8」，得數是多少？`,opts:uniqueOpts('60',['6','80','48']),a:'60',exp:`48÷8＝6，補零得 60。`}),
+      ()=>({q:`下列哪一個重量的物品最輕？`,opts:uniqueOpts('450 公克',['1 公斤 50 公克','2 公斤','850 公克']),a:'450 公克',exp:`450 公克小於其餘三項。`}),
+      ()=>({q:`兩地相距 4 公里 80 公尺，也可改寫成幾公尺？`,opts:uniqueOpts('4080 公尺',['4800 公尺','480 公尺','4008 公尺']),a:'4080 公尺',exp:`4×1000＋80＝4080 公尺。`}),
+      ()=>({q:`下列哪一組分數相加起來「剛好等於 1」？`,opts:uniqueOpts('2/9 ＋ 7/9',['3/8 ＋ 4/8','1/5 ＋ 3/5','4/7 ＋ 4/7']),a:'2/9 ＋ 7/9',exp:`2/9＋7/9＝9/9＝1。`}),
+      ()=>({q:`量筒裡原有 360 毫升的水，丟入一顆石頭後水位升到 510 毫升，石頭體積占多少毫公升？`,opts:uniqueOpts('150 毫公升',['870 毫公升','250 毫公升','50 毫公升']),a:'150 毫公升',exp:`排水法求體積：510－360＝150。`}),
+      ()=>({q:`一個數的 5 倍是 45，那麼這個數的 8 倍會是多少？`,opts:uniqueOpts('72',['9','40','81']),a:'72',exp:`該數為 45÷5＝9，9×8＝72。`}),
+      ()=>({q:`觀察月份天數，「今年 4 月底（30日）的隔天」是幾月幾日？`,opts:uniqueOpts('5 月 1 日',['4 月 31 日','5 月 30 日','3 月 1 日']),a:'5 月 1 日',exp:`4 月小月共 30 天，隔日進入 5 月 1 日。`}),
+      ()=>({q:`在算式「(□ ＋ 15) × 3 ＝ 90」中，□ 代表的數字是多少？`,opts:uniqueOpts('15',['30','25','45']),a:'15',exp:`90÷3＝30，30－15＝15。`}),
+      ()=>({q:`下面哪一組「不是」常見的長條圖製作必要要素？`,opts:uniqueOpts('個人家庭住址',['統計標題','橫軸項目名稱','縱軸刻度與單位']),a:'個人家庭住址',exp:`長條圖必備標題、軸線類別與刻度單位。`}),
+      ()=>({q:`把一條繩子對折再對折後，剪開其中兩處（不含對折端？對，從中間剪斷一刀），其實「對折 1 次從正中間剪斷」最多會變成幾段？`,opts:uniqueOpts('3 段',['2 段','4 段','1 段']),a:'3 段',exp:`對折中間有彎曲連接，剪一刀分出左右 2 端＋中間折連 1 段＝3 段。`}),
+      ()=>({q:`買 1 打（12枝）鉛筆共花 180 元，平均每枝鉛筆賣幾元？`,opts:uniqueOpts('15 元',['12 元','20 元','18 元']),a:'15 元',exp:`180÷12＝15 元。`})
+    ];
+    return extraMc[(t - 48) % extraMc.length]();
+  }
+
+  if(kind==='fill'){
+    const t = idx(76);
+    if(t===0){const a=rnd(12,35)*scale,b=rnd(8,25)*scale;return {q:`比大小（請填 ＞、＜ 或 ＝）：「${a} ＋ ${b}」（　）「${a+2} ＋ ${b-1}」`,a:'＜'};}
+    if(t===1){const d=rnd(3,9),q0=rnd(5,12),r=rnd(1,d-1);return {q:`在「（　　）÷ ${d} ＝ ${q0} … ${r}」中，被除數應該是（　　）。`,a:String(d*q0+r)};}
+    if(t===2){const a=rnd(4,9),b=rnd(2,6);return {q:`把乘法寫成連加：${a} × ${b} 就是 ${b} 個 ${a} 相加，也可以記為 ${a} 的（　）倍。`,a:String(b)};}
+    if(t===3){const hr=rnd(1,4),min=rnd(10,45);return {q:`時間換算：${hr} 小時 ${min} 分鐘 ＝（　　）分鐘。`,a:String(hr*60+min)};}
+    if(t===4){const m=rnd(2,8),cm=rnd(15,85);return {q:`長度換算：${m} 公尺 ${cm} 公分 ＝（　　）公分。`,a:String(m*100+cm)};}
+    if(t===5){const L=rnd(2,6),ml=rnd(150,750);return {q:`容量換算：${L} 公升 ${ml} 毫公升 ＝（　　　）毫公升。`,a:String(L*1000+ml)};}
+    if(t===6){const kg=rnd(1,5),gr=rnd(200,800);return {q:`重量換算：${kg} 公斤 ${gr} 公克 ＝（　　　）公克。`,a:String(kg*1000+gr)};}
+    if(t===7){const s=rnd(5,15);return {q:`一個正三角形每條邊長 ${s} 公分，它的周長是（　　）公分。`,a:String(s*3)};}
+    if(t===8){const den=rnd(5,9),n1=rnd(1,den-2);return {q:`分數補 1：1 － ${n1}/${den} ＝（　　）。`,a:`${den-n1}/${den}`};}
+    if(t===9){const x=rnd(2,8);return {q:`小數寫作：「6 個 1 和 ${x} 個 0.1」合起來是（　　）。`,a:`6.${x}`};}
+    if(t===10){const n=rnd(2,8)*100+rnd(10,90);return {q:`逆推填空：（　　）＋ ${n} ＝ ${n*2+50}。`,a:String(n+50)};}
+    if(t===11){const st=rnd(10,40)*scale,sp=rnd(3,9)*scale;return {q:`倒數規律填填看：${st+sp*3} → ${st+sp*2} →（　　）→ ${st}。`,a:String(st+sp)};}
+    if(t===12){const h=rnd(2,9);return {q:`鐘面分針從 12 走到 ${h}，共走了（　　）分鐘。`,a:String(h*5)};}
+    if(t===13){const w=rnd(4,12),h=rnd(3,9);return {q:`長 ${w} 公分、寬 ${h} 公分的長方形，面積是（　　）平方公分。`,a:String(w*h)};}
+    if(t===14){const x=rnd(3,9),y=rnd(2,6);return {q:`倍數關係：哥哥有 ${x*y} 元，是弟弟的 ${y} 倍，弟弟有（　　）元。`,a:String(x)};}
+    if(t===15){const d=rnd(1,15),w=rnd(1,2);return {q:`日曆計算：7 月 ${d} 日經過 ${w} 星期後是 7 月（　　）日。`,a:String(d+w*7)};}
+    if(t===16){const r=rnd(4,12);return {q:`圓形計算：一個圓的直徑是 ${r*2} 公分，它的半徑是（　　）公分。`,a:String(r)};}
+    if(t===17){const th=rnd(1,7),u=rnd(2,9);return {q:`位值填數：由 ${th} 個千和 ${u} 個一組成的四位數寫作（　　　）。`,a:String(th*1000+u)};}
+    if(t===18){const x=rnd(12,35);return {q:`一個數的 1 倍是 ${x}，這個數的 0 倍是（　），10 倍是（　　）。`,a:`0；${x*10}`};}
+    if(t===19){const a=rnd(12,48),b=rnd(5,19);return {q:`加減互逆：已知 ${a} ＋ ${b} ＝ ${a+b}，所以 ${a+b} － ${a} ＝（　　）。`,a:String(b)};}
+    if(t===20){const a=rnd(4,9),b=rnd(11,18);return {q:`乘除互逆：已知 ${a} × ${b} ＝ ${a*b}，所以 ${a*b} ÷ ${a} ＝（　　）。`,a:String(b)};}
+    if(t===21){const s=rnd(6,15);return {q:`周長反推邊長：已知正方形的周長是 ${s*4} 公分，每條邊長（　　）公分。`,a:String(s)};}
+    if(t===22){const m=rnd(2,5);return {q:`毫米單位換算：${m} 公分 ＝（　　）毫米；80 毫米 ＝（　）公分。`,a:`${m*10}；8`};}
+    if(t===23){const p=rnd(2,7);return {q:`下午時刻換算 24 時制：下午 ${p} 時 15 分是（　　）時 15 分。`,a:String(p+12)};}
+    if(t===24){const c1=rnd(1,4);return {q:`秒數換算：${c1} 分鐘 25 秒 ＝（　　）秒。`,a:String(c1*60+25)};}
+    if(t===25){const n=rnd(3,9);return {q:`分數與整數：1 個披薩切 8 份，吃了 ${n} 份再補回 1 份，現在有（　　）分之（　）個。`,a:`8；${Math.max(1,8-n+1)}`};}
+    if(t===26){const v1=rnd(2,5);return {q:`鈔票兌換：${v1} 張 500 元鈔票可以換成（　　）張 100 元鈔票。`,a:String(v1*5)};}
+    if(t===27){const d=rnd(4,8);return {q:`除數為 ${d} 時，所有可能的餘數由小到大共有（　）種（不包含餘數為 0）。`,a:String(d-1)};}
+    if(t===28){const n=rnd(2,7);return {q:`小數加減補 1：0.${n} ＋（　　）＝ 1；1 － 0.${n} ＝（　　）。`,a:`0.${10-n}；0.${10-n}`};}
+    if(t===29){const k=rnd(3,8);return {q:`倍數填入：${k*100} 是 ${k} 的（　　）倍，也是 ${k*10} 的（　　）倍。`,a:`100；10`};}
+    if(t===30){const a=rnd(15,35),b=rnd(10,25);return {q:`未知數求解：□ － ${a} ＝ ${b}，則 □ ＝（　　）。`,a:String(a+b)};}
+    if(t===31) return {q:`三角板角度填空：一個直角三角板的三個角分別是 90°、45° 和（　　）°。`,a:'45'};
+    if(t===32){const yr=2024;return {q:`閏年日曆檢查：西元 ${yr} 年是閏年，這年 2 月有（　　）天，全年共有（　　）天。`,a:'29；366'};}
+    if(t===33){const len=rnd(10,20);return {q:`兩條長度分別為 ${len} 公分和 ${len+15} 公分的繩子，接在一起（重疊 3 公分）後總長為（　　）公分。`,a:String(len+len+15-3)};}
+    const extraFill = [
+      ()=>{const km=rnd(2,6),m0=rnd(50,450);return {q:`公里與公尺換算：${km} 公里 ${m0} 公尺 ＝（　　　）公尺。`,a:String(km*1000+m0)};},
+      ()=>{const d=rnd(3,7);return {q:`等量平分：將 ${d*8} 顆糖果平分給 ${d} 位同學，每人可分到（　）顆。`,a:'8'};},
+      ()=>{const x=rnd(2,6);return {q:`正方形面積換算：邊長 ${x} 公分的正方形，面積是（　　）平方公分。`,a:String(x*x)};},
+      ()=>{const m=rnd(3,9);return {q:`零錢加總：${m} 個 50 元硬幣合起來一共是（　　）元。`,a:String(m*50)};},
+      ()=>{const p=rnd(2,5);return {q:`週數轉換天數：${p} 星期加上 3 天，總共是（　　）天。`,a:String(p*7+3)};},
+      ()=>{const h1=rnd(1,4);return {q:`倍數運算填數：一打鉛筆有 12 枝，${h1} 打一共有（　　）枝鉛筆。`,a:String(h1*12)};},
+      ()=>{const a=rnd(15,35);return {q:`整百逼近估算：${a} × 10 ＝（　　），比 ${a*10-5} 多了（　）。`,a:`${a*10}；5`};},
+      ()=>{const den=rnd(5,9);return {q:`等值概念：${den} 分之 ${den} 等於整數（　），也等於 2 分之（　）。`,a:'1；2'};},
+      ()=>{const a=rnd(2,5);return {q:`天數與小時換算：${a} 日（整天）一共是（　　）小時。`,a:String(a*24)};},
+      ()=>{const x=rnd(4,9);return {q:`整數與分數比較：把 1 個蘋果平分 ${x} 份，吃了 3 份是吃了（　　）個。`,a:`3/${x}`};},
+      ()=>{const a=rnd(2,8);return {q:`公斤改寫：${a*1000} 公克 ＝（　）公斤；半公斤 ＝（　　）公克。`,a:`${a}；500`};},
+      ()=>{const m=rnd(120,380);return {q:`整千湊數練習：${m} ＋（　　）＝ 1000。`,a:String(1000-m)};},
+      ()=>{const d=rnd(3,7);return {q:`除法求餘數：${d*9+2} 除以 ${d}，商是（　），餘數是（　）。`,a:'9；2'};},
+      ()=>{const w=rnd(6,12),h=rnd(4,8);return {q:`長方形周長計算：長 ${w} 公分、寬 ${h} 公分，周長是（　　）公分。`,a:String((w+h)*2)};},
+      ()=>{const a=rnd(12,30);return {q:`等式平衡補空：${a} ＋ 25 ＝ 15 ＋（　　）。`,a:String(a+10)};},
+      ()=>{const p=rnd(2,6);return {q:`小時與分鐘轉秒：${p} 分鐘 ＝（　　）秒。`,a:String(p*60)};},
+      ()=>{const a=rnd(2,7);return {q:`小數數線推算：從 1.2 往右數 ${a} 個 0.1，會停在（　　）。`,a:(1.2+a*0.1).toFixed(1)};},
+      ()=>{const a=rnd(3,9);return {q:`菱形與等邊性質：正四邊形一條邊是 ${a} 公尺，四條邊總長為（　　）公尺。`,a:String(a*4)};},
+      ()=>{const s=rnd(2,6);return {q:`奇數數列推算：連續三個奇數分別是 ${s*2+1}、${s*2+3} 和（　　）。`,a:String(s*2+5)};},
+      ()=>{const s=rnd(4,9);return {q:`偶數數列填空：${s*2} 之後的下一個連續偶數是（　　）。`,a:String(s*2+2)};},
+      ()=>{const c=rnd(3,8);return {q:`一塊積木重 ${c}0 公克，5 塊相同的積木合起來一共重（　　）公克。`,a:String(c*50)};},
+      ()=>{const m=rnd(15,40);return {q:`購物找零填答：拿 100 元買了一枝 ${m} 元的原子筆，應找回（　　）元。`,a:String(100-m)};},
+      ()=>{const r=rnd(5,12);return {q:`半徑換算直徑：圓規兩腳張開 ${r} 公分所畫出的圓，直徑長（　　）公分。`,a:String(r*2)};},
+      ()=>{const a=rnd(2,5);return {q:`百元鈔票換算：1 張 1000 元可以換成 ${a} 張 100 元和（　）張 100 元。`,a:String(10-a)};},
+      ()=>{const m=rnd(3,7);return {q:`分母相同分數加法：1/${m+4} ＋ 2/${m+4} ＝（　　）。`,a:`3/${m+4}`};},
+      ()=>{const y=rnd(1,5);return {q:`年與月換算：${y} 年 4 個月一共是（　　）個月。`,a:String(y*12+4)};},
+      ()=>{const a=rnd(4,9);return {q:`倍數驗證：${a} 的 3 倍再加上 ${a} 的 2 倍，合起來是 ${a} 的（　）倍。`,a:'5'};},
+      ()=>{const d=rnd(12,24);return {q:`時刻經過推算：下午 2 時 ${d} 分經過 40 分鐘，會來到下午（　）時（　）分。`,a:`${d+40>=60?3:2}；${(d+40)%60}`};},
+      ()=>{const a=rnd(3,9);return {q:`體積概念填答：每層排 ${a} 個 1 立方公分積木，共疊 4 層，總體積為（　　）立方公分。`,a:String(a*4)};},
+      ()=>{const n=rnd(2,6);return {q:`容量公升改寫：${n*1000+500} 毫公升 ＝（　）公升（　　）毫公升。`,a:`${n}；500`};},
+      ()=>{const a=rnd(3,7);return {q:`四則混合分配：${a} × 12 ＝ ${a} × 10 ＋ ${a} ×（　）。`,a:'2'};},
+      ()=>{const x=rnd(12,24);return {q:`等量代換空格：如果 ★ × 4 ＝ ${x*4}，那麼 ★ ＋ 10 ＝（　　）。`,a:String(x+10)};},
+      ()=>{const k=rnd(2,6);return {q:`長度換算毫米：${k} 公分 7 毫米 ＝（　　）毫米。`,a:String(k*10+7)};},
+      ()=>{const m=rnd(3,8);return {q:`時間差填寫：從上午 8 時 15 分到上午 9 時 ${m+15} 分，經過（　）小時（　）分。`,a:`1；${m}`};},
+      ()=>{const s=rnd(3,7);return {q:`分數補數：${s}/11 ＋（　　）＝ 1。`,a:`${11-s}/11`};},
+      ()=>{const d=rnd(4,9);return {q:`十倍百倍換算：${d} 張千元鈔票加上 5 個百元合起來是（　　　）元。`,a:String(d*1000+500)};},
+      ()=>{const p=rnd(2,5);return {q:`倍數和推算：甲數是 ${p*6}，乙數是甲數的一半，兩數之和為（　　）。`,a:String(p*9)};},
+      ()=>{const a=rnd(3,8);return {q:`小數比大小：0.${a}（　）${a}/10（請填 ＞、＜ 或 ＝）。`,a:'＝'};},
+      ()=>{const w=rnd(4,9);return {q:`長方形推算：周長為 ${w*4+6} 公分的長方形，寬是 3 公分，長是（　　）公分。`,a:String(w*2)};},
+      ()=>{const n=rnd(10,30);return {q:`日期加天數：3 月 ${n} 日再過 5 天，是幾月幾日？（　）月（　）日。`,a:`${n+5>31?4:3}；${n+5>31?n+5-31:n+5}`};},
+      ()=>{const s=rnd(2,5);return {q:`乘法分配拆分：99 × ${s} ＝ 100 × ${s} －（　）。`,a:String(s)};}
+    ];
+    return extraFill[(t - 34) % extraFill.length]();
+  }
+
+  if(kind==='calc'){
+    const t = idx(56);
+    const a=rnd(12,45)*scale, b=rnd(7,28)*scale, c=rnd(3,9);
+    if(t===0) return {q:`${a} ＋ ${b} ＝（　　）`,a:String(a+b)};
+    if(t===1) return {q:`${a+b} － ${a} ＝（　　）`,a:String(b)};
+    if(t===2) return {q:`${a} ＋ ${b} － ${c} ＝（　　）`,a:String(a+b-c)};
+    if(t===3){const k3=rnd(12,38);return {q:`${k3} × ${c} ＝（　　）`,a:String(k3*c)};}
+    if(t===4){const k=rnd(11,29);return {q:`直式乘法檢核：${k} × ${c} ＝（　　）`,a:String(k*c)};}
+    if(t===5){const q0=rnd(11,24),r=rnd(1,c-1);return {q:`有餘數除法：${c*q0+r} ÷ ${c} ＝（　　）…（　）`,a:`${q0} … ${r}`};}
+    if(t===6){const x=rnd(15,45),y=rnd(6,18);return {q:`先乘後加計算：${x} ＋ ${y} × ${c} ＝（　　）`,a:String(x+y*c)};}
+    if(t===7){const x=rnd(4,12),y=rnd(3,9);return {q:`括號優先計算：(${x} ＋ ${y}) × ${c} ＝（　　）`,a:String((x+y)*c)};}
+    if(t===8){const den=rnd(5,9),n1=rnd(1,3),n2=rnd(1,den-n1-1);return {q:`同分母分數減法：${n1+n2}/${den} － ${n1}/${den} ＝（　　）`,a:`${n2}/${den}`};}
+    if(t===9){const d1=(rnd(25,85)/10),d2=(rnd(11,d1*10-5)/10);return {q:`小數減法計算：${d1.toFixed(1)} － ${d2.toFixed(1)} ＝（　　）`,a:(d1-d2).toFixed(1)};}
+    if(t===10){const h1=rnd(1,3),m1=rnd(20,40),h2=rnd(1,2),m2=rnd(25,35),tm=m1+m2;return {q:`時間相加：${h1} 小時 ${m1} 分 ＋ ${h2} 小時 ${m2} 分 ＝（　）小時（　）分`,a:`${h1+h2+Math.floor(tm/60)} 時 ${tm%60} 分`};}
+    if(t===11){const k1=rnd(1,4),g1=rnd(400,700),g2=rnd(500,800);return {q:`重量合併換算：${k1} 公斤 ${g1} 公克 ＋ ${g2} 公克 ＝（　　）公克`,a:String(k1*1000+g1+g2)};}
+    if(t===12){const s1=rnd(4,12),s2=rnd(3,9);return {q:`兩數乘積求倍數：${s1} × ${s2} ＋ ${s1} ＝（　　）`,a:String(s1*(s2+1))};}
+    if(t===13){const km=rnd(2,6),m0=rnd(300,850);return {q:`距離相差計算：${km} 公里 － ${m0} 公尺 ＝（　　）公尺`,a:String(km*1000-m0)};}
+    if(t===14){const L=rnd(2,5),ml=rnd(200,700);return {q:`容量減法：${L} 公升 － ${ml} 毫公升 ＝（　　）毫公升`,a:String(L*1000-ml)};}
+    if(t===15){const x=rnd(3,8)*10,y=rnd(2,6)*10;return {q:`整十連乘驗算：${x} × ${y} ＝（　　）`,a:String(x*y)};}
+    if(t===16){const d=rnd(3,8),q0=rnd(12,25);return {q:`整除商數計算：${d*q0} ÷ ${d} ＝（　　）`,a:String(q0)};}
+    if(t===17){const n=rnd(2,5)*100;return {q:`湊千補數計算：1000 － ${n+35} ＝（　　）`,a:String(1000-n-35)};}
+    if(t===18){const x=rnd(20,50),y=rnd(6,15);return {q:`連減性質計算：${x+30} － ${y} － ${10} ＝（　　）`,a:String(x+20-y)};}
+    if(t===19){const p1=rnd(120,350),p2=rnd(130,380),p3=rnd(50,150);return {q:`三數連加總和：${p1} ＋ ${p2} ＋ ${p3} ＝（　　）`,a:String(p1+p2+p3)};}
+    const extraCalc = [
+      ()=>{const d1=(rnd(12,45)/10),d2=(rnd(11,35)/10);return {q:`小數加法直式：${d1.toFixed(1)} ＋ ${d2.toFixed(1)} ＝（　　）`,a:(d1+d2).toFixed(1)};},
+      ()=>{const den=pick([7,8,9,10]),n1=rnd(1,3),n2=rnd(1,den-n1);return {q:`同分母分數加法：${n1}/${den} ＋ ${n2}/${den} ＝（　　）`,a:`${n1+n2}/${den}`};},
+      ()=>{const x=rnd(12,25),y=rnd(12,28);return {q:`先加後減順序：${x*10} ＋ ${y*10} － 95 ＝（　　）`,a:String(x*10+y*10-95)};},
+      ()=>{const q0=rnd(20,45);return {q:`三位數乘以一位數：${q0*4} × ${c} ＝（　　）`,a:String(q0*4*c)};},
+      ()=>{const x=rnd(14,32),y=rnd(4,8);return {q:`括號減除計算：(${x+40} － ${x}) ÷ ${y} ＝（　　）`,a:(40%y===0?String(40/y):`${Math.floor(40/y)}…${40%y}`)};},
+      ()=>{const kg=rnd(2,4),g1=rnd(120,350),g2=rnd(250,480);return {q:`兩筆重量相減：${kg} 公斤 ${g1+500} 公克 － ${g2} 公克 ＝（　　）公克`,a:String(kg*1000+g1+500-g2)};},
+      ()=>{const m1=rnd(15,35);return {q:`正方形與邊長倍率：${m1} × 4 ＋ ${m1} × 2 ＝（　　）`,a:String(m1*6)};},
+      ()=>{const p=rnd(25,65);return {q:`連乘積運算：${p} × 2 × 5 ＝（　　）`,a:String(p*10)};},
+      ()=>{const x=rnd(12,36),y=rnd(14,28);return {q:`加法交換驗證：${x} ＋ ${y} ＋ 100 ＝（　　）`,a:String(x+y+100)};},
+      ()=>{const p=rnd(3,8),q=rnd(4,9);return {q:`先乘後減步驟：${p*20} － ${q} × 5 ＝（　　）`,a:String(p*20-q*5)};},
+      ()=>{const q0=rnd(6,12);return {q:`先除後加計算：${q0*6} ÷ 6 ＋ 35 ＝（　　）`,a:String(q0+35)};},
+      ()=>{const q0=rnd(8,15);return {q:`先除後減步驟：100 － ${q0*4} ÷ 4 ＝（　　）`,a:String(100-q0)};},
+      ()=>{const m=rnd(2,5),cm=rnd(20,65);return {q:`長度合算練習：${m} 公尺 ${cm} 公分 ＋ 35 公分 ＝（　）公尺（　）公分`,a:`${m+Math.floor((cm+35)/100)} 公尺 ${(cm+35)%100} 公分`};},
+      ()=>{const h=rnd(1,3),m=rnd(20,45);return {q:`經過時刻相減：${h+2} 時 ${m+10} 分 － ${h} 時 ${m} 分 ＝（　）小時（　）分`,a:`2 小時 10 分`};},
+      ()=>{const x=rnd(15,35);return {q:`加倍與三倍求和：${x} × 2 ＋ ${x} × 3 ＝（　　）`,a:String(x*5)};},
+      ()=>{const x=rnd(12,24);return {q:`括號內相乘計算：8 × (${x} － 9) ＝（　　）`,a:String(8*(x-9))};},
+      ()=>{const d=rnd(4,9),m=rnd(15,35);return {q:`乘法逆推空格：（　　）÷ ${d} ＝ ${m}（整除無餘數）`,a:String(d*m)};},
+      ()=>{const x=rnd(20,50),y=rnd(10,30);return {q:`千位退位直式減法：2000 － ${x*10+y} ＝（　　）`,a:String(2000-(x*10+y))};},
+      ()=>{const x=rnd(11,25);return {q:`二位數乘整十練習：${x} × 30 ＝（　　）`,a:String(x*30)};},
+      ()=>{const x=rnd(4,9);return {q:`整百除以一位數：${x*100} ÷ 5 ＝（　　）`,a:String(x*20)};},
+      ()=>{const x=rnd(15,45);return {q:`加法湊百進位：${x} ＋ 199 ＝（　　）`,a:String(x+199)};},
+      ()=>{const x=rnd(350,680);return {q:`減法湊整技巧：${x} － 198 ＝（　　）`,a:String(x-198)};},
+      ()=>{const d=rnd(1,4);return {q:`一位小數連加：0.${d} ＋ 1.${d+2} ＋ 2.5 ＝（　　）`,a:(d*0.1+1+(d+2)*0.1+2.5).toFixed(1)};},
+      ()=>{const den=pick([6,8,10]);return {q:`整數與分數減法：2 － 3/${den} ＝（　　）`,a:`1 又 ${den-3}/${den}`};},
+      ()=>{const a=rnd(12,25),b=rnd(14,32);return {q:`長方形四邊求和：${a} ＋ ${b} ＋ ${a} ＋ ${b} ＝（　　）`,a:String((a+b)*2)};},
+      ()=>{const w=rnd(2,6);return {q:`面積倍數推算：(${w} × 5) × 4 ＝（　　）`,a:String(w*20)};},
+      ()=>{const a=rnd(3,8);return {q:`分與秒進位計算：${a} 分 45 秒 ＋ 35 秒 ＝（　）分（　）秒`,a:`${a+1} 分 20 秒`};},
+      ()=>{const g=rnd(2,6);return {q:`公斤退位扣減：${g} 公斤 － 450 公克 ＝（　　）公克`,a:String(g*1000-450)};},
+      ()=>{const s=rnd(12,35);return {q:`未知被減數求解：（　　）－ ${s} ＝ 88`,a:String(s+88)};},
+      ()=>{const p=rnd(12,28);return {q:`價格加總驗算：${p*5} 元 ＋ ${p*10} 元 － 15 元 ＝（　　）元`,a:String(p*15-15)};},
+      ()=>{const k=rnd(2,5);return {q:`平方陣列計數：${k*4} × ${k*4} ＝（　　）`,a:String(k*4*k*4)};},
+      ()=>{const m=rnd(10,30);return {q:`三數連減步驟：500 － ${m} － ${m+20} ＝（　　）`,a:String(500-m-(m+20))};},
+      ()=>{const d=rnd(3,7);return {q:`連除化簡步驟：${d*24} ÷ 4 ÷ 2 ＝（　　）`,a:String(d*3)};},
+      ()=>{const d=rnd(2,8);return {q:`同分母與整數湊二：1/${d+3} ＋ ${d+2}/${d+3} ＋ 1 ＝（　）`,a:'2'};},
+      ()=>{const a=rnd(3,9);return {q:`半徑與圓周概念倍算：${a} × 2 × 3 ＝（　　）`,a:String(a*6)};},
+      ()=>{const p=rnd(15,40);return {q:`單價倍率加總：(${p} ＋ 5) × 6 ＝（　　）`,a:String((p+5)*6)};}
+    ];
+    return extraCalc[(t - 20) % extraCalc.length]();
+  }
+
+  if(kind==='word'){
+    const t = idx(20);
+    if(t===0){const a=rnd(18,32),b=rnd(5,12),c=rnd(4,10);return {q:`公車上原本有 ${a} 位乘客，到站後下車了 ${b} 人，又上車了 ${c} 人，現在車上有幾人？`,a:`${a} - ${b} + ${c} = ${a-b+c}（人）`};}
+    if(t===1){const p1=rnd(35,85),p2=rnd(20,45),pay=500;return {q:`媽媽買了一袋 ${p1} 元的${it}和兩瓶每瓶 ${p2} 元的鮮奶，付給店員 ${pay} 元，應找回多少元？`,a:`${pay} - ${p1} - ${p2*2} = ${pay-p1-p2*2}（元）`};}
+    if(t===2){const tot=rnd(45,95),cut=rnd(6,9),q0=Math.floor(tot/cut),r=tot%cut;return {q:`一條彩帶長 ${tot} 公分，每 ${cut} 公分剪成一段包裝禮物，最多可剪成幾段？還剩幾公分？`,a:`${tot} ÷ ${cut} = ${q0}（段）餘 ${r}（公分）`};}
+    if(t===3){const kids=rnd(28,45),cap=rnd(5,8),q0=Math.floor(kids/cap),r=kids%cap;return {q:`戶外教學共有 ${kids} 位學生要搭計程車，每輛車限坐 ${cap} 人，至少需要叫幾輛車？`,a:`${kids} ÷ ${cap} = ${q0}${r?`…${r}，至少需 ${q0+1} 輛`:'，需 '+q0+' 輛'}`};}
+    if(t===4){const pg=rnd(72,140),per=rnd(8,12);return {q:`一本故事書有 ${pg} 頁，${nm}每天固定讀 ${per} 頁，連續讀了 6 天後，還剩下幾頁沒讀？`,a:`${pg} - (${per} × 6) = ${pg-per*6}（頁）`};}
+    if(t===5){const h1=rnd(125,148),diffH=rnd(7,16);return {q:`${nm}的身高是 ${h1} 公分，${nm2}比他高了 ${diffH} 公分，請問兩人的身高合起來共是多少公分？`,a:`${h1} + (${h1} + ${diffH}) = ${h1*2+diffH}（公分）`};}
+    if(t===6){const w=rnd(8,16),h=rnd(5,11);return {q:`長方形蔬菜園長 ${w} 公尺、寬 ${h} 公尺，農夫想在四周圍起竹籬笆，至少需要幾公尺的籬笆？`,a:`(${w} + ${h}) × 2 = ${(w+h)*2}（公尺）`};}
+    if(t===7){const h1=rnd(8,10),m1=rnd(15,40),dur=rnd(45,80),tot=h1*60+m1+dur;return {q:`美術課於上午 ${h1} 時 ${m1} 分開始，一共進行 ${dur} 分鐘，請問幾時幾分結束？`,a:`${Math.floor(tot/60)} 時 ${tot%60} 分`};}
+    if(t===8){const basket=rnd(300,500),allW=rnd(1800,2600);return {q:`一籃橘子連同籃子一起秤重是 ${allW} 公克，已知空籃子重 ${basket} 公克，橘子淨重多少公克？`,a:`${allW} - ${basket} = ${allW-basket}（公克）`};}
+    if(t===9){const wk=rnd(5,8),save=rnd(40,90);return {q:`${nm}想買一個 ${wk*save} 元的遙控玩具，如果每天存 ${save} 元，需要連續存幾天才能買到？`,a:`${wk*save} ÷ ${save} = ${wk}（天）`};}
+    if(t===10){const rows=rnd(5,8),per=rnd(6,9),left=rnd(2,5);return {q:`禮堂排列椅子，每排擺 ${per} 張，一共排了 ${rows} 排，還有 ${left} 張備用椅未排入，禮堂共有幾張椅子？`,a:`${per} × ${rows} + ${left} = ${per*rows+left}（張）`};}
+    if(t===11){const d1=rnd(1,3),m1=rnd(350,800),d2=rnd(1,2),m2=rnd(250,650);return {q:`登山步道分為兩段：前段長 ${d1} 公里 ${m1} 公尺，後段長 ${d2} 公里 ${m2} 公尺，整條步道總長幾公尺？`,a:`${(d1+d2)*1000+m1+m2}（公尺）`};}
+    if(t===12){const den=pick([6,8,10]),a1=rnd(2,3),a2=rnd(1,2);return {q:`一塊蛋糕平分成 ${den} 份，姊姊吃掉 ${a1}/${den} 塊，弟弟吃掉 ${a2}/${den} 塊，還剩下幾分之幾塊蛋糕？`,a:`${den-a1-a2}/${den}（塊）`};}
+    if(t===13){const base=rnd(30,80),cnt=rnd(4,7),disc=rnd(15,35);return {q:`每本漫畫書定價 ${base} 元，買了 ${cnt} 本並使用折價券扣掉 ${disc} 元，實際需付幾元？`,a:`${base} × ${cnt} - ${disc} = ${base*cnt-disc}（元）`};}
+    const extraWord = [
+      ()=>{const box=rnd(6,9),per=rnd(12,24),brk=rnd(5,12);return {q:`麵包店烘烤了 ${box} 盤餅乾，每盤有 ${per} 片，搬運時不小心碎掉了 ${brk} 片，完好的餅乾還剩幾片？`,a:`${box} × ${per} - ${brk} = ${box*per-brk}（片）`};},
+      ()=>{const cup=rnd(220,380),cnt=rnd(3,5),jug=2000;return {q:`一個大水壺裝滿 ${jug} 毫公升麥茶，倒出 ${cnt} 杯各 ${cup} 毫公升後，水壺裡還剩幾毫公升？`,a:`${jug} - ${cup} × ${cnt} = ${jug-cup*cnt}（毫公升）`};},
+      ()=>{const mon=rnd(35,65),tue=rnd(45,85);return {q:`學校圖書館星期一借出 ${mon} 本繪本，星期二借出 ${tue} 本，兩天共借出幾本？星期二比星期一多幾本？`,a:`共 ${mon+tue} 本；多 ${tue-mon} 本`};},
+      ()=>{const side=rnd(7,14);return {q:`正方形花圃邊長為 ${side} 公尺，${nm}每天繞著花圃慢跑 5 圈，她一共跑了多少公尺？`,a:`${side} × 4 × 5 = ${side*20}（公尺）`};},
+      ()=>{const p=rnd(18,36),m=rnd(4,7);return {q:`文具店舉辦促銷，${m} 枝原子筆賣 ${p*m} 元，平均每枝原子筆多少元？買 9 枝需要多少元？`,a:`每枝 ${p} 元；9 枝需 ${p*9} 元`};},
+      ()=>{const w1=(rnd(15,28)/10),w2=(rnd(12,24)/10);return {q:`小狗體重 ${w1.toFixed(1)} 公斤，小貓比小狗輕 ${w2.toFixed(1)} 公斤，兩隻寵物合起來共重幾公斤？`,a:`${(w1 + (w1-w2)).toFixed(1)}（公斤）`};}
+    ];
+    return extraWord[(t - 14) % extraWord.length]();
+  }
+
+  // kind === 'match'
+  const t = idx(12);
+  if(t===0) return {q:'時間換算配對（連結相等的時間）',pairs:[['1 小時 10 分','70 分鐘'],['2 小時','120 分鐘'],['半小時','30 分鐘'],['1 分 20 秒','80 秒']]};
+  if(t===1) return {q:'重量單位換算配對',pairs:[['1 公斤 500 克','1500 公克'],['3 公斤','3000 公克'],['2 公斤 50 克','2050 公克'],['半公斤','500 公克']]};
+  if(t===2) return {q:'長度單位換算配對',pairs:[['2 公尺 30 公分','230 公分'],['4 公分 5 毫米','45 毫米'],['3 公里','3000 公尺'],['1 公尺','100 公分']]};
+  if(t===3) return {q:'容量單位換算配對',pairs:[['1 公升 200 毫升','1200 毫公升'],['4 公升','4000 毫公升'],['半公升','500 毫公升'],['2 公升 50 毫升','2050 毫公升']]};
+  if(t===4) return {q:'四則乘除算式得數配對',pairs:[['15 × 4','60'],['72 ÷ 8','9'],['25 × 8','200'],['96 ÷ 4','24']]};
+  if(t===5) return {q:'日曆與時刻概念配對',pairs:[['大月天數','31 天'],['小月天數','30 天'],['平年 2 月','28 天'],['下午 4 時（24時制）','16 時']]};
+  if(t===6) return {q:'平面圖形定義配對',pairs:[['正方形','4 條邊一樣長'],['直角','剛好 90 度'],['圓的直徑','半徑的 2 倍'],['三角形','共有 3 個頂點']]};
+  if(t===7) return {q:'分數讀法與數值配對',pairs:[['一半（平分成兩份取1份）','1/2'],['平分成 4 份取 3 份','3/4'],['平分成 5 份取 2 份','2/5'],['5 個 1/6 合起來','5/6']]};
+  if(t===8) return {q:'整百湊千與位值組合配對',pairs:[['650 ＋ 350','1000'],['4 個千 ＋ 5 個十','4050'],['900 ＋ 90 ＋ 9','999'],['30 個百','3000']]};
+  if(t===9) return {q:'角度分類與度數配對',pairs:[['銳角範例','45 度'],['直角度數','90 度'],['鈍角範例','125 度'],['平角度數','180 度']]};
+  if(t===10) return {q:'小數與單位分數等值配對',pairs:[['0.3','3 個 0.1'],['1.2','12 個 0.1'],['0.5','1/2（一半）'],['0.8 ＋ 0.2','1.0']]};
+  return {q:'周長與正方形運算配對',pairs:[['邊長 5cm 正方形周長','20 公分'],['長 6cm 寬 4cm 周長','20 公分'],['邊長 8cm 正方形周長','32 公分'],['邊長 3cm 正三角形周長','9 公分']]};
+}
+
+// ===== 2. 動態國語字音/字形抽題 =====
+function genChineseDynamic(grade, kind, diff='mid', allowedUnits=null){
+  if(!window.TW||!window.ZY_DATA)return null;
+  const pool=[];
+  Object.values(TW).forEach(pubObj=>{
+    Object.values(pubObj).forEach(arr=>{
+      arr.filter(ls=>ls.g==+grade && (!allowedUnits || !allowedUnits.length || allowedUnits.includes(ls.t)))
+         .forEach(ls=>ls.c.forEach(c=>{if(c[0]&&c[2])pool.push(c);}));
+    });
+  });
+  if(pool.length<4){
+    Object.values(TW).forEach(pubObj=>{
+      Object.values(pubObj).forEach(arr=>{
+        arr.filter(ls=>ls.g==+grade).forEach(ls=>ls.c.forEach(c=>{if(c[0]&&c[2])pool.push(c);}));
+      });
+    });
+  }
+  if(pool.length<10)return null;
+  const item=pick(pool), ch=item[0], zy=item[2], rad=item[3], strokes=item[4];
+  const idioms=[
+    ['一心一意','專心一意，沒有雜念','三心二意'],['鳥語花香','形容春天景色美好','寸草不生'],
+    ['守株待兔','比喻不知變通、妄想不勞而獲','腳踏實地'],['井底之蛙','比喻見識狹窄的人','見多識廣'],
+    ['畫蛇添足','比喻做了多餘的事反而壞事','恰到好處'],['半途而廢','做事情沒有堅持到底','持之以恆'],
+    ['雪中送炭','在別人急需時給予幫助','錦上添花'],['水落石出','比喻事情真相大白','撲朔迷離'],
+    ['亡羊補牢','事後及時補救還不算太晚','未雨綢繆'],['胸有成竹','做事之前已經有完整的把握','驚慌失措'],
+    ['掩耳盜鈴','比喻自己欺騙自己','實事求是'],['飲水思源','比喻不忘本、懂得感恩','忘恩負義'],
+    ['狐假虎威','借著別人的威勢欺壓他人','自食其力'],['愚公移山','比喻有恆心毅力不怕困難','知難而退'],
+    ['塞翁失馬','比喻一時的損失可能變成好處','禍不單行'],['一鳴驚人','平時默默無聞卻突然有驚人表現','默默無聞'],
+    ['鐵杵磨針','比喻只要有恆心終能成功','虎頭蛇尾'],['破釜沉舟','下定決心不留退路','猶豫不決'],
+    ['聞雞起舞','比喻及時奮發努力','苟且偷安'],['同心協力','大家團結一致共同努力','分道揚鑣'],
+    ['名落孫山','比喻考試或選拔沒有錄取','金榜題名'],['津津有味','形容吃得很有味道或趣味濃厚','索然無味'],
+    ['小心翼翼','形容舉動十分謹慎小心','粗心大意'],['恍然大悟','形容忽然完全明白過來','百思不解']
+  ];
+  if(kind==='fill'){
+    const r=Math.random();
+    if(diff==='hard'&&+grade>=3&&r<0.45){
+      const idm=pick(idioms);
+      return {q:`成語與相反詞應用：「${idm[1]}」可用成語「${idm[0][0]}（　）${idm[0][2]}${idm[0][3]}」，它的相反詞是「${idm[2]}」。`,a:idm[0][1]};
+    }
+    if(r<0.35) return {q:`寫出注音與總筆畫：「${ch}」讀作（　　），共（　）畫。`,a:`${zy}；${strokes||''}`};
+    if(r<0.7) return {q:`看注音寫國字與部首：「${zy}」（　），屬於（　）部。`,a:`${ch}；${rad||''}`};
+    const item2=pick(pool.filter(x=>x[0]!==ch));
+    return {q:`寫出正確注音：「${ch}」（　　）、「${item2[0]}」（　　）。`,a:`${zy}；${item2[2]}`};
+  }
+  if(kind==='mc'){
+    if(diff==='hard'&&+grade>=3&&Math.random()<0.4){
+      const idm=pick(idioms), dist=shuffle(idioms.filter(x=>x[0]!==idm[0])).slice(0,3).map(x=>x[0]);
+      return {q:`哪一個成語的意思是「${idm[1]}」？`,opts:uniqueOpts(idm[0],dist),a:idm[0],exp:`「${idm[0]}」指${idm[1]}。`};
+    }
+    if(Math.random()<0.35&&rad){
+      const rDist=shuffle([...new Set(pool.map(x=>x[3]).filter(x=>x&&x!==rad))]).slice(0,3);
+      if(rDist.length>=3) return {q:`國字「${ch}」的部首是哪一個？`,opts:uniqueOpts(`${rad}部`,rDist.map(x=>`${x}部`)),a:`${rad}部`,exp:`「${ch}」屬${rad}部，讀作 ${zy}。`};
+    }
+    const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
+    return {q:`「${ch}」的正確讀音是哪一個？`,opts:uniqueOpts(zy,others),a:zy,exp:`「${ch}」讀作 ${zy}${rad?`，${rad}部`:''}。`};
+  }
+  if(kind==='tf'){
+    const isTrue=Math.random()<0.5;
+    if(Math.random()<0.4&&rad&&strokes){
+      const fakeS=isTrue?strokes:(+strokes+pick([1,-1,2]));
+      return {q:`國字「${ch}」屬於「${rad}部」，總筆畫共 ${fakeS} 畫。`,a:isTrue?'○':'✕',exp:`「${ch}」為${rad}部，共 ${strokes} 畫。`};
+    }
+    const wrong=pick(pool.filter(x=>x[2]!==zy))[2];
+    const shown=isTrue?zy:wrong;
+    return {q:`國字「${ch}」的讀音是「${shown}」。`,a:isTrue?'○':'✕',exp:`正確讀音為 ${zy}。`};
+  }
+  return null;
+}
+
+
+function genEngProc(grade, kind){
+  const PB=window.PROC_BANK&&PROC_BANK.eng; if(!PB)return null;
+  const g=+grade, vPool=PB.vocab[g]||PB.vocab[3], allV=[...vPool,...(PB.vocab[Math.max(1,g-1)]||[])];
+  if(kind==='mc'){
+    if(Math.random()<0.45&&PB.sentences[g]&&PB.sentences[g].length){
+      const st=pick(PB.sentences[g]);if(st.opts)return {q:st.q,opts:shuffle(st.opts),a:st.a};
+    }
+    const [en,zh]=pick(vPool);
+    const others=shuffle(allV.filter(x=>x[0]!==en&&x[1]!==zh)).slice(0,3);
+    return Math.random()<0.5
+      ? {q:`英文單字 "${en}" 的中文意思是什麼？`,opts:uniqueOpts(zh,others.map(x=>x[1])),a:zh,exp:`${en} ＝ ${zh}`}
+      : {q:`「${zh}」的英文單字是哪一個？`,opts:uniqueOpts(en,others.map(x=>x[0])),a:en,exp:`${zh} ＝ ${en}`};
+  }
+  if(kind==='tf'){
+    const [en,zh]=pick(vPool), isTrue=Math.random()<0.5;
+    const shown=isTrue?zh:pick(allV.filter(x=>x[1]!==zh))[1];
+    return {q:`英文 "${en}" 的中文意思是「${shown}」。`,a:isTrue?'○':'✕',exp:`${en} ＝ ${zh}`};
+  }
+  if(kind==='fill'){
+    const [en,zh]=pick(vPool);
+    const masked=en.length>2?en[0]+' _ '.repeat(en.length-2)+en[en.length-1]:en;
+    return {q:`依中文提示拼出英文單字：「${zh}」→ ${masked}（　　　）`,a:en};
+  }
+  if(kind==='match'){
+    return {q:'英文單字中英配對（將對應的代號填入括號中）',pairs:shuffle(vPool).slice(0,4)};
+  }
+  return null;
+}
+
+function genFactProc(subj, grade, kind){
+  const PB=window.PROC_BANK; if(!PB)return null;
+  const g=+grade, tier=g<=2?'low':(g<=4?'mid':'high');
+  const node=subj==='生活'?PB.life:(subj==='自然科學'?PB.sci[tier]:PB.soc[tier]);
+  if(!node)return null;
+  if(kind==='tf'&&node.facts.length){
+    const f=pick(node.facts);
+    return {q:f.q,a:f.ok?'○':'✕',exp:f.exp||''};
+  }
+  if(kind==='match'&&node.pairs.length>=4){
+    return {q:`${subj}概念配對（將對應的代號填入括號中）`,pairs:shuffle(node.pairs).slice(0,4)};
+  }
+  if(kind==='mc'&&node.cats.length){
+    const cat=pick(node.cats), pickA=Math.random()<0.5;
+    const ans=pick(pickA?cat.a:cat.b), dist=shuffle(pickA?cat.b:cat.a).slice(0,3);
+    if(dist.length>=3) return {q:`下列哪一項屬於「${pickA?cat.aName:cat.bName}」？`,opts:uniqueOpts(ans,dist),a:ans,exp:`${ans} 屬於${pickA?cat.aName:cat.bName}。`};
+  }
+  if(kind==='calc'&&node.cats.length){
+    const cat=pick(node.cats), items=shuffle([...cat.a.slice(0,2),...cat.b.slice(0,2)]);
+    return {q:`分類練習（${cat.title}）：請將「${items.join('、')}」分別歸類：\n${cat.aName}：（　　　　）\n${cat.bName}：（　　　　）`,
+      a:`${cat.aName}：${items.filter(x=>cat.a.includes(x)).join('、')}；${cat.bName}：${items.filter(x=>cat.b.includes(x)).join('、')}`};
+  }
+  return null;
+}
+
+// ===== 3. 概念主題辨識、跨題型防重與「由簡入深」難度排序引擎 =====
+const TOPIC_RULES = [
+  // 自然與生活核心概念
+  ['磁鐵特性', /磁鐵|磁極|同極|異極|吸引迴紋針|小鐵夾/],
+  ['太陽與影子', /影子|太陽位置|竿影|日晷|背光面/],
+  ['月相與潮汐', /月亮|月相|眉月|滿月|上弦|下弦|農曆十五|賞月/],
+  ['昆蟲與動物特徵', /昆蟲|六隻腳|6隻腳|蜘蛛|瓢蟲|完全變態|不完全變態/],
+  ['電路與導電', /電路|燈泡|通路|斷路|串聯|並聯|導體|絕緣體|電磁鐵/],
+  ['聲音與振動', /拍打.*水|聲音高低|音量|振動|分貝|敲擊/],
+  ['水與毛細虹吸', /毛細現象|虹吸現象|連通管/],
+  ['水的三態與循環', /蒸發|凝結|凝固|融化|水循環|水蒸氣|冰杯外壁/],
+  ['空氣與燃燒生鏽', /空氣佔|氧氣|二氧化碳|助燃|石灰水|滅火|鐵生鏽/],
+  ['酸鹼與水溶液', /石蕊試紙|酸性|鹼性|小蘇打|白醋|檸檬汁|溶解速度/],
+  ['光的反射與折射', /光的反射|光的折射|三稜鏡|色散|鏡子|筷子.*折斷/],
+  ['熱的傳播', /熱傳導|熱對流|熱輻射|冷氣.*上方/],
+  ['槓桿與滑輪機械', /槓桿|支點|施力臂|抗力臂|定滑輪|動滑輪/],
+  ['植物構造與光合', /光合作用|蒸散作用|葉脈|平行脈|網狀脈|水生植物|布袋蓮/],
+  ['種子發芽與生長', /發芽|關在全黑|植物.*陽光/],
+  ['岩石地層與河流', /火成岩|沉積岩|變質岩|凹岸|凸岸|侵蝕|堆積|化石|地震/],
+  ['天氣與鋒面', /氣團|滯留鋒|梅雨|颱風|百葉箱/],
+  ['生態系與食物鏈', /生產者|消費者|分解者|食物鏈/],
+  ['再生與非再生能源', /再生能源|太陽能|煤炭|石油/],
+  ['傳統節慶習俗', /端午節|元宵節|春節|清明節|包粽子|提燈籠/],
+  ['交通安全與紅綠燈', /紅綠燈|紅燈|綠燈|斑馬線|過馬路/],
+  ['校園安全與急救', /跌倒受傷|保健室|火警|走廊奔跑|避難包/],
+  ['資源回收與環保', /資源回收|可回收|空飲料罐|寶特瓶|隨手關燈|節約能源|關水/],
+  // 社會核心概念
+  ['地圖要素與方位', /圖例|比例尺|方向標|方位|北\(N\)/],
+  ['台灣地形與山脈', /五大.*地形|中央山脈|盆地|台地|平原|丘陵/],
+  ['早期水圳與開墾', /瑠公圳|八堡圳|嘉南大圳|八田與一/],
+  ['荷西與明鄭歷史', /荷蘭|西班牙|熱蘭遮城|鄭成功/],
+  ['清領開港與建設', /茶葉.*樟腦|劉銘傳|巡撫/],
+  ['原住民族與多元文化', /原住民族|南島語族|16\s*族|新住民/],
+  ['中央五院與憲政', /行政院|立法院|司法院|考試院|監察院|五權分立/],
+  ['地方自治與議會', /縣（市）議會|縣（市）政府|村（里）長|代表會/],
+  ['人民權利與義務', /基本權利|基本義務|納稅|服兵役|選舉權/],
+  ['消費保障與理財', /統一發票|1950|消費者保護|需要.*想要/],
+  ['國際組織與永續', /SDGs|永續發展|WHO|聯合國|半導體/],
+  // 數學核心概念
+  ['三角形面積', /三角形.*面積/],
+  ['三角形內角和', /三角形.*內角|三角形.*角.*°/],
+  ['三角形分類性質', /正三角形|等腰三角形|直角三角形/],
+  ['平行四邊形面積', /平行四邊形.*面積/],
+  ['梯形面積', /梯形.*面積/],
+  ['複合圖形面積', /L\s*形|複合圖形/],
+  ['正方形周長', /正方形.*周長/],
+  ['正方形面積', /正方形.*面積/],
+  ['長方形周長', /長方形.*周長/],
+  ['長方形面積', /長方形.*面積/],
+  ['正方體體積', /正方體.*體積/],
+  ['正方體表面積', /正方體.*表面積/],
+  ['正方體頂點邊面', /正方體.*個面.*頂點/],
+  ['長方體體積與容積', /長方體.*體積|水箱內部尺寸/],
+  ['圓半徑與直徑', /半徑.*直徑|直徑.*半徑/],
+  ['圓周長計算', /圓周長/],
+  ['圓面積計算', /圓的面積|圓.*面積大約/],
+  ['扇形與圓心角', /扇形|圓心角/],
+  ['圓柱體積與展開', /圓柱/],
+  ['角柱與圓錐性質', /角柱|圓錐/],
+  ['線對稱圖形', /對稱軸|線對稱/],
+  ['角度與銳鈍直角', /銳角|鈍角|幾個「直角」|平角/],
+  ['直線與曲線辨識', /直線.*曲線/],
+  ['平面圖形計數', /機器人圖形|小屋圖形/],
+  ['鐘面時間判讀', /鐘面|時鐘.*幾點/],
+  ['24時制與經過時間', /24\s*時制|開演.*片長/],
+  ['年月與閏年', /閏年|年.*個月/],
+  ['錢幣計數與找錢', /硬幣|找回.*元/],
+  ['直尺測量與比較', /直尺|鉛筆最長/],
+  ['長度單位換算', /公尺.*公分|公里.*公尺|公分.*毫米/],
+  ['量杯與容量換算', /公升.*毫公升|量杯/],
+  ['重量單位換算', /公斤.*公克|公噸.*公斤/],
+  ['面積單位換算', /平方公尺.*平方公分|公頃.*公畝/],
+  ['長條圖判讀', /長條圖/],
+  ['折線圖判讀', /折線圖/],
+  ['圓形圖判讀', /圓形圖/],
+  ['速率時間與距離', /時速|速率|每秒.*公尺/],
+  ['比與比值應用', /最簡單整數比|比值|相等的比|按.*：.*分給|兩數的比/],
+  ['正比關係判讀', /成正比/],
+  ['質數與質因數分解', /質數|質因數分解/],
+  ['公因數與公倍數', /最大公因數|最小公倍數|平分裝袋/],
+  ['因數與倍數判別', /最小因數|2\s*和\s*3\s*的倍數/],
+  ['百分率與打折加成', /百分率|打.*折|進球率|加計.*%/],
+  ['四捨五入與概數', /四捨五入/],
+  ['十位個位與定位板', /十位.*個位|個十.*個一/],
+  ['百位位值與數列', /個百.*個一|一百一數/],
+  ['大數一億位值', /一億|一千萬/],
+  ['排隊順序問題', /排隊|算起第.*個/],
+  ['數字分與合', /分合表|翅膀上的兩個數/],
+  ['骰子點數合', /骰子/],
+  ['積木數量合', /積木合起來/],
+  ['點陣與乘法交換', /圓點.*排|一樣大.*×|倍.*多幾個/],
+  ['除法餘數性質', /餘數.*最大|餘數有可能/],
+  ['真假帶分數互換', /假分數|帶分數/],
+  ['等值分數與擴分', /等值分數|分子和分母同乘/],
+  ['分數意義與讀法', /平分成.*片|讀作.*分之/],
+  // 國語核心概念
+  ['修辭_譬喻', /譬喻/],
+  ['修辭_擬人', /擬人/],
+  ['修辭_誇飾', /誇飾/],
+  ['修辭_排比', /排比/],
+  ['修辭_設問', /設問/],
+  ['標點_問號', /問號/],
+  ['標點_驚嘆號', /驚嘆號/],
+  ['標點_引號冒號', /引號|冒號/],
+  ['標點_刪節號', /刪節號/],
+  ['標點_書名號', /書名號/],
+  ['關聯_轉折', /雖然.*但是|儘管.*還是/],
+  ['關聯_因果', /因為.*所以|既然.*就/],
+  ['關聯_遞進', /不但.*而且/],
+  ['關聯_假設', /如果.*就|要是.*就/],
+  ['關聯_條件', /只要.*就|無論.*都/],
+  ['關聯_取捨', /與其.*不如|寧可.*也不/],
+  ['同音_再在', /再\/在|「再」和「在」/],
+  ['同音_做坐', /做\/坐|「做」和「坐」/],
+  ['同音_像向', /像\/向/],
+  ['同音_進近', /進\/近/],
+  ['同音_園圓', /園\/圓/],
+  ['同音_須需', /須\/需/],
+  ['同音_辨辯', /辨\/辯/],
+  ['量詞搭配', /量詞/]
+];
+
+function inferTopicKeys(item, subj){
+  const keys=[];
+  const full=String(item.q||'')+' '+String(item.a||'')+' '+String(item.exp||'')+' '+(item.opts?item.opts.join(' '):'');
+  for(const [name,re] of TOPIC_RULES){
+    if(re.test(full)) keys.push(name);
+  }
+  if(subj==='國語'){
+    // 擷取題目鎖定之目標單字或成語，確保同一國字或成語絕不在整份考卷重複出現
+    const qm=[...String(item.q||'').matchAll(/「([^」]{1,4})」/g)].map(m=>m[1]);
+    qm.forEach(w=>{if(w.length===1||w.length===4)keys.push('zh_target_'+w);});
+  }
+  if(subj==='英語'){
+    const em=[...String(item.q||'').matchAll(/"([A-Za-z\s']+)"/g)].map(m=>m[1].trim().toLowerCase());
+    em.forEach(w=>{if(w&&w.length<=15)keys.push('en_target_'+w);});
+    if(/what time|o'clock/i.test(full)) keys.push('en_time');
+    if(/how much|dollar/i.test(full)) keys.push('en_price');
+    if(/weather|sunny|rainy|cloudy|windy/i.test(full)) keys.push('en_weather');
+    if(/under|in the|on the|next to/i.test(full)) keys.push('en_prep');
+    if(/how old/i.test(full)) keys.push('en_age');
+    if(/yesterday|went|ate|saw|did/i.test(full)) keys.push('en_past');
+    if(/bigger|taller|faster|than/i.test(full)) keys.push('en_comp');
+  }
+  if(item.pairs){
+    item.pairs.forEach(pr=>{
+      const pTxt=pr[0]+' '+pr[1];
+      for(const [name,re] of TOPIC_RULES){
+        if(re.test(pTxt)) keys.push(name);
+      }
+    });
+  }
+  if(!keys.length) keys.push('raw_'+String(item.q||'').slice(0,18));
+  return [...new Set(keys)];
+}
+
+// 識別題目所屬之「廣義概念群組」（同一題組若有 2 題以上，強制由簡單排到困難）
+function inferBroadCategory(item, subj, kindKey){
+  const q=String(item.q||'');
+  if(subj==='國語'){
+    if(/讀音|注音/.test(q)) return 'zh_phonetic';
+    if(/部首|筆畫/.test(q)) return 'zh_radical';
+    if(/成語|四字/.test(q)) return 'zh_idiom';
+    if(/修辭/.test(q)) return 'zh_rhetoric';
+    if(/標點/.test(q)) return 'zh_punc';
+    if(/量詞|疊字|短語/.test(q)) return 'zh_phrase';
+    return 'zh_comp';
+  }
+  if(subj==='數學'){
+    if(/面積|周長|體積|表面積|角|圓|扇形|三角形|四邊形|梯形|正方|長方/.test(q)) return 'math_geo';
+    if(/公升|毫公升|公尺|公分|公里|公斤|公克|公噸|時|分|元|硬幣|直尺|量杯/.test(q)) return 'math_meas';
+    if(/長條圖|折線圖|圓形圖/.test(q)) return 'math_stat';
+    return 'math_num';
+  }
+  if(subj==='英語'){
+    if(/單字|中文意思|拼出/.test(q)) return 'en_vocab';
+    return 'en_gram';
+  }
+  return subj+'_'+kindKey;
+}
+
+// 計算單題精細難度分數（確保各題型與同一概念題組嚴格「由簡單到困難」遞增排序）
+function calcQuestionDifficulty(item, subj, kindKey, effDiff='mid'){
+  const base = effDiff==='easy'?100:(effDiff==='hard'?300:200);
+  const q = String(item.q||'');
+  let comp = 0;
+  // 1. 擷取題目中之數值大小與步驟數
+  const nums = (q.match(/\d+(\.\d+)?/g)||[]).map(Number).filter(n=>!isNaN(n));
+  if(nums.length){
+    const mx = Math.max(...nums);
+    comp += Math.min(35, Math.log10(mx+1)*10 + nums.length*3);
+  }
+  // 2. 空格數、小題數與運算複雜度
+  const blanks = (q.match(/[（(][\s　]*[）)]|□/g)||[]).length;
+  comp += blanks * 8;
+  if(/[×÷]/.test(q) && /[＋－+-]/.test(q)) comp += 18; // 四則混合兩步驟以上
+  if(/餘數|最大公因數|最小公倍數|複合|L\s*形|平均速率|定價|打.*折|比例尺|扇形|圓柱/.test(q)) comp += 22;
+  if(subj==='國語'){
+    if(/讀音|注音/.test(q) && q.length<22) comp += 5;
+    else if(/部首|筆畫|量詞/.test(q)) comp += 18;
+    else if(/選字|相似|相反|短語/.test(q)) comp += 30;
+    else if(/成語|標點|關聯|雖然|因為/.test(q)) comp += 45;
+    else if(/修辭|閱讀|推論/.test(q)) comp += 62;
+  }
+  if(subj==='英語'){
+    if(/中文意思|英文單字/.test(q)) comp += 10;
+    else if(/拼出/.test(q)) comp += 25;
+    else comp += 42;
+  }
+  comp += Math.min(25, q.length * 0.35);
+  return base + comp;
+}
+
+
+function attachMatchingSvg(item, subj, g){
+  if(item.svg) return item;
+  const q = String(item.q||'') + ' ' + String(item.a||'');
+  if(subj==='生活'||subj==='自然科學'){
+    if(/同極|N\s*極和\s*N\s*極|相斥/.test(q)) item.svg = svgMagnet('S','N','N','S');
+    else if(/異極|N\s*極和\s*S\s*極|兩個極/.test(q)) item.svg = svgMagnet('S','N','S','N');
+    else if(/磁鐵.*吸|鐵釘|迴紋針/.test(q)) item.svg = svgMagnetAttract();
+    else if(/中午.*影子|仰角最高.*影子最短/.test(q)) item.svg = svgShadowSun('noon');
+    else if(/影子|太陽/.test(q)) item.svg = svgShadowSun('side');
+    else if(/拍打.*水|杯子.*聲音/.test(q)) item.svg = svgWaterGlasses();
+    else if(/紅燈|綠燈|紅綠燈/.test(q)) item.svg = svgTrafficLight();
+    else if(/月亮|月相|滿月|上弦月|初一到十五/.test(q)) item.svg = svgMoonPhase();
+    else if(/空氣佔有空間|空杯.*壓入水中/.test(q)) item.svg = svgAirCup();
+    else if(/電路|燈泡|導體|絕緣體/.test(q)) item.svg = svgCircuit(!/斷路|壞掉/.test(item.q));
+    else if(/20\s*公分.*300\s*克.*15\s*公分/.test(q)) item.svg = svgLever(20,300,15);
+    else if(/溶解|石蕊試紙|酸性|鹼性|水溶液/.test(q)) item.svg = svgBeaker(600);
+  }
+  if(subj==='社會'){
+    if(/圖例|比例尺|方向|方位/.test(q)) item.svg = svgCompassRose();
+    else if(/五大.*地形|盆地|台地|平原|中央山脈/.test(q)) item.svg = svgTaiwanTerrain();
+  }
+  if(subj==='英語'){
+    if(/seven\s*\(?.*o'clock|7:00/i.test(q)) item.svg = svgClock(7,0);
+    else if(/eight\s*\(?.*o'clock|8:00/i.test(q)) item.svg = svgClock(8,0);
+    else if(/What\s*\(?.*time/i.test(q)) item.svg = svgClock(7,0);
+    else if(/thirty\s+dollars/i.test(q)) item.svg = svgPriceTag(/juice/i.test(q)?'Juice':'Item', 30);
+    else if(/forty\s+dollars/i.test(q)) item.svg = svgPriceTag(/sandwich/i.test(q)?'Sandwich':'Item', 40);
+    else if(/How\s*\(?.*much/i.test(q)) item.svg = svgPriceTag('Bag', 80);
+    else if(/rainy/i.test(q)) item.svg = svgWeatherIcon('rainy');
+    else if(/sunny|weather/i.test(q)) item.svg = svgWeatherIcon('sunny');
+    else if(/under the chair|under the desk/i.test(q)) item.svg = svgPreposition('under');
+    else if(/on the desk|on the box/i.test(q)) item.svg = svgPreposition('on');
+    else if(/in the box|in the bag/i.test(q)) item.svg = svgPreposition('in');
+  }
+  return item;
+}
+
+// 依據單元關鍵字判斷題目是否屬於使用者勾選的單元
+function matchesUnitTopics(item, subj, g, sem, unitIndices, allUnitsCount){
+  if(!unitIndices || !unitIndices.length || unitIndices.length >= allUnitsCount) return true;
+  if(subj==='國語') return false; // 國語勾選特定單課時，100% 由該課生字與課文動態出題，不混入全冊通用靜態題
+  const q = String(item.q||'') + ' ' + String(item.a||'') + ' ' + String(item.exp||'');
+  const UNIT_KW = {
+    '生活_1_上_0': /上課|鐘聲|校園|教室|禮貌|走廊|樓梯|同學|朋友/,
+    '生活_1_上_1': /秋|落葉|植物|小動物|昆蟲|6\s*隻腳|陽光|季節|穿/,
+    '生活_1_上_2': /玩具|聲音|拍打|水杯|敲擊|高低/,
+    '生活_1_下_0': /家人|家事|紅燈|綠燈|過馬路|跌倒|火警|安全/,
+    '生活_1_下_1': /發芽|豆|盆栽|澆水|回收|寶特瓶|鋁罐|紙類|垃圾/,
+    '生活_1_下_2': /影子|太陽|省水|關水|端午|中秋|元宵|春節|習俗/,
+    '生活_2_上_0': /二年級|時間|作息|社區|公共|規範/,
+    '生活_2_上_1': /磁鐵|磁極|鐵釘|迴紋針|同極|異極|風/,
+    '生活_2_下_0': /米|稻|粽|月餅|湯圓|食物|特產/,
+    '生活_2_下_1': /昆蟲|6\s*隻腳|蝴蝶|蜘蛛|回收|環保袋|節約能源|關燈/,
+    '自然科學_3_上_0': /植物|根|莖|葉|花|果實|種子|光合作用/,
+    '自然科學_3_上_1': /磁鐵|磁極|同極|異極|鐵/,
+    '自然科學_3_上_2': /空氣|風|倒扣|壓縮/,
+    '自然科學_3_下_0': /昆蟲|六隻腳|6隻腳|變態|蛹|蝴蝶|蝗蟲/,
+    '自然科學_3_下_1': /溶解|食鹽|砂糖|水溫|浮|沉/,
+    '自然科學_3_下_2': /溫度計|氣溫|雲|雨|天氣|百葉箱/,
+    '自然科學_4_上_0': /月|滿月|眉月|上弦|農曆/,
+    '自然科學_4_上_1': /水生|布袋蓮|浮萍|睡蓮|水蘊草|荷花|魚|鰓|鰭/,
+    '自然科學_4_上_2': /光|反射|折射|鏡|三稜鏡|彩虹|筷子/,
+    '自然科學_4_下_0': /力|彈簧|砝碼|摩擦|重力/,
+    '自然科學_4_下_1': /毛細|虹吸|連通管|蒸發|凝結|凝固|融化|三態/,
+    '自然科學_4_下_2': /電路|燈泡|串聯|並聯|導體|絕緣體|銅線/,
+    '自然科學_5_上_0': /太陽|影|四季|夏至|冬至|仰角|日晷/,
+    '自然科學_5_上_1': /花|授粉|果實|種子|繁殖/,
+    '自然科學_5_上_2': /酸|鹼|石蕊|高麗菜|小蘇打|檸檬|醋|溶解/,
+    '自然科學_5_下_0': /燃燒|氧氣|二氧化碳|石灰水|滅火|生鏽|熱傳導|熱對流|熱輻射/,
+    '自然科學_5_下_1': /骨骼|肌肉|關節|呼吸|血液|心臟/,
+    '自然科學_5_下_2': /星|北極星|北斗七星|仙后座/,
+    '自然科學_6_上_0': /岩|火成|沉積|變質|侵蝕|堆積|凹岸|凸岸|地震|化石/,
+    '自然科學_6_上_1': /電磁鐵|線圈|磁力|指北針/,
+    '自然科學_6_上_2': /鋒|滯留鋒|梅雨|氣團|氣壓|颱風/,
+    '自然科學_6_下_0': /槓桿|支點|施力臂|抗力臂|滑輪|輪軸|省力/,
+    '自然科學_6_下_1': /生態|生產者|消費者|分解者|食物鏈|外來種/,
+    '自然科學_6_下_2': /再生能源|太陽能|風力|煤炭|石油|永續|溫室/,
+    '社會_3_上_0': /家庭|親屬|社區|鄰里|巡守/,
+    '社會_3_上_1': /班級|自治|安全|溝通|學校/,
+    '社會_3_上_2': /消費|需要|想要|發票|1950|儲蓄/,
+    '社會_3_下_0': /地名|古蹟|先民|傳統建築/,
+    '社會_3_下_1': /農|漁|牧|特產|工商業|服務業/,
+    '社會_3_下_2': /節慶|多元文化|原住民|新住民/,
+    '社會_4_上_0': /地形|山地|丘陵|平原|盆地|台地|圖例|比例尺|方向/,
+    '社會_4_上_1': /縣（市）|議會|政府|防災|避難|颱風|地震/,
+    '社會_4_下_0': /交通|運輸|陸運|水運|空運|通訊|手機/,
+    '社會_4_下_1': /水圳|瑠公圳|八堡圳|產業|永續/,
+    '社會_5_上_0': /中央山脈|地形|河川|海岸|國家公園/,
+    '社會_5_上_1': /史前|原住民|南島語族|16\s*族/,
+    '社會_5_上_2': /荷蘭|西班牙|熱蘭遮|鄭成功/,
+    '社會_5_下_0': /清|茶|樟腦|蔗糖|劉銘傳|水圳/,
+    '社會_5_下_1': /日治|八田與一|嘉南大圳|戰後|民主/,
+    '社會_6_上_0': /憲法|行政院|立法院|司法院|考試院|監察院|五權|權利|義務|納稅|服兵役/,
+    '社會_6_上_1': /經濟|貿易|半導體|出口|投資|理財/,
+    '社會_6_下_0': /亞洲|大洋|太平洋|文化|世界/,
+    '社會_6_下_1': /UN|WHO|SDGs|永續|國際組織/,
+    '英語_1_上_0': /morning|Hello|name|apple|cat|dog/i,
+    '英語_1_上_1': /one|two|three|four|five|six|seven|eight|nine|ten|pen|book/i,
+    '英語_1_下_0': /red|blue|green|yellow|black|white|book|pen|ruler|bag/i,
+    '英語_1_下_1': /cat|dog|bird|fish|mom|dad/i,
+    '英語_2_上_0': /this|that|pig|duck|milk|egg|cake/i,
+    '英語_2_上_1': /head|eye|ear|nose|mouth|hand|Touch|old/i,
+    '英語_2_下_0': /like|milk|juice|bread|water|cake|egg|apple|banana/i,
+    '英語_2_下_1': /big|small|tall|short|happy|sad|rabbit|monkey|lion|bear/i,
+    '英語_3_上_0': /name|old|nine|ten|student|teacher/i,
+    '英語_3_上_1': /pencil|eraser|chair|desk|box|ball|this|that/i,
+    '英語_3_下_0': /Who|teacher|student|doctor|nurse|cook|farmer|am|is/i,
+    '英語_3_下_1': /Where|in|on|under|near|elephant|tiger|zebra|turtle|snake|frog/i,
+    '英語_4_上_0': /time|o'clock|Monday|Tuesday|Wednesday|Thursday|Friday|Sunday|day/i,
+    '英語_4_上_1': /Can you|swim|like|ride|catch/i,
+    '英語_4_下_0': /How much|dollar|hamburger|noodles|sandwich|rice|soup|juice/i,
+    '英語_4_下_1': /weather|sunny|rainy|cloudy|windy|hot|cold|hungry|thirsty|tired|angry|happy/i,
+    '英語_5_上_0': /doing|reading|swimming|running|-ing/i,
+    '英語_5_上_1': /jacket|shorts|raincoat|sweater|hat|shoes|wear|birthday/i,
+    '英語_5_下_0': /MRT|bus|train|bike|scooter|car|straight|turn left|turn right|library|park|zoo|hospital|post office|bookstore/i,
+    '英語_5_下_1': /always|usually|sometimes|never|weekend/i,
+    '英語_6_上_0': /yesterday|Last|went|ate|saw|had|did|was|were/i,
+    '英語_6_上_1': /taller|shorter|faster|bigger|oldest|highest|than/i,
+    '英語_6_下_0': /going to|will|want to|engineer|singer|pilot|artist|scientist|writer/i,
+    '英語_6_下_1': /Kenting|Tainan|visit|travel|summer|train|seafood/i
+  };
+  return unitIndices.some(uIdx=>{
+    const re = UNIT_KW[`${subj}_${g}_${sem}_${uIdx}`];
+    return re ? re.test(q) : true;
+  });
+}
+
+
+// 針對國語、生活、自然科學、社會、英語之單一勾選單元專屬動態題庫（確保只勾選單一單元時 100% 題目皆出自該單元）
+function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allowedUnits){
+  const isTrue = (vIdx + randSeed) % 2 === 0;
+  if(subj==='國語'){
+    // 100% 從勾選課次之生字池抽題，並支援所有 6 種題型（含短語造句與閱讀理解）
+    const pool=[];
+    if(window.TW){
+      Object.values(TW).forEach(pubObj=>{
+        Object.values(pubObj).forEach(arr=>{
+          arr.filter(ls=>ls.g==+g && (!allowedUnits || !allowedUnits.length || allowedUnits.includes(ls.t)))
+             .forEach(ls=>ls.c.forEach(c=>{if(c[0]&&c[2])pool.push({...c,lesson:ls.t});}));
+        });
+      });
+    }
+    if(pool.length>=4){
+      const nP = pool.length;
+      const c1=pool[(vIdx+randSeed)%nP];
+      const c2=pool[(vIdx+1+randSeed)%nP];
+      const c3=pool[(vIdx+2+randSeed)%nP];
+      const c4=pool[(vIdx+3+randSeed)%nP];
+      const ch=c1[0], zy=c1[2], rad=c1[3]||'口', st=c1[4]||8, lsName=c1.lesson||'本課';
+      if(kindKey==='mc'){
+        if(vIdx%3===0){
+          const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
+          return {q:`（${lsName}）「${ch}」這個字的正確注音是哪一個？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}，屬${rad}部。`};
+        }
+        if(vIdx%3===1){
+          const rDist=shuffle([...new Set(pool.map(x=>x[3]).filter(x=>x&&x!==rad)),'水','木','手','心']).slice(0,3);
+          return {q:`（${lsName}）國字「${ch}」的部首是哪一個？`,opts:uniqueOpts(`${rad}部`,rDist.map(x=>`${x}部`)),a:`${rad}部`,exp:`「${ch}」屬${rad}部，共 ${st} 畫。`};
+        }
+        return {q:`（${lsName}）國字「${ch}」的總筆畫數是多少畫？`,opts:uniqueOpts(`${st} 畫`,[`${+st+1} 畫`,`${Math.max(1,+st-1)} 畫`,`${+st+2} 畫`]),a:`${st} 畫`,exp:`「${ch}」共 ${st} 畫。`};
+      }
+      if(kindKey==='tf'){
+        if(vIdx%2===0){
+          const fakeZy=isTrue?zy:c2[2];
+          return {q:`（${lsName}）國字「${ch}」的讀音是「${fakeZy}」。`,a:isTrue?'○':'✕',exp:`「${ch}」正確讀音為 ${zy}。`};
+        }
+        const fakeSt=isTrue?st:(+st+2);
+        return {q:`（${lsName}）國字「${ch}」屬於「${rad}部」，總筆畫共 ${fakeSt} 畫。`,a:isTrue?'○':'✕',exp:`「${ch}」屬${rad}部，共 ${st} 畫。`};
+      }
+      if(kindKey==='fill'){
+        if(vIdx%2===0) return {q:`（${lsName}）寫出國字注音與總筆畫：「${ch}」讀作（　　），共（　）畫。`,a:`${zy}；${st}`};
+        return {q:`（${lsName}）看注音寫國字與部首：「${zy}」寫作（　），是（　）部。`,a:`${ch}；${rad}`};
+      }
+      if(kindKey==='match'){
+        return {q:`${lsName}生字與注音部首配對`,pairs:[
+          [`「${c1[0]}」的注音`,c1[2]],
+          [`「${c2[0]}」的部首`,`${c2[3]||'口'}部`],
+          [`「${c3[0]}」的注音`,c3[2]],
+          [`「${c4[0]}」的總筆畫`,`${c4[4]||8} 畫`]
+        ]};
+      }
+      if(kindKey==='calc'){
+        return {q:`（${lsName}）造詞與造句練習：請用本課生字「${ch}」（${zy}）先造一個語詞，再寫出一個完整的句子。`,a:`例：使用「${ch}」造詞並完成通順句子。`};
+      }
+      if(kindKey==='word'){
+        return {q:`【${lsName}閱讀與字詞應用】小華在複習〈${lsName}〉時，整理了「${c1[0]}（${c1[2]}）」、「${c2[0]}（${c2[2]}）」和「${c3[0]}（${c3[2]}）」三個重點生字。問題：(1)「${c1[0]}」是什麼部首？共幾畫？ (2)請挑其中兩個生字各造一個語詞。`,a:`(1) ${rad}部，共 ${st} 畫。(2) 依本課生字正確造詞。`};
+      }
+    }
+  }
+
+  // 英語科依勾選 Unit 精準抽題
+  if(subj==='英語'){
+    const PB=window.PROC_BANK&&PROC_BANK.eng;
+    const fullV=(PB&&PB.vocab[g])||[['apple','蘋果'],['book','書本'],['cat','貓'],['dog','狗'],['sunny','晴朗的'],['library','圖書館']];
+    const half=Math.ceil(fullV.length/2);
+    const uVocab = uIdx===0 ? fullV.slice(0,half) : fullV.slice(half);
+    const pool = uVocab.length>=4 ? uVocab : fullV;
+    const [en,zh] = pool[(vIdx+randSeed)%pool.length];
+    const others = shuffle(fullV.filter(x=>x[0]!==en&&x[1]!==zh)).slice(0,3);
+    const uList = ((CURRICULUM[g]||{})['英語']||{})[sem]||[];
+    const uTitle = (uList[uIdx]&&uList[uIdx].name)||`Unit ${uIdx+1}`;
+    let item=null;
+    if(kindKey==='mc'){
+      item = vIdx%2===0
+        ? {q:`[${uTitle}] 英文單字 "${en}" 的中文意思是什麼？`,opts:uniqueOpts(zh,others.map(x=>x[1])),a:zh,exp:`${en} ＝ ${zh}`}
+        : {q:`[${uTitle}] 「${zh}」的英文單字是哪一個？`,opts:uniqueOpts(en,others.map(x=>x[0])),a:en,exp:`${zh} ＝ ${en}`};
+    }else if(kindKey==='tf'){
+      const shown=isTrue?zh:others[0][1];
+      item = {q:`[${uTitle}] 英文 "${en}" 的中文意思是「${shown}」。`,a:isTrue?'○':'✕',exp:`${en} ＝ ${zh}`};
+    }else if(kindKey==='fill'){
+      const masked=en.length>2?en[0]+' _ '.repeat(en.length-2)+en[en.length-1]:en;
+      item = {q:`[${uTitle}] 依中文提示拼出英文單字：「${zh}」→ ${masked}（　　　）`,a:en};
+    }else if(kindKey==='match'){
+      item = {q:`${uTitle} 單字中英配對`,pairs:shuffle(pool).slice(0,4)};
+    }else if(kindKey==='calc'){
+      item = {q:`[${uTitle}] 英文句型寫作：請運用單字 "${en}"（${zh}）完成一個英文短句並寫出中文意思。`,a:`It is a/an ${en}. / I like ${en}.（${zh}）`};
+    }else{
+      const [en2,zh2]=pool[(vIdx+1+randSeed)%pool.length];
+      item = {q:`【${uTitle} 閱讀對話】Amy: "Look! What is it?" Ben: "It is a/an ${en}. And I can see a/an ${en2}, too." 問題：(1) What does Ben see first（寫出中文）? (2) Write down the English word for「${zh2}」.`,a:`(1) ${zh}。(2) ${en2}。`};
+    }
+    return attachMatchingSvg(item, subj, g);
+  }
+
+  // 生活、自然科學、社會：依據 CURRICULUM[g][subj][sem][uIdx] 之各子主題產生自然且不重複的單元考題與圖解
+  const uList = ((CURRICULUM[g]||{})[subj]||{})[sem]||[];
+  const uObj = uList[uIdx] || uList[0] || {name:`單元${uIdx+1}`,topics:['核心概念一','核心概念二','核心概念三']};
+  const tps = uObj.topics || ['核心概念'];
+  const tp = tps[vIdx % tps.length];
+  const tpNext = tps[(vIdx+1) % tps.length];
+  const uShort = uObj.name.split('：')[1] || uObj.name;
+  const otherUnits = uList.filter((_,idx)=>idx!==uIdx);
+  const wrongTopics = otherUnits.flatMap(u=>u.topics||[]).concat(['隨意破壞環境','不遵守安全規則','未經查證的猜測']);
+
+  let item=null;
+  if(kindKey==='mc'){
+    const dist = shuffle(wrongTopics.filter(x=>x!==tp)).slice(0,3);
+    const mcPrompts = [
+      `進行「${uShort}」單元探究時，下列哪一項屬於本單元的正確觀察或重點？`,
+      `關於「${tp}」的課堂學習，下列哪一個敘述與本單元「${uShort}」最直接相關？`,
+      `小華正在複習「${uObj.name}」，他應該特別掌握下列哪一個關鍵概念？`,
+      `下列哪一項主題屬於「${uObj.name}」的學習範圍？`,
+      `在「${uShort}」主題討論中，老師提到的「${tpNext}」與下列哪個概念同屬本單元？`,
+      `整理「${uObj.name}」重點筆記時，哪一個項目應該列入本單元？`,
+      `小美想深入了解「${uShort}」，下列哪一項是她在課本中會學到的內容？`,
+      `複習${subj}科「${uObj.name}」時，下列哪個選項是正確的核心概念？`
+    ];
+    item = {q:mcPrompts[vIdx%mcPrompts.length], opts:uniqueOpts(tp,dist), a:tp, exp:`「${uObj.name}」重點為：${tps.join('、')}。`};
+  }else if(kindKey==='tf'){
+    const shown = isTrue ? tp : wrongTopics[vIdx%wrongTopics.length];
+    const tfPrompts = [
+      `學習「${uShort}」時，我們會透過觀察與討論來認識「${shown}」。`,
+      `「${shown}」屬於「${uObj.name}」單元中所探討的重要內容。`,
+      `在「${uShort}」的課程活動裡，重點包含了「${shown}」的認識與實踐。`,
+      `複習「${uObj.name}」時，「${shown}」是本單元的核心觀念之一。`,
+      `課堂進行「${uShort}」探究時，老師會帶領大家認識「${shown}」。`
+    ];
+    item = {q:tfPrompts[vIdx%tfPrompts.length], a:isTrue?'○':'✕', exp:`「${uObj.name}」重點為：${tps.join('、')}。`};
+  }else if(kindKey==='fill'){
+    const fillPrompts = [
+      {q:`在「${uObj.name}」中，我們學習了「${tp}」與（　　　　　）等重要概念。`,a:tpNext},
+      {q:`複習「${uShort}」時，除了「${tpNext}」之外，（　　　　　）也是本單元的關鍵重點。`,a:tp},
+      {q:`「${uObj.name}」單元的學習重點包含（　　　　　）以及「${tpNext}」。`,a:tp},
+      {q:`進行「${uShort}」探究活動時，認識「${tp}」與（　　　　　）能幫助我們掌握單元概念。`,a:tpNext}
+    ];
+    item = fillPrompts[vIdx%fillPrompts.length];
+  }else if(kindKey==='match'){
+    const pairs = tps.slice(0,3).map((t,idx)=>[`${uShort}重點(${idx+1})`,t]);
+    while(pairs.length<4) pairs.push([`本單元主題(${pairs.length+1})`, uShort]);
+    item = {q:`${uObj.name} 概念配對`,pairs};
+  }else if(kindKey==='calc'){
+    item = {q:`【${uShort}・實作練習(${vIdx+1})】請針對本單元的「${tp}」，寫出兩項你在課堂實驗或日常生活中觀察到的具體例子。`,a:`依「${tp}」寫出兩項具體實例（如：${tps.join('、')}相關觀察）。`};
+  }else{
+    item = {q:`【${uShort}・素養情境題(${vIdx+1})】老師帶領全班進行「${uShort}」探究活動，討論了「${tps.join('」、「')}」。問題：(1) 請挑出其中一項概念說明它的意思。 (2) 在生活中我們可以如何應用「${tp}」？`,a:`(1) 說明「${tps[0]}」概念。(2) 結合「${tp}」之生活應用。`};
+  }
+  return attachMatchingSvg(item, subj, g);
+}
+
+function normalizeTemplateSig(q){
+  if(!q)return '';
+  return String(q)
+    .replace(/^【[^】]{1,24}】\s*/,'')
+    .replace(/\d+(?:\.\d+)?/g,'#')
+    .replace(/小明|小華|小美|小強|小瑛|小玉|小丸子|大雄|靜香|阿明|阿華|美美|志明|春嬌|爸爸|媽媽|哥哥|姊姊|姐姐|弟弟|妹妹|老師/g,'某人')
+    .replace(/蘋果|橘子|香蕉|草莓|西瓜|鉛筆|原子筆|橡皮擦|尺|貼紙|糖果|餅乾|巧克力|彈珠|色紙|卡片|故事書|繪本|蛋糕|麵包|水壺|氣球|花朵|積木/g,'某物')
+    .replace(/[一二三四五六七八九十兩百千萬]+個/g,'#個')
+    .replace(/[Ａ-Ｚａ-ｚ甲乙丙丁]/g,'X')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+let randSeed=0;
+function generateExamQuestions(cfg){
+  randSeed=rnd(0,97);
+  const g=+cfg.grade, subj=cfg.subject, diff=cfg.diff;
+  const tier=g<=2?'low':(g<=4?'mid':'high');
+  const sections=[];
+  // 全卷（及跨張懶人包）防重集合：題幹、版型簽名（防只換數字/人名）、與概念主題皆不得重複
+  const examTopicsUsed=new Set();
+  const examQuestionsUsed=new Set();
+  const examSigsUsed=new Set();
+  const extQuestions = cfg.excludeQuestions instanceof Set ? cfg.excludeQuestions : null;
+  const extSigs = cfg.excludeSigs instanceof Set ? cfg.excludeSigs : null;
+
+  const isGlobalDup=(cand, checkSig=true)=>{
+    if(!cand||!cand.q) return true;
+    if(examQuestionsUsed.has(cand.q) || (extQuestions && extQuestions.has(cand.q))) return true;
+    if(checkSig){
+      const sig=normalizeTemplateSig(cand.q);
+      if(examSigsUsed.has(sig) || (extSigs && extSigs.has(sig))) return true;
+    }
+    return false;
+  };
+  const isTopicConflict=(cand)=>{
+    if(isGlobalDup(cand, true)) return true;
+    const tKeys=inferTopicKeys(cand,subj);
+    return tKeys.some(k=>examTopicsUsed.has(k));
+  };
+  const markTopicUsed=(cand, secSet)=>{
+    const sig=normalizeTemplateSig(cand.q);
+    examQuestionsUsed.add(cand.q);
+    examSigsUsed.add(sig);
+    if(extQuestions) extQuestions.add(cand.q);
+    if(extSigs) extSigs.add(sig);
+    inferTopicKeys(cand,subj).forEach(k=>{examTopicsUsed.add(k);if(secSet)secSet.add(k);});
+  };
+
+  const pullBank=(kindKey, count, title)=>{
+    if(count<=0)return;
+    const qs=[];
+    const secTopicsUsed=new Set();
+    // 建立由簡單到困難的遞增難度梯度（前段 easy -> 中段 mid -> 後段 hard）
+    const getStepDiff=(idx)=>{
+      if(diff!=='mix') return diff;
+      if(count<=1) return 'mid';
+      const ratio=idx/(count-1);
+      return ratio<0.34?'easy':(ratio<0.74?'mid':'hard');
+    };
+
+    const uIdxs = (cfg.unitIndices&&cfg.unitIndices.length) ? cfg.unitIndices : [0,1,2,3];
+    const allUnitsCount = cfg.allUnitsCount || 4;
+    if(subj==='數學'){
+      const mathBank=(EXAM_BANK['數學']&&(EXAM_BANK['數學'][tier]||EXAM_BANK['數學'].all))||{};
+      const mathBKey=kindKey==='calc'?'prac':(kindKey==='word'?'read':kindKey);
+      const mathStaticPool=shuffle(mathBank[mathBKey]||[]);
+      for(let i=0;i<count;i++){
+        const effD=getStepDiff(i);
+        let item=null;
+        // 第一輪：優先指定單元專屬題型（跨卷版型不重、全卷概念不重）
+        for(let tr=0;tr<18;tr++){
+          const uPick=uIdxs[(i+tr)%uIdxs.length];
+          const cand=genMathForUnit(g,cfg.sem,uPick,effD,kindKey,i+tr+randSeed);
+          if(!isTopicConflict(cand)){item=cand;break;}
+        }
+        // 第二輪：年級對應單元主題題型（genMath 與指定單元交叉輪替，仍堅持不重版型）
+        if(!item){
+          for(let tr=0;tr<24;tr++){
+            const uPick=uIdxs[(i+tr)%uIdxs.length];
+            const cand = tr%2===0
+              ? genMath(g,effD,kindKey,tr+i+randSeed)
+              : genMathForUnit(g,cfg.sem,uPick,effD,kindKey,i+tr+randSeed+13);
+            const tKeys=inferTopicKeys(cand,subj);
+            if(!isGlobalDup(cand,true) && !tKeys.some(k=>secTopicsUsed.has(k))){item=cand;break;}
+          }
+        }
+        // 第三輪：逐一走訪跨題型多變化數學題庫 genMathVariety + genMath + 同年級他單元 + 靜態題庫（step=1 絕不跳漏！）
+        if(!item){
+          for(let k=0;k<95;k++){
+            const cand=genMathVariety(g,cfg.sem,effD,kindKey,i*7+k+randSeed);
+            if(!isGlobalDup(cand,true)){item=cand;break;}
+          }
+        }
+        if(!item){
+          for(let k=0;k<10;k++){
+            const cand=genMath(g,effD,kindKey,i*3+k+randSeed);
+            if(!isGlobalDup(cand,true)){item=cand;break;}
+          }
+        }
+        if(!item){
+          for(let sIdx=0;sIdx<2&&!item;sIdx++){
+            const semTry = sIdx===0 ? cfg.sem : (cfg.sem==='上'?'下':'上');
+            for(let uTry=0;uTry<4&&!item;uTry++){
+              for(let vTry=0;vTry<5&&!item;vTry++){
+                const cand=genMathForUnit(g,semTry,uTry,effD,kindKey,vTry+randSeed);
+                if(!isGlobalDup(cand,true)){item=cand;break;}
+              }
+            }
+          }
+        }
+        if(!item && mathStaticPool.length){
+          const stCand=mathStaticPool.find(r=>!isGlobalDup(r,true));
+          if(stCand) item={...stCand};
+        }
+        // 最終保底（所有題型與變化庫皆完全窮盡時）：至少題幹完全不重
+        if(!item){
+          for(let tr=0;tr<20;tr++){
+            const uPick=uIdxs[(i+tr)%uIdxs.length];
+            const cand=genMathForUnit(g,cfg.sem,uPick,effD,kindKey,i+tr+randSeed+53);
+            if(!isGlobalDup(cand,false)){item=cand;break;}
+          }
+        }
+        if(item){
+          if(item.opts && Array.isArray(item.opts)) item={...item,opts:shuffle(item.opts)};
+          if(item.pairs){const sh=shuffle(item.pairs.map(p=>p[1]));item={...item,right:sh};}
+          item._diff=effD;
+          item._broadCat=inferBroadCategory(item,subj,kindKey);
+          item._dScore=calcQuestionDifficulty(item,subj,kindKey,effD);
+          markTopicUsed(item, secTopicsUsed);
+          qs.push(item);
+        }
+      }
+    }else{
+      const bank=(EXAM_BANK[subj]&&(EXAM_BANK[subj][tier]||EXAM_BANK[subj].all))||{};
+      const bankKey=kindKey==='calc'?'prac':(kindKey==='word'?'read':kindKey);
+      let list=shuffle(bank[bankKey]||[]);
+      for(let i=0;i<count;i++){
+        const effD=getStepDiff(i);
+        let chosen=null;
+
+        const unitList=list.filter(r=>matchesUnitTopics(r,subj,g,cfg.sem,uIdxs,allUnitsCount));
+
+        const tryDynamic=()=>{
+          for(let tr=0;tr<28;tr++){
+            let d=null;
+            if(subj==='國語'&&(kindKey==='mc'||kindKey==='fill'||kindKey==='tf')) d=genChineseDynamic(g,kindKey,effD,cfg.units);
+            else if(subj==='英語'&&kindKey!=='word') d=genEngProc(g,kindKey);
+            else if(subj==='生活'||subj==='自然科學'||subj==='社會') d=genFactProc(subj,g,kindKey);
+            if(d && (subj==='國語' || matchesUnitTopics(d,subj,g,cfg.sem,uIdxs,allUnitsCount)) && !isTopicConflict(d)) return d;
+          }
+          return null;
+        };
+
+        const tryStatic=()=>{
+          const avail=unitList.filter(r=>!isTopicConflict(r));
+          return avail.length?avail[0]:null;
+        };
+
+        const tryUnitSpecific=(strictSig=true)=>{
+          for(let tr=0;tr<28;tr++){
+            const uPick=uIdxs[(i+tr)%uIdxs.length];
+            const cand=genCurriculumUnitQuestion(subj,g,cfg.sem,uPick,kindKey,effD,i+tr+randSeed,cfg.units);
+            if(cand && !isGlobalDup(cand,strictSig)) return cand;
+          }
+          return null;
+        };
+
+        if(i%2===0){
+          chosen=tryDynamic()||tryStatic()||tryUnitSpecific(true)||tryUnitSpecific(false);
+        }else{
+          chosen=tryStatic()||tryDynamic()||tryUnitSpecific(true)||tryUnitSpecific(false);
+        }
+        if(!chosen){
+          // 若受測主題桶已全數使用，改從題庫挑尚未在整套出現過版型的新題
+          const unusedStatic=unitList.find(r=>!isGlobalDup(r,true)) || unitList.find(r=>!isGlobalDup(r,false));
+          if(unusedStatic) chosen=unusedStatic;
+        }
+        if(chosen){
+          let item=chosen.opts?{...chosen,opts:shuffle(chosen.opts)}:{...chosen};
+          if(chosen.pairs){const sh=shuffle(chosen.pairs.map(p=>p[1]));item={...item,right:sh};}
+          attachMatchingSvg(item, subj, g);
+
+          item._diff=effD;
+          item._broadCat=inferBroadCategory(item,subj,kindKey);
+          item._dScore=calcQuestionDifficulty(item,subj,kindKey,effD);
+          markTopicUsed(item, secTopicsUsed);
+          qs.push(item);
+        }
+      }
+    }
+
+    // 強制排序：每一大題內部以及同一概念題組達 2 題以上時，難易度一律「由簡單到困難」遞增排列
+    qs.sort((a,b)=>a._dScore - b._dScore);
+    if(qs.length)sections.push({kind:kindKey,title,qs});
+  };
+
+  pullBank('mc', cfg.nMc, '選出正確的答案');
+  pullBank('tf', cfg.nTf, '對的畫 ○，錯的打 ✕');
+  pullBank('fill', cfg.nFill, '填填看／做做看');
+  pullBank('match', cfg.nMatch, '連連看／看圖配對');
+  pullBank('calc', cfg.nCalc, subj==='數學'?'計算題':'實作與寫作練習');
+  pullBank('word', cfg.nWord, subj==='數學'?'素養養成題／生活應用':'閱讀理解與應用');
+
+  assignScores(sections);
+  const CN=['一','二','三','四','五','六'];
+  sections.forEach((s,i)=>{
+    const same=s.qs.every(q=>q.pts===s.qs[0].pts);
+    const ptsDesc=same?`每題 ${s.qs[0].pts} 分，共 ${s.ptsTotal} 分`:`共 ${s.ptsTotal} 分`;
+    s.heading=`${CN[i]}、${s.title}（${ptsDesc}）`;
+  });
+  return {meta:cfg, sections};
+}
+
+function assignScores(sections){
+  const W={mc:3,tf:2,fill:3,match:6,calc:5,word:7};
+  let all=[];
+  sections.forEach(s=>s.qs.forEach(q=>all.push({s,q,w:W[s.kind]||3})));
+  if(!all.length)return;
+  const sumW=all.reduce((a,x)=>a+x.w,0);
+  let assigned=0;
+  all.forEach(x=>{x.q.pts=Math.max(1,Math.round(x.w*100/sumW));assigned+=x.q.pts;});
+  // 調整最後幾題讓總分精準為 100 分
+  let diff=100-assigned, idx=all.length-1;
+  while(diff!==0){
+    const step=diff>0?1:-1;
+    if(all[idx].q.pts+step>=1){all[idx].q.pts+=step;diff-=step;}
+    idx=(idx-1+all.length)%all.length;
+  }
+  sections.forEach(s=>{s.ptsTotal=s.qs.reduce((a,q)=>a+q.pts,0);});
+}
+
+let curExam=null;
+
+// ===== 4. 彈性排版引擎（依題數自動微調字級與間距，盡可能填滿兩頁）=====
+const DENSITIES=[
+  {name:'relaxed',fs:15.5,lh:1.50,gap:12,calcH:38,wordH:54,cpl2:19,cpl1:40},
+  {name:'normal', fs:14.0,lh:1.42,gap:8, calcH:28,wordH:42,cpl2:21,cpl1:45},
+  {name:'compact',fs:12.8,lh:1.34,gap:5, calcH:22,wordH:32,cpl2:24,cpl1:50},
+  {name:'tight',  fs:11.6,lh:1.25,gap:3, calcH:18,wordH:26,cpl2:26,cpl1:54}
+];
+
+function layoutAtDensity(exam, D){
+  const {meta, sections}=exam;
+  const twoCol=meta.layout==='2col';
+  const cpl=twoCol?D.cpl2:D.cpl1;
+  const lineH=D.fs*D.lh;
+  const blocks=[];
+  sections.forEach(sec=>{
+    blocks.push({type:'sec',h:D.fs*1.6+10,text:sec.heading,kind:sec.kind});
+    sec.qs.forEach((q,idx)=>{
+      const lines=Math.ceil(q.q.length/cpl)+(q.q.match(/\n/g)||[]).length;
+      let h=lines*lineH+D.gap+4+(q.svg?56:0);
+      if(sec.kind==='mc'){
+        const optLen=q.opts.reduce((a,o)=>a+o.length+5,0);
+        h+=Math.ceil(optLen/(cpl*1.1))*(D.fs*1.35)+2;
+      }else if(sec.kind==='match'){
+        h+=q.pairs.length*(D.fs*1.45)+12;
+      }else if(sec.kind==='calc'){
+        h+=D.calcH+4;
+      }else if(sec.kind==='word'){
+        h+=D.wordH+4;
+      }
+      blocks.push({type:'q',h,num:idx+1,kind:sec.kind,item:q});
+    });
+  });
+
+  // 分配至頁與欄（雙欄時先左欄後右欄）
+  const pages=[];
+  const cap=(p)=> (p===0?940:1040);
+  const colsPerPage=twoCol?2:1;
+  let p=0, c=0, h=0, curCols=[[],[]];
+  const pushPage=()=>{pages.push(twoCol?curCols:[curCols[0]]);p++;c=0;h=0;curCols=[[],[]];};
+  blocks.forEach((b,bi)=>{
+    const maxH=cap(p);
+    // 避免大題標題孤立在欄底
+    const nextH=(b.type==='sec'&&blocks[bi+1])?blocks[bi+1].h:0;
+    if(h+b.h+nextH>maxH && curCols[c].length>0){
+      if(c+1<colsPerPage){c++;h=0;}else{pushPage();}
+    }
+    curCols[c].push(b);h+=b.h;
+  });
+  if(curCols[0].length||curCols[1].length)pages.push(twoCol?curCols:[curCols[0]]);
+  // 若雙欄模式最後一頁僅左欄有題目，依高度均分至左右兩欄讓版面更平衡
+  if(twoCol&&pages.length){
+    const last=pages[pages.length-1];
+    if(last[0].length>=4&&last[1].length===0){
+      const totH=last[0].reduce((a,b)=>a+b.h,0);
+      let acc=0, cut=Math.ceil(last[0].length/2);
+      for(let i=0;i<last[0].length;i++){
+        acc+=last[0][i].h;
+        if(acc>=totH*0.5&&last[0][i].type!=='sec'){cut=i+1;break;}
+      }
+      if(cut>0&&cut<last[0].length){last[1]=last[0].slice(cut);last[0]=last[0].slice(0,cut);}
+    }
+  }
+  return {D, pages};
+}
+
+function chooseBestLayout(exam){
+  if(exam.meta.layout==='1col') return layoutAtDensity(exam,DENSITIES[0]); // 單欄永遠維持大字體（15.5px）
+  const two=$('exTwoPage').checked;
+  const res=DENSITIES.map(D=>layoutAtDensity(exam,D));
+  if(two){
+    const fit2=res.find(r=>r.pages.length<=2);
+    return fit2||res[res.length-1];
+  }
+  return res[1];
+}
+
+function updateCapInfo(pagesCount){
+  if(curExam&&pagesCount!=null)curExam._lastPageCount=pagesCount;
+  const total=curExam && curExam.sections
+    ? curExam.sections.reduce((a,s)=>a+s.qs.length,0)
+    : ($('chkMc').checked*+$('numMc').value + $('chkTf').checked*+$('numTf').value +
+       $('chkFill').checked*+$('numFill').value + $('chkMatch').checked*+$('numMatch').value +
+       $('chkCalc').checked*+$('numCalc').value + $('chkWord').checked*+$('numWord').value);
+  const two=$('exTwoPage').checked;
+  const isWarn=two&&pagesCount>2;
+  const fillPct = curExam && curExam._lastPageFill ? Math.round(curExam._lastPageFill*100) : 0;
+  const fillTag = fillPct ? `・末頁填滿約 ${fillPct}%` : '';
+  const cls='cap-banner '+(isWarn?'warn':'ok');
+  const msg=pagesCount==null
+    ? `📋 目前設定共 ${total} 題`
+    : (isWarn
+      ? `⚠️ 超出兩頁範圍！目前設定共 ${total} 題，預覽達 ${pagesCount} 頁（超過正反一張紙），請減少題數或切換雙欄！`
+      : `✅ 版面均衡：目前共 ${total} 題（總分 100 分），試卷 ${pagesCount} 頁${two?'（正反雙面）':''}${fillTag}${curExam&&curExam.meta.withAns?' ＋ 解答 1 頁':''}`);
+  ['exCapInfo','exCapInfo2'].forEach(id=>{
+    const el=$(id); if(!el)return;
+    el.className=cls; el.textContent=msg;
+  });
+}
+function renderExam(){
+  const box=$('examSheet');box.innerHTML='';
+  if(!curExam||!curExam.sections.length){box.innerHTML='<p class="hint">請先選擇科目與題數並點擊「依設定產生測驗卷」。</p>';updateCapInfo(0);return;}
+  const {meta, sections}=curExam;
+  const {D}=chooseBestLayout(curExam);
+  const twoCol=meta.layout==='2col';
+  const diffName={easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度'}[meta.diff];
+  const pubName=CURR_META.pubs[meta.pub]||meta.pub;
+  const unitsText=meta.units.length?meta.units.join('、'):'全冊綜合複習';
+  const isZh=meta.subject==='國語';
+
+  let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
+  st.textContent=isZh?'@media print{@page{size:A4 landscape;margin:0}}':'@media print{@page{size:A4 portrait;margin:0}}';
+  if($('btnExXlsx'))$('btnExXlsx').textContent=isZh?'📊 匯出 Excel（A4 橫式直書）':'📊 匯出 Excel（A4 直式）';
+
+  const optLabels=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];
+  const matchLabels='ㄅㄆㄇㄈㄉㄊㄋㄌ';
+  const makeQEl=(b,zhMode)=>{
+    const kind=b.kind, q=b.item;
+    const d=document.createElement('div');d.className=zhMode?'ex-zh-q':'ex-q';
+    const brk=zhMode?'︵　︶':'(　)';
+    const noRaw=zhMode?`<span class="tcy">${b.num}.</span>`:`${b.num}.`;
+    const noText=(kind==='mc'||kind==='tf')?`${noRaw} ${brk}`:noRaw;
+    const qHtml=`${rubyHtml(q.q)}<span class="qpts">（${q.pts}分）</span>`;
+    let body=`<div class="qt">${qHtml}</div>`;
+    if(q.svg) body+=`<div class="ex-svg">${q.svg}</div>`;
+    if(kind==='mc'){
+      body+=`<div class="qopts">${q.opts.map((o,i)=>`<span>${optLabels[i]} ${rubyHtml(o)}</span>`).join('')}</div>`;
+    }else if(kind==='match'){
+      const rows=q.pairs.map((p,i)=>`<div><b>${i+1}.</b> <span class="h-blank">（　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
+      body+=`<div class="ex-match">${rows}</div>`;
+    }else if(kind==='calc'||kind==='word'){
+      body+=`<div class="qbox ${kind}"></div>`;
+    }
+    const hasBrk=(kind==='mc'||kind==='tf');
+    d.innerHTML=`<div class="qno${hasBrk?' has-brk':''}">${noText}</div><div class="qbody">${body}</div>`;
+    return d;
+  };
+
+  if(isZh){
+    // 國語科：一字一格、一符一格、一空一格之隱藏式格子欄流（100% 零重疊）
+    const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
+    const zhFs=($('exTwoPage').checked&&sections.reduce((a,x)=>a+x.qs.length,0)>=18)?13:14;
+    const maxColUnits=Math.floor((736/zhFs)*22*0.93); // 每欄可容納之 SVG 高度單位
+
+    const packCols=(cells, indentUnits=0)=>{
+      const cols=[]; let cur=[], h=0;
+      const startCol=(withIndent)=>{
+        cur=[]; h=0;
+        if(withIndent&&indentUnits>0){cur.push(gCellSpace(indentUnits));h+=indentUnits;}
+      };
+      startCol(false);
+      cells.forEach(c=>{
+        if(c.newline){if(cur.length)cols.push(cur);startCol(true);return;}
+        if(h+c.h>maxColUnits&&cur.length>(indentUnits>0?1:0)){
+          cols.push(cur);startCol(true);
+        }
+        cur.push(c);h+=c.h;
+      });
+      if(cur.length)cols.push(cur);
+      return cols;
+    };
+
+    const buildZhQ=b=>{
+      const kind=b.kind, q=b.item;
+      const wrap=document.createElement('div');wrap.className='ex-zh-q';
+      const headCells=[gCellLabel(`${b.num}.`,true,'#111',15)];
+      if(kind==='mc'||kind==='tf'){
+        headCells.push(gCellBlank(42));
+      }
+      const indentH=headCells.reduce((a,c)=>a+c.h,0);
+
+      if(kind==='match'){
+        // 配對題：題幹一欄 + 每一配對獨立一欄（上方：1. ︵　︶ 題目；下方：ㄅ 選項）
+        const stemCells=[...headCells,...tokenizeZhCells(q.q,useZy),gCellLabel(`(${q.pts}分)`,true,'#444',13.5)];
+        const allCols=[...packCols(stemCells,indentH)];
+        q.pairs.forEach((pr,i)=>{
+          const pCells=[
+            gCellSpace(22),
+            gCellLabel(`${i+1}.`,true,'#111',14),
+            gCellBlank(40),
+            ...tokenizeZhCells(pr[0],useZy),
+            gCellSpace(26),
+            gCellLabel(matchLabels[i],true,'#7a3b00',15),
+            ...tokenizeZhCells(q.right[i],useZy)
+          ];
+          allCols.push(pCells);
+        });
+        allCols.forEach(col=>{
+          const cd=document.createElement('div');cd.className='ex-zh-col';
+          cd.innerHTML=col.map(c=>c.svg).join('');
+          wrap.appendChild(cd);
+        });
+        return {el:wrap, colCount:allCols.length};
+      }
+
+      const bodyCells=[...headCells,...tokenizeZhCells(q.q,useZy),gCellLabel(`(${q.pts}分)`,true,'#444',13.5)];
+      const qCols=packCols(bodyCells, indentH);
+
+      if(kind==='mc'){
+        // 選項欄：接在題幹後或新欄整齊排列
+        const optCells=[gCellSpace(indentH)];
+        q.opts.forEach((o,i)=>{
+          optCells.push(gCellLabel(optLabels[i],true,'#111',15));
+          optCells.push(...tokenizeZhCells(o,useZy));
+          if(i<q.opts.length-1)optCells.push(gCellSpace(14));
+        });
+        qCols.push(...packCols(optCells,indentH));
+      }
+
+      qCols.forEach(col=>{
+        const cd=document.createElement('div');cd.className='ex-zh-col';
+        cd.innerHTML=col.map(c=>c.svg).join('');
+        wrap.appendChild(cd);
+      });
+      let extraCols=0;
+      if(kind==='calc'||kind==='word'){
+        const qb=document.createElement('div');qb.className='qbox '+kind;
+        wrap.appendChild(qb);
+        extraCols=kind==='word'?2:1.3;
+      }
+      return {el:wrap, colCount:qCols.length+extraCols};
+    };
+
+    const flat=[];
+    sections.forEach(sec=>{
+      flat.push({type:'sec',text:sec.heading,cols:1.3});
+      sec.qs.forEach((q,idx)=>{
+        const b={type:'q',num:idx+1,kind:sec.kind,item:q};
+        const built=buildZhQ(b);
+        b.el=built.el; b.cols=built.colCount;
+        flat.push(b);
+      });
+    });
+
+    // 以隱藏之真實 A4 橫式容器量測每一大題與每一題之實際像素寬度，確保第 1 頁絕不超出左界被切掉
+    const meas=document.createElement('div');
+    meas.className='a4 exam-a4 ex-land';
+    meas.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden';
+    const mw=document.createElement('div');mw.className='ex-zh-wrap';
+    mw.style.setProperty('--ex-fs',zhFs+'px');
+    const hdM=document.createElement('div');hdM.className='ex-zh-hd';
+    hdM.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
+      <div class="ex-zh-info"><span>班級：　　</span><span>姓名：　　　</span><span>座號：　　</span><span>得分：　　　　</span></div>`);
+    mw.appendChild(hdM);meas.appendChild(mw);document.body.appendChild(meas);
+    const maxW=mw.clientWidth-52; // 扣除左右 padding 26*2
+    const hdW=hdM.offsetWidth+12;
+
+    flat.forEach(b=>{
+      if(b.type==='sec'){
+        const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));
+        mw.appendChild(d); b.pxW=d.offsetWidth+12;
+      }else{
+        mw.appendChild(b.el); b.pxW=b.el.offsetWidth+10;
+      }
+    });
+    document.body.removeChild(meas);
+
+    const zhPages=[]; let cur=[], wUsed=hdW, pIdx=0;
+    const zhPageUsedW=[];
+    flat.forEach((b,bi)=>{
+      const nextW=(b.type==='sec'&&flat[bi+1])?flat[bi+1].pxW:0;
+      if(wUsed+b.pxW+nextW > maxW-8 && cur.length){
+        zhPages.push(cur); zhPageUsedW.push(wUsed);
+        cur=[]; wUsed=0; pIdx++;
+      }
+      cur.push(b);wUsed+=b.pxW;
+    });
+    if(cur.length){zhPages.push(cur); zhPageUsedW.push(wUsed);}
+    curExam._zhPages=zhPages;
+    const zhLastRatio = maxW>0 ? Math.min(1, (zhPageUsedW[zhPageUsedW.length-1]||0)/maxW) : 1;
+    curExam._lastPageFill = zhLastRatio;
+    curExam._pageFills = zhPageUsedW.map(w=>Math.min(1, w/Math.max(1,maxW)));
+    const totZ=zhPages.length+(meta.withAns?1:0);
+    updateCapInfo(zhPages.length);
+
+    zhPages.forEach((items,p)=>{
+      const cap=document.createElement('div');cap.className='pcap';
+      cap.textContent=`A4 橫式直書（由右至左）　第 ${p+1} / ${totZ} 頁`;box.appendChild(cap);
+      const pg=document.createElement('div');pg.className='a4 exam-a4 ex-land';
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+      const inner=document.createElement('div');inner.className='ex-zh-wrap';
+      inner.style.setProperty('--ex-fs',zhFs+'px');
+      // 第一優先：依本頁剩餘空間均勻放寬直欄間距與實作格子寬度，維持舒適閱讀同時填滿整頁（不留大塊空白）
+      const usedW = zhPageUsedW[p] || 0;
+      const spareW = Math.max(0, (maxW - 28) - usedW);
+      const qCountOnPg = Math.max(1, items.filter(b=>b.type==='q').length);
+      const itemCnt = Math.max(1, items.length + (p===0?1:0));
+      if(spareW > 30 && items.length >= 2){
+        const qGap = Math.min(20, 3 + (spareW * 0.48) / qCountOnPg);
+        const colGap = Math.min(22, 4 + (spareW * 0.40) / itemCnt);
+        const hasBox = items.some(b=>b.kind==='calc'||b.kind==='word');
+        inner.style.setProperty('--zh-col-gap', colGap.toFixed(1)+'px');
+        inner.style.setProperty('--zh-q-gap', qGap.toFixed(1)+'px');
+        if(hasBox && spareW > 70){
+          inner.style.setProperty('--zh-box-calc', '2.9em');
+          inner.style.setProperty('--zh-box-word', '4.3em');
+        }
+      }
+      if(p===0){
+        const hd=document.createElement('div');hd.className='ex-zh-hd';
+        hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
+          <div class="ex-zh-info"><span>班級：　　</span><span>姓名：　　　</span><span>座號：　　</span><span>得分：　　　　</span></div>`);
+        inner.appendChild(hd);
+      }
+      items.forEach(b=>{
+        if(b.type==='sec'){const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));inner.appendChild(d);}
+        else inner.appendChild(b.el);
+      });
+      pg.appendChild(inner);
+      if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
+      const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${p+1} / ${totZ} 頁`}));
+      box.appendChild(pg);
+    });
+  }else{
+    // 直式科目：依序嘗試各密度實際 DOM 量測，確保「兩頁一張」時優先縮入兩頁且 100% 不會被切掉
+    const candDs=(meta.layout==='1col'||!$('exTwoPage').checked)?[DENSITIES[0]]:DENSITIES;
+    let chosenD=candDs[0], pages=[], chosenCapHs=[940,1040];
+    for(const candD of candDs){
+      const meas=document.createElement('div');
+      meas.className='a4 exam-a4';
+      meas.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden';
+      const mw=document.createElement('div');mw.className='ex-wrap'+($('exRuby').checked?' has-ruby':'');
+      mw.style.setProperty('--ex-fs',candD.fs+'px');mw.style.setProperty('--ex-lh',candD.lh);
+      mw.style.setProperty('--ex-gap',candD.gap+'px');
+      mw.style.setProperty('--ex-box-calc',candD.calcH+'px');
+      mw.style.setProperty('--ex-box-word',candD.wordH+'px');
+      const hdM=document.createElement('div');hdM.className='ex-hd';
+      hdM.innerHTML=`<h3>國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}評量測驗卷（總分 100 分）</h3>
+        <div class="ex-sub">版本：${pubName}　｜　難度：${diffName}　｜　範圍：${unitsText}</div>
+        <div class="ex-info"><span>班級：________</span><span>姓名：____________</span><span>座號：____</span><span>得分：________</span></div>`;
+      mw.appendChild(hdM);
+      const colM=document.createElement('div');
+      colM.style.width=twoCol?'350px':'734px';
+      mw.appendChild(colM);meas.appendChild(mw);document.body.appendChild(meas);
+      const hdH=hdM.offsetHeight+12;
+
+      const flat=[];
+      sections.forEach(sec=>{
+        const se=document.createElement('div');se.className='ex-sec';se.textContent=sec.heading;
+        colM.appendChild(se);flat.push({type:'sec',text:sec.heading,h:se.offsetHeight+10});
+        sec.qs.forEach((q,idx)=>{
+          const b={type:'q',num:idx+1,kind:sec.kind,item:q};
+          const qe=makeQEl(b,false);colM.appendChild(qe);
+          b.h=qe.offsetHeight+candD.gap+3;flat.push(b);
+        });
+      });
+      document.body.removeChild(meas);
+
+      const candPages=[], colsPerPage=twoCol?2:1;
+      let p=0, c=0, h=0, curCols=[[],[]];
+      const capH=pgIdx=> (pgIdx===0?1054-hdH:1054);
+      const pushPg=()=>{candPages.push(twoCol?curCols:[curCols[0]]);p++;c=0;h=0;curCols=[[],[]];};
+      flat.forEach((b,bi)=>{
+        const maxH=capH(p), nextH=(b.type==='sec'&&flat[bi+1])?flat[bi+1].h:0;
+        if(h+b.h+nextH>maxH && curCols[c].length>0){
+          if(c+1<colsPerPage){c++;h=0;}else{pushPg();}
+        }
+        curCols[c].push(b);h+=b.h;
+      });
+      if(curCols[0].length||curCols[1].length)candPages.push(twoCol?curCols:[curCols[0]]);
+      if(twoCol&&candPages.length){
+        const last=candPages[candPages.length-1];
+        if(last[0].length>=2&&last[1].length===0){
+          const totH=last[0].reduce((a,b)=>a+b.h,0);
+          let acc=0, cut=Math.ceil(last[0].length/2);
+          for(let i=0;i<last[0].length;i++){acc+=last[0][i].h;if(acc>=totH*0.5&&last[0][i].type!=='sec'){cut=i+1;break;}}
+          if(cut>0&&cut<last[0].length){last[1]=last[0].slice(cut);last[0]=last[0].slice(0,cut);}
+        }
+      }
+      chosenD=candD; pages=candPages;
+      chosenCapHs = candPages.map((_,idx)=>capH(idx));
+      if(pages.length<=2)break;
+    }
+    curExam._measured={D:chosenD,pages};
+    const vFills = pages.map((cols,idx)=>{
+      const maxColH = Math.max(...cols.map(col=>col.reduce((a,b)=>a+b.h,0)), 0);
+      return Math.min(1, maxColH / Math.max(1, chosenCapHs[idx]||1054));
+    });
+    curExam._pageFills = vFills;
+    curExam._lastPageFill = vFills[vFills.length-1] || 0;
+
+    const totalP=pages.length+(meta.withAns?1:0);
+    updateCapInfo(pages.length);
+
+    pages.forEach((cols,pgIdx)=>{
+      const cap=document.createElement('div');cap.className='pcap';
+      cap.textContent=`A4 直式測驗卷　第 ${pgIdx+1} / ${totalP} 頁`;box.appendChild(cap);
+      const pg=document.createElement('div');pg.className='a4 exam-a4';
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+      const inner=document.createElement('div');inner.className='ex-wrap'+($('exRuby').checked?' has-ruby':'');
+      // 第一優先：若該頁有留白，優先自動放寬行距、題距與計算／應用空白格高，讓排版舒展填滿且不溢頁
+      const pageMaxH = chosenCapHs[pgIdx] || 1054;
+      const colHeights = cols.map(col=>col.reduce((a,b)=>a+b.h,0));
+      const maxUsedH = Math.max(...colHeights, 0);
+      const spareH = Math.max(0, pageMaxH * 0.93 - maxUsedH);
+      const maxColBlocks = Math.max(...cols.map(col=>col.filter(b=>b.type==='q').length), 1);
+      let effLh = chosenD.lh, effGap = chosenD.gap, effCalcH = chosenD.calcH, effWordH = chosenD.wordH;
+      if(spareH > 35 && maxUsedH > 120){
+        const hasCalc = cols.some(col=>col.some(b=>b.kind==='calc'));
+        const hasWord = cols.some(col=>col.some(b=>b.kind==='word'));
+        const ratioFill = maxUsedH / Math.max(1, pageMaxH);
+        const lhBoost = ratioFill < 0.78 ? Math.min(0.22, (0.86 - ratioFill) * 0.75) : 0.06;
+        effLh = Math.min(1.76, +(chosenD.lh + lhBoost).toFixed(2));
+        effGap = Math.min(26, Math.round(chosenD.gap + Math.min(16, (spareH * 0.48) / maxColBlocks)));
+        if(hasCalc) effCalcH = Math.min(62, Math.round(chosenD.calcH + Math.min(22, spareH * 0.16)));
+        if(hasWord) effWordH = Math.min(82, Math.round(chosenD.wordH + Math.min(26, spareH * 0.22)));
+      }
+      inner.style.setProperty('--ex-fs',chosenD.fs+'px');inner.style.setProperty('--ex-lh',effLh);
+      inner.style.setProperty('--ex-gap',effGap+'px');
+      inner.style.setProperty('--ex-box-calc',effCalcH+'px');
+      inner.style.setProperty('--ex-box-word',effWordH+'px');
+      if(pgIdx===0){
+        const hd=document.createElement('div');hd.className='ex-hd';
+        hd.innerHTML=`<h3>國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}評量測驗卷（總分 100 分）</h3>
+          <div class="ex-sub">版本：${pubName}　｜　難度：${diffName}　｜　範圍：${unitsText}</div>
+          <div class="ex-info"><span>班級：________</span><span>姓名：____________</span><span>座號：____</span><span>得分：________</span></div>`;
+        inner.appendChild(hd);
+      }
+      const fillCol=(el,list)=>list.forEach(b=>{
+        if(b.type==='sec'){const d=document.createElement('div');d.className='ex-sec';d.textContent=b.text;el.appendChild(d);}
+        else el.appendChild(makeQEl(b,false));
+      });
+      if(twoCol){
+        const wrap=document.createElement('div');wrap.className='ex-cols2';
+        const cl=document.createElement('div');cl.className='ex-col-l';
+        const cr=document.createElement('div');cr.className='ex-col-r';
+        fillCol(cl,cols[0]);fillCol(cr,cols[1]);wrap.appendChild(cl);wrap.appendChild(cr);inner.appendChild(wrap);
+      }else{
+        const c1=document.createElement('div');c1.className='ex-col-1';
+        fillCol(c1,cols[0]);inner.appendChild(c1);
+      }
+      pg.appendChild(inner);
+      if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(794,1122,meta.wmText||''));
+      const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${pgIdx+1} / ${totalP} 頁`}));
+      box.appendChild(pg);
+    });
+  }
+
+  if(meta.withAns){
+    const allPg=box.querySelectorAll('.a4').length+1;
+    const cap=document.createElement('div');cap.className='pcap';
+    const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+    if(isZh){
+      cap.textContent=`A4 橫式直書（由右至左）解答與解析頁　第 ${allPg} / ${allPg} 頁`;box.appendChild(cap);
+      const pg=document.createElement('div');pg.className='a4 exam-a4 ex-land';
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+      const inner=document.createElement('div');inner.className='ex-zh-wrap';
+      inner.style.setProperty('--ex-fs','13.5px');
+      const hd=document.createElement('div');hd.className='ex-zh-hd';
+      hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語科解答與解析（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>`);
+      inner.appendChild(hd);
+      sections.forEach(sec=>{
+        const sh=document.createElement('div');sh.className='ex-zh-sec';sh.innerHTML=zhFormat(esc(sec.heading));inner.appendChild(sh);
+        sec.qs.forEach((q,i)=>{
+          let ans=q.a;
+          if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);ans=`${['①','②','③','④'][ix]} ${q.a}`;}
+          else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`${j+1}→${L[q.right.indexOf(p[1])]}`).join('、');}
+          ans=String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2)');
+          const col=document.createElement('div');
+          col.style.cssText='writing-mode:vertical-rl;text-orientation:upright;height:100%;margin:0 4px;line-height:1.55;font-size:13.5px;flex:none';
+          col.innerHTML=zhFormat(`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span style="color:#555;font-size:0.9em">（${esc(q.exp)}）</span>`:''}`);
+          inner.appendChild(col);
+        });
+      });
+      pg.appendChild(inner);
+      if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${allPg} / ${allPg} 頁`}));
+      box.appendChild(pg);
+    }else{
+      cap.textContent=`A4 直式解答與解析頁　第 ${allPg} / ${allPg} 頁`;box.appendChild(cap);
+      const pg=document.createElement('div');pg.className='a4 exam-a4';
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+      const inner=document.createElement('div');inner.className='ex-wrap'+($('exRuby').checked?' has-ruby':'');
+      inner.innerHTML=`<div class="ex-hd"><h3>解答與解析</h3><div class="ex-sub">國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}（總分 100 分）</div></div>`;
+      sections.forEach(sec=>{
+        const h=document.createElement('div');h.className='ex-sec';h.textContent=sec.heading;inner.appendChild(h);
+        const grid=document.createElement('div');grid.className='ex-ans-grid';
+        sec.qs.forEach((q,i)=>{
+          const d=document.createElement('div');d.className='ex-ans';
+          let ans=q.a;
+          if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);const L=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];ans=`${L[ix]} ${q.a}`;}
+          else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`${j+1}→${L[q.right.indexOf(p[1])]}`).join(' ');}
+          ans=String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2) ');
+          d.innerHTML=`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span class="hint">（${esc(q.exp)}）</span>`:''}`;
+          grid.appendChild(d);
+        });
+        inner.appendChild(grid);
+      });
+      pg.appendChild(inner);
+      if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(794,1122,meta.wmText||''));
+      pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${allPg} / ${allPg} 頁`}));
+      box.appendChild(pg);
+    }
+  }
+}
+const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+
+// ===== 5. 100% 預覽保真級 Excel 匯出（含注音、直書標點、圖解，零跑版、零信任修復警告）=====
+const EXAM_EXPORT_CSS = `*{box-sizing:border-box}
+html{font-size:15px}
+body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:#fff8ec;color:#2a2a2a;line-height:1.45}
+.wrap{max-width:840px;margin:0 auto;padding:0 14px}
+header{background:linear-gradient(135deg,#ffc83d,#ff7a1a);color:#fff;padding:12px 0;box-shadow:0 2px 8px #ff7a1a44}
+header .wrap{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:1.45rem}header p{margin:0;font-size:.92rem;opacity:.95}
+.card{background:#fff;border-radius:12px;padding:12px 16px;margin:10px 0;box-shadow:0 3px 10px #0001;border:1px solid #ffe2b0}
+.card h2{margin:0 0 8px;font-size:1.12rem;display:flex;align-items:center;gap:8px}
+.step{display:inline-flex;width:1.55rem;height:1.55rem;border-radius:50%;background:#ff7a1a;color:#fff;align-items:center;justify-content:center;font-size:.9rem}
+.sub{font-weight:700;margin:8px 0 4px;color:#b35a00;font-size:.95rem}
+.row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:6px 0}
+select,input[type=number],textarea{font:inherit;font-size:.95rem;padding:5px 9px;border:1.5px solid #e6d3b5;border-radius:8px;background:#fff}
+select:focus,textarea:focus,input:focus{outline:none;border-color:#ff7a1a}
+input[type=number]{width:4em}
+textarea{width:100%;font-size:1.35rem;letter-spacing:.12em}
+label{font-size:.95rem}.chk{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a1a}
+.btn{font:inherit;font-size:.95rem;padding:6px 14px;border:0;border-radius:9px;background:#f0e6d6;cursor:pointer;transition:.12s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px #0002}
+.btn.big{font-size:1rem;padding:8px 18px;font-weight:700}
+.btn.pri{background:linear-gradient(135deg,#ffc83d,#ff7a1a);color:#fff}
+.btn.ok{background:linear-gradient(135deg,#34c47c,#1f9d55);color:#fff}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mode{display:block;border:1.5px solid #e6d3b5;border-radius:10px;padding:8px 12px;cursor:pointer}
+.mode b{display:block;font-size:1rem;margin-left:4px}.mode span{display:block;font-size:.85rem;color:#666;margin:2px 0 0 22px}
+.mode input{float:left;margin-top:4px}
+.mode:has(input:checked){border-color:#ff7a1a;background:#fff4e2}
+.hint{font-size:.85rem;color:#777;margin:4px 0 0}.msg{font-size:.95rem;color:#c0392b;min-height:1.2em;margin-top:4px}
+#sheet{display:flex;flex-direction:column;align-items:center;gap:20px;padding-bottom:32px}
+.a4{position:relative;width:794px;height:1122px;background:#fff;box-shadow:0 4px 18px #0003;overflow:hidden;flex:none}
+.a4 .cap{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10.5px;color:#777}
+.a4 .wm-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:8;overflow:hidden}
+.a4 img{position:absolute;display:block}
+.a4 .edge{position:absolute;inset:0;border:1px dashed #ccc;pointer-events:none}
+.pcap{font-weight:700;color:#b35a00;margin-bottom:-14px;font-size:.95rem}
+@media(max-width:700px){.modes{grid-template-columns:1fr}}
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{background:#fff;font-size:12px}
+  .noprint,.pcap{display:none!important}
+  main{max-width:none;padding:0}.wrap{padding:0}
+  #sheet{display:block;padding:0;gap:0}
+  .a4{box-shadow:none;break-after:page;page-break-after:always}
+  .a4 .cap,.a4 .edge{display:none}
+}
+
+/* 頂部功能分頁列 */
+.hd-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.nav-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.nav-tab{font:inherit;font-size:1.05rem;font-weight:700;padding:8px 16px;border:2px solid #fff6;border-radius:10px;background:#fff3;color:#fff;cursor:pointer;transition:.15s}
+.nav-tab:hover{background:#fff5}
+.nav-tab.active{background:#fff;color:#d85a00;border-color:#fff;box-shadow:0 3px 10px #0002}
+
+/* 評量測驗卷控制區 */
+.units-box{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px;max-height:170px;overflow-y:auto;padding:8px 10px;background:#fffaf2;border:1.5px solid #f0dec0;border-radius:10px}
+.uchk{display:flex;align-items:flex-start;gap:6px;font-size:.92rem;cursor:pointer;line-height:1.35}
+.uchk small{color:#777;font-size:.82rem}
+.uchk input{margin-top:3px;flex:none}
+@media(max-width:700px){.units-box{grid-template-columns:1fr}}
+
+/* 評量測驗卷控制與 A4 市售考卷級排版（標楷體＋正統右側直式注音） */
+.qtype-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;margin-top:6px;padding:8px 10px;background:#fffaf2;border:1.5px solid #f0dec0;border-radius:10px}
+.qtype-grid small{color:#888;font-size:.78rem}
+@media(max-width:720px){.qtype-grid{grid-template-columns:1fr 1fr}}
+#examSheet{display:flex;flex-direction:column;align-items:center;gap:18px;padding-bottom:28px}
+
+/* 考卷專用字體（台灣標楷體優先） */
+.exam-a4{font-family:"BiauKai","DFKai-SB","標楷體","Kaiti TC","Noto Serif TC","Noto Sans TC",serif}
+
+/* 隱藏式格子系統（一字一格、一符一格、一空一格，橫書與直書零重疊） */
+/* 1. 橫書科目（數學、生活、自然、社會、英語） */
+.hcell-han{display:inline-block;width:1.75em;height:1.26em;vertical-align:-.22em;margin:0 .02em;overflow:visible}
+.hcell-zy{display:inline-block;width:1.25em;height:1.32em;vertical-align:-.25em;margin:0 .03em;overflow:visible}
+.h-blank{display:inline-block;min-width:2.6em;text-align:center;font-weight:600;margin:0 .08em;white-space:nowrap}
+
+/* 2. 直書國語科（全部統一為寬 42 單位之隱藏式格子，主軸 x=14，注音軌 x=31） */
+.gcell{display:block;width:1.85em;margin:0 auto;overflow:visible}
+.g-han{height:1.24em}
+.g-zy{height:1.38em}
+.g-punc{height:.95em}
+.g-blank{height:2.2em}
+.g-badge{height:1.8em}
+
+/* 直式 A4（數學／生活／自然／社會／英語） */
+.ex-wrap{padding:24px 30px;color:#111;font-size:var(--ex-fs,15px);line-height:var(--ex-lh,1.55);height:100%;display:flex;flex-direction:column}
+.ex-wrap.has-ruby{line-height:1.82}
+.ex-hd{border-bottom:2px solid #222;padding-bottom:6px;margin-bottom:8px;flex:none}
+.ex-hd h3{margin:0 0 4px;font-size:1.28rem;text-align:center;letter-spacing:.04em}
+.ex-sub{font-size:.84rem;color:#444;margin:2px 0;text-align:left}
+.ex-info{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.92rem;font-weight:600;margin-top:6px}
+.ex-info span{white-space:nowrap}
+.ex-cols2{display:grid;grid-template-columns:1fr 1fr;flex:1;align-items:start}
+.ex-col-l{padding-right:14px;border-right:1px solid #bbb;min-height:100%}
+.ex-col-r{padding-left:14px}
+.ex-col-1{flex:1}
+.ex-sec{font-weight:700;font-size:1em;background:#fff3df;color:#7a3b00;padding:3px 8px;border-left:4px solid #ff7a1a;margin:6px 0 6px}
+.ex-q{display:grid;grid-template-columns:auto 1fr;column-gap:6px;margin-bottom:var(--ex-gap,8px);break-inside:avoid;align-items:baseline}
+.ex-q .qno{font-weight:700;white-space:nowrap;padding-right:2px}
+.ex-q .qbody{min-width:0}
+.ex-q .qt{word-break:break-word}
+.ex-q .qpts{color:#555;font-size:.84em;margin-left:3px;white-space:nowrap}
+.ex-q .qopts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:3px;font-size:.94em}
+.ex-q .qbox{border:1px dashed #aaa;border-radius:5px;margin-top:4px}
+.ex-q .qbox.calc{height:var(--ex-box-calc,28px)}
+.ex-q .qbox.word{height:var(--ex-box-word,40px)}
+.ex-match{display:grid;grid-template-columns:1.2fr 1fr;gap:4px 12px;align-items:baseline;margin-top:4px;font-size:.93em;padding:6px 10px;background:#fafafa;border:1px solid #dcdcdc;border-radius:6px}
+.ex-match div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-svg{margin:4px 0 2px;max-width:100%}
+.ex-svg svg{display:block;max-width:100%;height:auto}
+.ex-ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.ex-ans{margin:2px 0;font-size:.92rem}
+
+/* 國語科：A4 橫式直書（由右至左，隱藏式格子欄流） */
+.a4.ex-land{width:1122px;height:794px}
+.ex-zh-wrap{display:flex;flex-direction:row-reverse;align-items:flex-start;width:100%;height:100%;padding:22px 26px;color:#111;font-size:var(--ex-fs,13.5px);gap:4px;overflow:hidden}
+.ex-zh-hd{writing-mode:vertical-rl;text-orientation:upright;border-left:2px solid #222;padding-left:10px;margin-left:6px;height:100%;display:flex;flex-direction:column;justify-content:space-between;flex:none}
+.ex-zh-hd h3{margin:0;font-size:1.22rem;letter-spacing:.06em}
+.ex-zh-hd .ex-sub{font-size:.8rem;color:#444;margin-right:4px}
+.ex-zh-hd .ex-zh-info{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:600;padding-bottom:32px}
+.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em}
+.ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 3px;flex:none;gap:2px}
+.ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
+.ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:2.1em;height:92%;margin:0 2px;flex:none}
+.ex-zh-q .qbox.word{width:3.2em}
+.tcy{display:inline-block;writing-mode:horizontal-tb;text-orientation:mixed;vertical-align:middle;line-height:1.1}
+
+@media print{
+  #examSheet{display:block;padding:0;gap:0}
+  .ex-wrap{padding:8mm 10mm}
+  .ex-zh-wrap{padding:8mm 10mm}
+}
+
+/* 即時題數與兩頁一張顯眼狀態橫幅 */
+.cap-banner{font-size:1.02rem;font-weight:700;padding:9px 14px;border-radius:10px;margin:8px 0 4px;display:flex;align-items:center;gap:8px;transition:.15s}
+.cap-banner.ok{background:#e7f8ee;border:2px solid #28a745;color:#136529}
+.cap-banner.warn{background:#fdeaea;border:2px solid #dc3545;color:#a71d2a}
+`;
+
+async function domPageToPng(pgEl){
+  const w=pgEl.offsetWidth||794, h=pgEl.offsetHeight||1122;
+  const clone=pgEl.cloneNode(true);
+  clone.querySelectorAll('.edge,.cap').forEach(e=>e.remove());
+  clone.style.boxShadow='none';
+  clone.style.margin='0';
+  const xhtml=new XMLSerializer().serializeToString(clone);
+  const svgStr=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <style>${EXAM_EXPORT_CSS}</style>
+    <foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject>
+  </svg>`;
+  const img=new Image();
+  const ok=await new Promise(res=>{
+    img.onload=()=>res(true);
+    img.onerror=()=>res(false);
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);
+  });
+  if(!ok)return null;
+  const scale=2.4;
+  const cv=document.createElement('canvas');
+  cv.width=Math.round(w*scale); cv.height=Math.round(h*scale);
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.drawImage(img,0,0,cv.width,cv.height);
+  const b64=cv.toDataURL('image/png').replace(/^data:image\/\w+;base64,/,'');
+  return {b64,w,h};
+}
+
+async function exportExamXlsx(){
+  if(!curExam)generateFromUI();
+  if(!curExam||!curExam.sections.length){$('exMsg').textContent='請至少選擇一種題型並大於 0 題';return;}
+  const {meta,sections}=curExam;
+  const twoCol=meta.layout==='2col';
+  const pubName=CURR_META.pubs[meta.pub]||meta.pub;
+  const diffName={easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度'}[meta.diff];
+  const isZh=meta.subject==='國語';
+
+  const allDomPages=[...document.querySelectorAll('#examSheet .a4')];
+  const qDomPages=meta.withAns&&allDomPages.length>1 ? allDomPages.slice(0,-1) : allDomPages;
+  const ansDomPage=meta.withAns&&allDomPages.length>1 ? allDomPages[allDomPages.length-1] : null;
+
+  const wb=new ExcelJS.Workbook();
+  const orient=isZh?'landscape':'portrait';
+
+  // 工作表 1：評量測驗卷（100% 與預覽畫面完全一致，含完整注音、聲調、直橫標點與 SVG 圖解）
+  const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+  const ws=wb.addWorksheet('評量測驗卷',{
+    pageSetup:{paperSize:9,orientation:orient,scale:100,horizontalDpi:300,verticalDpi:300,
+      margins:{left:.2,right:.2,top:.2,bottom:.2,header:.1,footer:.1},horizontalCentered:true,verticalCentered:true},
+    headerFooter:{oddFooter:`&C${cpr}　｜　第 &P 頁／共 &N 頁（A4 ${isZh?'橫式直書':'直式'}）`},
+    views:[{state:'normal',zoomScale:100,showGridLines:false}]
+  });
+
+  const colsPerSheet=isZh?14:10;
+  const rowsPerPage=isZh?28:40;
+  const rowPt=isZh?19.5:19.5;
+  const imgW=isZh?1036:734;
+  const imgH=isZh?728:1036;
+
+  for(let c=1;c<=colsPerSheet;c++) ws.getColumn(c).width=10.5;
+
+  for(let p=0;p<qDomPages.length;p++){
+    const rStart=p*rowsPerPage;
+    for(let r=1;r<=rowsPerPage;r++) ws.getRow(rStart+r).height=rowPt;
+    const png=await domPageToPng(qDomPages[p]);
+    if(png){
+      const imgId=wb.addImage({base64:png.b64,extension:'png'});
+      ws.addImage(imgId,{tl:{col:0,row:rStart},ext:{width:imgW,height:imgH},editAs:'oneCell'});
+    }
+    if(p<qDomPages.length-1) ws.getRow(rStart+rowsPerPage).addPageBreak();
+  }
+
+  // 工作表 2：解答與解析（方向與試卷完全一致：國語 A4 橫式直書、其餘 A4 直式）
+  if(meta.withAns&&ansDomPage){
+    const wa=wb.addWorksheet('解答與解析',{
+      pageSetup:{paperSize:9,orientation:orient,scale:100,horizontalDpi:300,verticalDpi:300,
+        margins:{left:.2,right:.2,top:.2,bottom:.2,header:.1,footer:.1},horizontalCentered:true,verticalCentered:true},
+      headerFooter:{oddFooter:`&C${cpr}　｜　解答與解析（A4 ${isZh?'橫式直書':'直式'}）`},
+      views:[{state:'normal',zoomScale:100,showGridLines:false}]
+    });
+    for(let c=1;c<=colsPerSheet;c++) wa.getColumn(c).width=10.5;
+    for(let r=1;r<=rowsPerPage;r++) wa.getRow(r).height=rowPt;
+    const ansPng=await domPageToPng(ansDomPage);
+    if(ansPng){
+      const aId=wb.addImage({base64:ansPng.b64,extension:'png'});
+      wa.addImage(aId,{tl:{col:0,row:0},ext:{width:imgW,height:imgH},editAs:'oneCell'});
+    }
+  }
+
+  // 工作表 3：題目與解答文字明細（供教師複製或二次編輯文字）
+  const wt=wb.addWorksheet('題目文字明細',{
+    pageSetup:{paperSize:9,orientation:orient,scale:100,horizontalDpi:300,verticalDpi:300,
+      margins:{left:.35,right:.35,top:.35,bottom:.4,header:.15,footer:.2},horizontalCentered:true},
+    views:[{state:'normal',zoomScale:100,showGridLines:true}]
+  });
+  wt.getColumn(1).width=8; wt.getColumn(2).width=54; wt.getColumn(3).width=24; wt.getColumn(4).width=10;
+  let tr=1;
+  wt.mergeCells(tr,1,tr,4);
+  Object.assign(wt.getCell(tr,1),{value:`國小 ${meta.grade} 年級${meta.sem}學期 ${meta.subject}評量測驗卷 — 題目與解答文字明細（${pubName}・${diffName}）`,font:{name:'Noto Sans TC',size:12,bold:true}});
+  wt.getRow(tr).height=24; tr++;
+  sections.forEach(sec=>{
+    wt.mergeCells(tr,1,tr,4);
+    Object.assign(wt.getCell(tr,1),{value:sec.heading,font:{name:'Noto Sans TC',size:11,bold:true,color:{argb:'FF7A3B00'}},fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF3DF'}}});
+    wt.getRow(tr).height=20; tr++;
+    sec.qs.forEach((q,i)=>{
+      let qTxt=q.q;
+      if(sec.kind==='mc'){const L=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];qTxt+='　'+q.opts.map((o,k)=>`${L[k]} ${o}`).join('　');}
+      else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';qTxt+='　'+q.pairs.map((p,k)=>`(${k+1})${p[0]} / ${L[k]}.${q.right[k]}`).join('；');}
+      let ans=q.a;
+      if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);const L=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];ans=`${L[ix]} ${q.a}`;}
+      else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`${j+1}→${L[q.right.indexOf(p[1])]}`).join('、');}
+      wt.getCell(tr,1).value=`第 ${i+1} 題`; wt.getCell(tr,1).font={name:'Noto Sans TC',size:10,bold:true};
+      wt.getCell(tr,2).value=qTxt; wt.getCell(tr,2).font={name:'Noto Sans TC',size:10}; wt.getCell(tr,2).alignment={wrapText:true,vertical:'top'};
+      wt.getCell(tr,3).value=String(ans)+(q.exp?`（${q.exp}）`:''); wt.getCell(tr,3).font={name:'Noto Sans TC',size:10}; wt.getCell(tr,3).alignment={wrapText:true,vertical:'top'};
+      wt.getCell(tr,4).value=`${q.pts} 分`; wt.getCell(tr,4).font={name:'Noto Sans TC',size:10};
+      wt.getRow(tr).height=Math.max(20,Math.ceil(qTxt.length/32)*15+4); tr++;
+    });
+  });
+
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`${meta.grade}年級_${meta.subject}_評量測驗卷.xlsx`;
+  a.click();
+  $('exMsg').style.color='#1f9d55';
+  $('exMsg').textContent=isZh
+    ? `已匯出：${meta.grade}年級${meta.sem}學期 國語評量測驗卷（A4 橫式直書・與預覽 100% 同步保真）`
+    : `已匯出：${meta.grade}年級${meta.sem}學期 ${meta.subject}評量測驗卷（A4 直式${twoCol?'・左右雙欄':''}・與預覽 100% 同步保真）`;
+}
+
+// ===== 6. 介面連動、混合式隨機骰子與上限檢查 =====
+function applyTermSelection(){
+  const tt=$('exTermType')?$('exTermType').value:'all';
+  const chks=[...document.querySelectorAll('#exUnits input')];
+  if(!chks.length||tt==='unit')return;
+  const mid=Math.ceil(chks.length/2);
+  chks.forEach((c,i)=>c.checked=(tt==='all')||(tt==='mid'&&i<mid)||(tt==='final'&&i>=mid));
+}
+function fillSubjects(){
+  const g=$('exGrade').value, subs=CURR_META.subjectsByGrade[g]||[], prev=$('exSubj').value;
+  $('exSubj').innerHTML=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(subs.includes(prev))$('exSubj').value=prev;
+  fillUnits();
+}
+function fillUnits(){
+  const g=$('exGrade').value, s=$('exSubj').value, sem=$('exSem').value, pub=$('exPub').value;
+  let list=((CURRICULUM[g]||{})[s]||{})[sem]||[];
+  if(s==='國語'&&window.TW){
+    const twKey=sem==='上'?'115上':'114下';
+    const pKey=pub==='std'?'n':pub;
+    const twLs=((TW[twKey]||{})[pKey]||[]).filter(x=>x.g==+g);
+    if(twLs.length){
+      list=twLs.map(x=>({name:x.t,topics:[`生字 ${x.c.length} 字`]}));
+    }
+  }
+  $('exUnits').innerHTML=list.map((u,idx)=>`<label class="uchk" title="${esc(u.name)}（${esc(u.topics.join('、'))}）"><span class="uchk-main"><input type="checkbox" data-uidx="${idx}" value="${esc(u.name)}" checked> <span class="uchk-name">${esc(u.name)}</span></span><small>（${esc(u.topics.join('、'))}）</small></label>`).join('');
+  applyTermSelection();
+  document.querySelectorAll('#exUnits input').forEach(chk=>{
+    chk.onchange=()=>{
+      if($('exTermType'))$('exTermType').value='unit';
+      generateFromUI();
+    };
+  });
+}
+function clampInput(id){
+  const e=$(id), mx=+e.max||20, mn=+e.min||0;
+  if(+e.value>mx)e.value=mx; if(+e.value<mn)e.value=mn;
+}
+// 兩階段版面滿版均衡引擎（第一優先：renderExam 行距／欄距伸展；第二優先：僅當仍不滿或超頁時才微調題數＆題型）
+function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
+  if(!curExam) return;
+  const KIND_TITLES={
+    mc:'選出正確的答案', tf:'對的畫 ○，錯的打 ✕', fill:'填填看／做做看',
+    match:'連連看／看圖配對',
+    calc: baseCfg.subject==='數學'?'計算題':'實作與寫作練習',
+    word: baseCfg.subject==='數學'?'素養養成題／生活應用':'閱讀理解與應用'
+  };
+  const CN=['一','二','三','四','五','六'];
+  const refreshHeadings=()=>{
+    assignScores(curExam.sections);
+    curExam.sections.forEach((s,i)=>{
+      const same=s.qs.every(q=>q.pts===s.qs[0].pts);
+      const ptsDesc=same?`每題 ${s.qs[0].pts} 分，共 ${s.ptsTotal} 分`:`共 ${s.ptsTotal} 分`;
+      s.heading=`${CN[i]}、${s.title}（${ptsDesc}）`;
+    });
+  };
+  const totalQCount=()=>curExam.sections.reduce((a,s)=>a+s.qs.length,0);
+  const removeOneFromKind=(k)=>{
+    const sIdx=curExam.sections.findIndex(s=>s.kind===k);
+    if(sIdx<0) return false;
+    const sec=curExam.sections[sIdx];
+    if(sec.qs.length>1) sec.qs.pop();
+    else if(curExam.sections.length>1) curExam.sections.splice(sIdx,1);
+    else return false;
+    refreshHeadings();
+    renderExam();
+    return true;
+  };
+  const addOneToKind=(k)=>{
+    const extQ=new Set(baseCfg.excludeQuestions||[]);
+    const extS=new Set(baseCfg.excludeSigs||[]);
+    curExam.sections.forEach(s=>s.qs.forEach(q=>{
+      extQ.add(q.q);
+      extS.add(normalizeTemplateSig(q.q));
+    }));
+    const singleCfg={
+      ...baseCfg,
+      excludeQuestions:extQ, excludeSigs:extS,
+      nMc:k==='mc'?1:0, nTf:k==='tf'?1:0, nFill:k==='fill'?1:0,
+      nMatch:k==='match'?1:0, nCalc:k==='calc'?1:0, nWord:k==='word'?1:0
+    };
+    const extra=generateExamQuestions(singleCfg);
+    const exSec=extra&&extra.sections&&extra.sections.find(s=>s.kind===k);
+    if(!exSec||!exSec.qs.length) return false;
+    const qNew=exSec.qs[0];
+    if(baseCfg.excludeQuestions) baseCfg.excludeQuestions.add(qNew.q);
+    if(baseCfg.excludeSigs) baseCfg.excludeSigs.add(normalizeTemplateSig(qNew.q));
+    let targetSec=curExam.sections.find(s=>s.kind===k);
+    if(!targetSec){
+      const orderIdx=['mc','tf','fill','match','calc','word'];
+      targetSec={kind:k,title:KIND_TITLES[k]||k,qs:[]};
+      curExam.sections.push(targetSec);
+      curExam.sections.sort((a,b)=>orderIdx.indexOf(a.kind)-orderIdx.indexOf(b.kind));
+    }
+    targetSec.qs.push(qNew);
+    refreshHeadings();
+    renderExam();
+    return true;
+  };
+
+  // 1. 若超過目標頁數，依佔空間順序適量精簡題數
+  const trimKinds=['word','calc','match','fill','mc','tf'];
+  for(let step=0; step<24 && curExam._lastPageCount>targetPages; step++){
+    let trimmed=false;
+    for(const k of trimKinds){
+      const sec=curExam.sections.find(s=>s.kind===k);
+      if(sec && sec.qs.length>(k==='match'||k==='word'?1:2)){
+        if(removeOneFromKind(k)){trimmed=true;break;}
+      }
+    }
+    if(!trimmed){
+      for(const k of trimKinds){
+        const sec=curExam.sections.find(s=>s.kind===k);
+        if(sec && sec.qs.length>1){if(removeOneFromKind(k)){trimmed=true;break;}}
+      }
+    }
+    if(!trimmed) break;
+  }
+
+  // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或末頁 < 80% 滿度時，啟動第二優先微調補題
+  const limits={mc:14,tf:12,fill:12,match:2,calc:8,word:5};
+  const enabledSet=new Set(['mc','tf','fill','match','calc','word']);
+  if(syncUi){
+    [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
+      if($('chk'+u)&&!$('chk'+u).checked) enabledSet.delete(k);
+    });
+  }
+  const growCycle=['mc','fill','tf','calc','word','match'].filter(k=>enabledSet.has(k));
+  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && (curExam._lastPageFill||0)<0.80);
+  let gStep=0;
+  while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<32){
+    const k=growCycle[gStep % growCycle.length];
+    const sec=curExam.sections.find(s=>s.kind===k);
+    const curLen=sec?sec.qs.length:0;
+    if(curLen < limits[k]){
+      const ok=addOneToKind(k);
+      if(ok && curExam._lastPageCount>targetPages){
+        removeOneFromKind(k);
+        break;
+      }
+    }
+    gStep++;
+  }
+
+  if(syncUi){
+    [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
+      const sec=curExam.sections.find(s=>s.kind===k);
+      if($('num'+u)) $('num'+u).value=String(sec?sec.qs.length:0);
+    });
+    updateCapInfo(curExam._lastPageCount);
+  }
+}
+
+function generateFromUI(arg){
+  const skipAutoBalance = arg === true;
+  ['numMc','numTf','numFill','numMatch','numCalc','numWord'].forEach(clampInput);
+  const allChks=[...document.querySelectorAll('#exUnits input')];
+  const checkedChks=allChks.filter(i=>i.checked);
+  const units=checkedChks.map(i=>i.value);
+  const unitIndices=checkedChks.map(i=>+i.dataset.uidx);
+  const cfg={
+    pub:$('exPub').value, grade:$('exGrade').value, sem:$('exSem').value, subject:$('exSubj').value,
+    diff:$('exDiff').value, layout:$('exLayout').value, withAns:$('exAns').checked, units,
+    unitIndices, allUnitsCount:allChks.length,
+    nMc:$('chkMc').checked?+$('numMc').value:0,
+    nTf:$('chkTf').checked?+$('numTf').value:0,
+    nFill:$('chkFill').checked?+$('numFill').value:0,
+    nMatch:$('chkMatch').checked?+$('numMatch').value:0,
+    nCalc:$('chkCalc').checked?+$('numCalc').value:0,
+    nWord:$('chkWord').checked?+$('numWord').value:0
+  };
+  $('exMsg').textContent='';
+  curExam=generateExamQuestions(cfg);
+  renderExam();
+  if(!skipAutoBalance && $('exTwoPage') && $('exTwoPage').checked && $('exLayout').value==='2col'){
+    const isZh=cfg.subject==='國語';
+    autoBalanceExamToTarget(2, isZh?25:24, cfg, true);
+  }
+}
+let lastDiceSig='';
+function rollMixedDice(){
+  const diffs=['easy','mid','hard','mix'];
+  const curD=$('exDiff').value;
+  $('exDiff').value=pick(diffs.filter(d=>d!==curD));
+  $('exTwoPage').checked=true;
+  $('exLayout').value='2col';
+
+  const isZh=$('exSubj').value==='國語';
+  let counts, sig='', guard=0;
+  do{
+    counts = isZh
+      ? {Mc:rnd(5,7), Tf:rnd(4,6), Fill:rnd(4,6), Match:rnd(1,2), Calc:rnd(2,3), Word:rnd(1,2)}
+      : {Mc:rnd(5,8), Tf:rnd(4,6), Fill:rnd(3,6), Match:rnd(1,2), Calc:rnd(2,4), Word:rnd(2,3)};
+    sig=Object.values(counts).join('-');
+    guard++;
+  }while(sig===lastDiceSig && guard<15);
+
+  ['Mc','Tf','Fill','Match','Calc','Word'].forEach(k=>{
+    $('chk'+k).checked=true;
+    $('num'+k).value=counts[k];
+  });
+  generateFromUI(false);
+  lastDiceSig=['Mc','Tf','Fill','Match','Calc','Word'].map(k=>$('num'+k).value).join('-');
+}
+
+window.generateExamQuestions = generateExamQuestions;
+
+// ===== 7. 前後台訂單串接、對帳管理、勾選列印與 Google 試算表同步引擎 =====
+const SAMPLE_BATCH_CSV = `order_id,parent_label,plan,grade,sem,pub,subj,scope,diff,ruby,custom_words,custom_units,paid_status,amount,sheets,packType,remit_last5,contact,reconcile_note
+A01,王媽媽#8821,綜合套組,1,上,康軒,國語,全冊總複習,混合難度,是,,,已付款,100,20,懶人包,88210,0912-345-678,11/18 中信查帳OK
+A02,林爸爸#3094,評量測驗卷,2,上,南一,數學,期中複習,標準評量,是,,,已付款,100,20,懶人包,30945,0922-111-222,11/18 台新查帳OK
+A03,陳小姐#6512,筆畫寫字帖,3,上,翰林,國語,全冊總複習,標準評量,是,,,待核帳,100,20,懶人包,65129,0933-888-999,待確認入帳
+A04,張媽媽#1178,評量測驗卷,4,上,康軒,自然科學,自選單元,素養挑戰,否,,月亮的圓缺變化,已付款,25,5,客製包,11782,0955-666-777,11/18 郵局查帳OK（單科5張客製）
+A05,黃先生#9405,評量測驗卷,6,上,南一,社會,期末複習,基礎熟練,否,,台灣的自然資源與物產,已付款,75,15,客製包,94051,0966-000-111,11/18 國泰查帳OK（單科15張客製）`;
+
+const LOCAL_ORDERS_KEY = 'kids_workshop_orders_db_v2';
+let curBatchOrders = [];
+
+function splitCsvLine(line){
+  const res=[]; let cur='', inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else inQ=!inQ;
+    }else if((ch===','||ch==='\t')&&!inQ){
+      res.push(cur.trim());cur='';
+    }else{
+      cur+=ch;
+    }
+  }
+  res.push(cur.trim());
+  return res;
+}
+
+function normalizeOrderRow(raw, idx){
+  const order_id = String(raw.order_id || raw['取貨編號'] || raw['訂單編號'] || `A${String(idx+1).padStart(2,'0')}`).trim();
+  const parent_label = String(raw.parent_label || raw['家長稱呼'] || raw['家長'] || '').trim();
+  const planRaw = String(raw.plan || raw['方案'] || '綜合套組').trim();
+  let plan = 'both', planName = '綜合套組（寫字帖＋測驗卷）';
+  if(/寫字|筆畫|筆順|生字|stroke/i.test(planRaw) && !/綜合|套組|雙享|both|\+|＋/i.test(planRaw)){
+    plan='stroke'; planName='筆畫練習寫字帖';
+  }else if(/測驗|評量|考卷|exam/i.test(planRaw) && !/綜合|套組|雙享|both|\+|＋/i.test(planRaw)){
+    plan='exam'; planName='國小評量測驗卷';
+  }
+
+  const gMatch = String(raw.grade || raw['年級'] || '').match(/[1-6]/);
+  const grade = gMatch ? gMatch[0] : '';
+  const semRaw = String(raw.sem || raw['學期'] || '上').trim();
+  const sem = /下|2/.test(semRaw) ? '下' : '上';
+
+  const pubRaw = String(raw.pub || raw['版本'] || 'std').trim();
+  let pub = 'std', pubName = '108課綱通用';
+  if(/南一|^n$/i.test(pubRaw)){pub='n';pubName='南一版';}
+  else if(/康軒|^k$/i.test(pubRaw)){pub='k';pubName='康軒版';}
+  else if(/翰林|^h$/i.test(pubRaw)){pub='h';pubName='翰林版';}
+
+  let subj = String(raw.subj || raw['科目'] || '國語').trim();
+  if(subj==='自然') subj='自然科學';
+  if(subj==='英文'||subj==='美語') subj='英語';
+
+  const scopeRaw = String(raw.scope || raw['範圍'] || 'all').trim();
+  let scope = 'all', scopeName = '全冊總複習';
+  if(/期中|mid/i.test(scopeRaw)){scope='mid';scopeName='期中複習卷';}
+  else if(/期末|final/i.test(scopeRaw)){scope='final';scopeName='期末複習卷';}
+  else if(/自選|單元|unit/i.test(scopeRaw)){scope='unit';scopeName='自選單元';}
+
+  const diffRaw = String(raw.diff || raw['難度'] || 'mid').trim();
+  let diff = 'mid', diffName = '標準評量';
+  if(/基礎|簡單|easy/i.test(diffRaw)){diff='easy';diffName='基礎熟練';}
+  else if(/素養|挑戰|困難|hard/i.test(diffRaw)){diff='hard';diffName='素養挑戰';}
+  else if(/混合|mix/i.test(diffRaw)){diff='mix';diffName='混合難度';}
+
+  const rubyRaw = raw.ruby !== undefined ? String(raw.ruby).trim() : String(raw['注音'] || '').trim();
+  const ruby = rubyRaw ? /^(是|要|附|true|1|yes|y)$/i.test(rubyRaw) : (+grade<=2);
+
+  const custom_words = String(raw.custom_words || raw['自訂生字'] || '').trim();
+  const custom_units = String(raw.custom_units || raw['自選單元名稱'] || '').trim();
+  if(custom_units && scope==='all'){scope='unit';scopeName='自選單元';}
+
+  const paidRaw = String(raw.reconcile_status || raw.paid_status || raw['付款狀態'] || '待核帳').trim();
+  const isInvalid = /無效|取消|invalid/i.test(paidRaw);
+  const isPaid = !isInvalid && (/已付|已入帳|有效單|paid/i.test(paidRaw));
+  const reconcile_status = isInvalid ? '❌ 無效單' : (isPaid ? '✅ 已入帳（有效單）' : '待核帳');
+  const paid_status = isInvalid ? '無效單' : (isPaid ? '已付款' : '待核帳');
+
+  const rawAmt = String(raw.amount || raw['金額'] || '').replace(/[^\d]/g,'');
+  const rawSheets = String(raw.sheets || raw['訂購張數'] || raw['張數'] || '').replace(/[^\d]/g,'');
+  const sheets = rawSheets ? Math.max(1, +rawSheets) : (rawAmt ? Math.max(1, Math.round(+rawAmt / 5)) : (plan==='both'?20:(custom_units||custom_words?1:20)));
+  const defaultAmt = sheets * 5;
+  const amount = rawAmt || String(defaultAmt);
+  const packType = String(raw.packType || raw.packtype || raw['方案模式'] || (sheets >= 20 && !custom_units && !custom_words ? '懶人包' : '客製包')).trim();
+  const remit_last5 = String(raw.remit_last5 || raw['後五碼'] || raw['匯款後五碼'] || '').trim();
+  const contact = String(raw.contact || raw['聯絡電話'] || '').trim();
+  const reconcile_note = String(raw.reconcile_note || raw['對帳備註'] || '').trim();
+  const created_at = String(raw.created_at || raw['下單時間'] || '').trim();
+  const strokeMode = raw.strokeMode === 'B' ? 'B' : 'A';
+  const cols = [5,6,7,8].includes(+raw.cols) ? +raw.cols : (+grade<=2?5:7);
+  const layout = raw.layout === '1col' ? '1col' : '2col';
+  const rowNumber = raw.rowNumber ? +raw.rowNumber : 0;
+
+  // 參數合法性檢核
+  const errors = [];
+  if(!parent_label) errors.push('缺少家長稱呼');
+  if(!grade || +grade<1 || +grade>6) errors.push('年級須為 1～6');
+  else {
+    const validSubs = (window.CURR_META && CURR_META.subjectsByGrade[grade]) || ['國語','數學','生活','自然科學','社會','英語'];
+    if(plan!=='stroke' && !validSubs.includes(subj)){
+      errors.push(`${grade}年級無「${subj}」科（可選：${validSubs.join('、')}）`);
+    }
+  }
+  const valid = errors.length===0;
+  const selectedForPrint = raw.selectedForPrint !== undefined ? !!raw.selectedForPrint : (valid && isPaid);
+
+  return {
+    order_id, parent_label, contact, remit_last5, plan, planName, packType, sheets, grade, sem, pub, pubName,
+    subj, scope, scopeName, diff, diffName, ruby, custom_words, custom_units,
+    strokeMode, cols, layout, rowNumber, created_at,
+    paid_status, reconcile_status, reconcile_note, isPaid, isInvalid, amount,
+    valid, errors, selectedForPrint
+  };
+}
+window.normalizeOrderRow = normalizeOrderRow;
+
+function parseBatchCsv(text){
+  const lines = String(text||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length) return [];
+  const stdCols = ['order_id','parent_label','plan','grade','sem','pub','subj','scope','diff','ruby','custom_words','custom_units','paid_status','amount','remit_last5','contact','reconcile_note'];
+  const firstCells = splitCsvLine(lines[0]);
+  const hasHeader = /order_id|取貨|家長|parent|plan|方案|grade|年級/i.test(firstCells.join(','));
+  const headers = hasHeader ? firstCells.map(h=>h.toLowerCase()) : stdCols;
+  const startRow = hasHeader ? 1 : 0;
+  const orders = [];
+  for(let r=startRow;r<lines.length;r++){
+    const cells = splitCsvLine(lines[r]);
+    if(cells.every(c=>!c)) continue;
+    const obj = {};
+    if(!hasHeader){
+      stdCols.forEach((col,idx)=>{ obj[col] = cells[idx]||''; });
+    }else{
+      headers.forEach((h,idx)=>{ obj[h] = cells[idx]||''; });
+    }
+    orders.push(normalizeOrderRow(obj, orders.length));
+  }
+  return orders;
+}
+window.parseBatchCsv = parseBatchCsv;
+
+function saveOrdersToLocalDB(){
+  try{
+    localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(curBatchOrders));
+  }catch(_){}
+  updateNavOrderBadge();
+}
+
+function loadOrdersFromLocalDB(){
+  try{
+    const raw = localStorage.getItem(LOCAL_ORDERS_KEY);
+    if(raw){
+      const arr = JSON.parse(raw);
+      if(Array.isArray(arr) && arr.length){
+        return arr.map((o,i)=>normalizeOrderRow(o,i));
+      }
+    }
+  }catch(_){}
+  return null;
+}
+
+function syncCsvBoxFromOrders(){
+  if(!$('batchCsvInput')) return;
+  const csvCols=['order_id','parent_label','plan','grade','sem','pub','subj','scope','diff','ruby','custom_words','custom_units','paid_status','amount','sheets','packType','remit_last5','contact','reconcile_note'];
+  const csvEsc=v=>{const s=String(v==null?'':v);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
+  const csvLines=[csvCols.join(','), ...curBatchOrders.map(o=>csvCols.map(c=>csvEsc(c==='ruby'?(o.ruby?'是':'否'):o[c])).join(','))];
+  $('batchCsvInput').value = csvLines.join('\n');
+}
+
+function updateNavOrderBadge(){
+  const badge = $('navOrdBadge');
+  if(!badge) return;
+  const pendCount = curBatchOrders.filter(o=>!o.isPaid && !o.isInvalid).length;
+  badge.textContent = String(curBatchOrders.length);
+  badge.title = pendCount>0 ? `共 ${curBatchOrders.length} 筆訂單（${pendCount} 筆待核帳）` : `共 ${curBatchOrders.length} 筆訂單`;
+}
+
+// 供家長前台訂購完成時直接呼叫：即時將新成立之訂單寫入後台對帳清單！
+window.receiveFrontendOrders = function(newOrderItems){
+  if(!curBatchOrders.length){
+    const saved = loadOrdersFromLocalDB();
+    curBatchOrders = saved || parseBatchCsv(SAMPLE_BATCH_CSV);
+  }
+  const normalized = (Array.isArray(newOrderItems)?newOrderItems:[newOrderItems]).map((o,idx)=>normalizeOrderRow(o, curBatchOrders.length+idx));
+  curBatchOrders = [...normalized, ...curBatchOrders];
+  saveOrdersToLocalDB();
+  syncCsvBoxFromOrders();
+  renderBatchTable(curBatchOrders);
+  return normalized;
+};
+
+// 同步後台系統批次時間軸看板（顯示當前週次、截單時間點與 9 點前後交貨分界）
+window.refreshBatchSysClock = function(){
+  const bar = $('batchSysClockBar');
+  if(!bar) return;
+  const sched = typeof window.computePickupSchedule === 'function'
+    ? window.computePickupSchedule()
+    : { batchLabel:'本週最新批次', cutoffStr:'週三 21:00', deliveryStr:'當週週五～週日', nextDeliveryStr:'次週週五～週日', isWedAfterCutoff:false };
+  const now = new Date();
+  const nowStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  bar.innerHTML = `
+    <div>📅 <b>當前梯次：</b>${esc(sched.batchLabel)}　｜　🕒 <b>系統時間：</b>${esc(nowStr)}</div>
+    <div>⏰ <b>截單／交貨分界：</b><b>${esc(sched.cutoffStr)} 前</b>入帳 → <b>${esc(sched.deliveryStr)}</b> 交貨；<b>9 點後</b>順延 <b>${esc(sched.nextDeliveryStr)}</b></div>
+  `;
+};
+
+async function pushReconcileToCloud(_order){
+  // 已撤除 Google Apps Script 外部同步欄位，對帳狀態與備註直接即時保存於本機系統資料庫與匯出 CSV
+}
+
+function renderReconcileStats(orders){
+  const bar = $('recStatsBar');
+  if(!bar) return;
+  const paidList = orders.filter(o=>o.isPaid && !o.isInvalid);
+  const pendList = orders.filter(o=>!o.isPaid && !o.isInvalid);
+  const prtList = orders.filter(o=>o.valid && o.selectedForPrint);
+  const paidSum = paidList.reduce((acc,o)=>acc+(+o.amount||0), 0);
+  const pendSum = pendList.reduce((acc,o)=>acc+(+o.amount||0), 0);
+  bar.innerHTML = `
+    <div class="rec-stat-card">
+      <div class="lbl">📊 本批總訂單數</div>
+      <div class="val">${orders.length} 筆</div>
+    </div>
+    <div class="rec-stat-card paid">
+      <div class="lbl">✅ 已入帳核對完成</div>
+      <div class="val">${paidList.length} 筆 <small style="font-size:.82rem">（實收 $${paidSum}）</small></div>
+    </div>
+    <div class="rec-stat-card pend">
+      <div class="lbl">⏳ 待核帳／未入帳</div>
+      <div class="val">${pendList.length} 筆 <small style="font-size:.82rem">（待核 $${pendSum}）</small></div>
+    </div>
+    <div class="rec-stat-card prt">
+      <div class="lbl">🖨️ 目前勾選準備列印</div>
+      <div class="val">${prtList.length} 筆</div>
+    </div>
+  `;
+}
+
+function renderBatchTable(orders){
+  const sumEl=$('batchSummary'), wrap=$('batchTableWrap');
+  updateNavOrderBadge();
+  if(typeof window.refreshBatchSysClock === 'function') window.refreshBatchSysClock();
+  renderReconcileStats(orders);
+  if(!sumEl||!wrap)return;
+  if(!orders.length){
+    sumEl.style.display='none';
+    wrap.innerHTML='<p class="hint">尚無訂單資料，請從前台測試下單、上傳 CSV，或點擊「📋 載入範例訂單」。</p>';
+    return;
+  }
+  const okCount = orders.filter(o=>o.valid).length;
+  const errCount = orders.length - okCount;
+  const selCount = orders.filter(o=>o.valid && o.selectedForPrint).length;
+  sumEl.style.display='flex';
+  sumEl.className = 'cap-banner ' + (errCount>0?'warn':'ok');
+  sumEl.textContent = errCount>0
+    ? `⚠️ 共 ${orders.length} 筆訂單：${okCount} 筆合法、${errCount} 筆參數有誤｜目前已勾選欲列印：${selCount} 筆`
+    : `✅ 共 ${orders.length} 筆訂單全部合法｜目前已勾選欲列印：${selCount} 筆（勾選欲印家長後，按下方「🚀 依勾選訂單生成教材」）`;
+
+  const sched = typeof window.computePickupSchedule === 'function'
+    ? window.computePickupSchedule()
+    : { batchLabel:'當週梯次', deliveryStr:'當週五～日' };
+
+  const rowsHtml = orders.map((o,i)=>{
+    const shortPlan = o.plan==='both'?'綜合套組':(o.plan==='exam'?'評量測驗卷':'筆畫寫字帖');
+    const stCls = o.isInvalid ? 'st-inv' : (o.isPaid ? 'st-paid' : 'st-pend');
+    return `<tr style="${o.selectedForPrint?'background:#f4fbf6':(o.isInvalid?'opacity:.6':'')}">
+    <td style="text-align:center">
+      <label class="chk" title="勾選是否列印此筆家長教材" style="justify-content:center">
+        <input type="checkbox" class="ord-print-chk" data-idx="${i}" ${o.selectedForPrint?'checked':''} ${!o.valid?'disabled':''}>
+      </label>
+    </td>
+    <td>
+      <div><b>${esc(o.order_id)}</b>・<span style="color:#7a3b00;font-weight:700">${esc(o.parent_label||'(未填)')}</span></div>
+      ${o.contact?`<div style="font-size:.76rem;color:#555">📞 ${esc(o.contact)}</div>`:''}
+      <div style="font-size:.74rem;color:#777">${o.created_at?`🕒 ${esc(o.created_at)}｜`:''}${esc(sched.batchLabel)}</div>
+    </td>
+    <td>
+      <div><b>${esc(shortPlan)}</b> <span class="badge-ok" style="font-size:.7rem;padding:1px 5px">${esc(o.packType||'懶人包')}</span>・<b>${o.sheets||20}張</b></div>
+      <div style="font-size:.78rem;color:#333">${o.grade?`${o.grade}年級${o.sem}`:'-'}・${esc(o.pubName)}・<b>${esc(o.subj)}</b>｜${esc(o.scopeName)}（${esc(o.diffName)}/${o.ruby?'注音':'無注音'}）</div>
+      ${o.custom_units?`<div style="font-size:.74rem;color:#666">單元：${esc(o.custom_units)}</div>`:''}
+      ${o.custom_words?`<div style="font-size:.74rem;color:#666">生字：${esc(o.custom_words.slice(0,16))}</div>`:''}
+    </td>
+    <td>
+      <b style="color:#c85000">$${esc(o.amount)}</b>
+      <div style="font-size:.76rem;color:#333;font-weight:700">末五碼：${esc(o.remit_last5||'未填')}</div>
+    </td>
+    <td>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+        <input type="checkbox" class="ord-paid-chk" data-idx="${i}" ${o.isPaid?'checked':''} title="打勾代表已核對匯款入帳">
+        <select class="rec-status-sel ${stCls}" data-idx="${i}" style="max-width:100%;font-size:.78rem">
+          <option value="待核帳" ${!o.isPaid&&!o.isInvalid?'selected':''}>⏳ 待核帳</option>
+          <option value="✅ 已入帳（有效單）" ${o.isPaid?'selected':''}>✅ 已入帳</option>
+          <option value="❌ 無效單" ${o.isInvalid?'selected':''}>❌ 無效單</option>
+        </select>
+      </div>
+      <input type="text" class="rec-note-input" data-idx="${i}" value="${esc(o.reconcile_note||'')}" placeholder="填寫對帳備註" style="width:100%">
+    </td>
+    <td style="text-align:center">${o.valid?`<span class="badge-ok">✅ 合法</span>`:`<span class="badge-err">❌ 有誤</span><div style="font-size:.7rem;color:#a71d2a">${esc(o.errors.join('；'))}</div>`}</td>
+  </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="batch-tbl orders-tbl">
+    <colgroup><col style="width:46px"><col style="width:20%"><col style="width:33%"><col style="width:11%"><col style="width:24%"><col style="width:68px"></colgroup>
+    <thead><tr>
+      <th style="text-align:center">印製</th>
+      <th>批號／家長／下單週次</th>
+      <th>訂購內容與範圍明細</th>
+      <th>金額／後五碼</th>
+      <th>💰 對帳確認＆備註紀錄</th>
+      <th style="text-align:center">檢核</th>
+    </tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>`;
+
+  // 綁定「勾選列印」事件
+  wrap.querySelectorAll('.ord-print-chk').forEach(chk=>{
+    chk.onchange=()=>{
+      const idx=+chk.dataset.idx;
+      if(curBatchOrders[idx]){
+        curBatchOrders[idx].selectedForPrint = chk.checked;
+        saveOrdersToLocalDB();
+        renderBatchTable(curBatchOrders);
+      }
+    };
+  });
+
+  // 綁定「對帳確認打勾」事件（打勾即設為已入帳並自動勾選列印）
+  wrap.querySelectorAll('.ord-paid-chk').forEach(chk=>{
+    chk.onchange=()=>{
+      const idx=+chk.dataset.idx;
+      const ord=curBatchOrders[idx];
+      if(!ord)return;
+      ord.isPaid = chk.checked;
+      ord.isInvalid = false;
+      ord.reconcile_status = chk.checked ? '✅ 已入帳（有效單）' : '待核帳';
+      ord.paid_status = chk.checked ? '已付款' : '待核帳';
+      ord.selectedForPrint = chk.checked && ord.valid;
+      if(chk.checked && !ord.reconcile_note){
+        const now=new Date();
+        ord.reconcile_note = `${now.getMonth()+1}/${now.getDate()} 核帳OK`;
+      }
+      saveOrdersToLocalDB();
+      syncCsvBoxFromOrders();
+      pushReconcileToCloud(ord);
+      renderBatchTable(curBatchOrders);
+    };
+  });
+
+  // 綁定「對帳狀態下拉選單」事件
+  wrap.querySelectorAll('.rec-status-sel').forEach(sel=>{
+    sel.onchange=()=>{
+      const idx=+sel.dataset.idx;
+      const ord=curBatchOrders[idx];
+      if(!ord)return;
+      const v=sel.value;
+      ord.reconcile_status = v;
+      ord.isInvalid = /無效/.test(v);
+      ord.isPaid = !ord.isInvalid && /已入帳/.test(v);
+      ord.paid_status = ord.isInvalid ? '無效單' : (ord.isPaid ? '已付款' : '待核帳');
+      ord.selectedForPrint = ord.isPaid && ord.valid;
+      saveOrdersToLocalDB();
+      syncCsvBoxFromOrders();
+      pushReconcileToCloud(ord);
+      renderBatchTable(curBatchOrders);
+    };
+  });
+
+  // 綁定「對帳備註欄」即時儲存事件
+  wrap.querySelectorAll('.rec-note-input').forEach(inp=>{
+    inp.onchange=()=>{
+      const idx=+inp.dataset.idx;
+      const ord=curBatchOrders[idx];
+      if(!ord)return;
+      ord.reconcile_note = inp.value.trim();
+      saveOrdersToLocalDB();
+      syncCsvBoxFromOrders();
+      pushReconcileToCloud(ord);
+    };
+  });
+}
+
+// 產生每筆訂單專屬「一張 A4 半張雙聯裁切單（上聯：貼袋外取貨單｜虛線撕開｜下聯：內部揀貨單）」
+function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
+  const pg = document.createElement('div');
+  pg.className = 'a4 cover-a4';
+  pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+  const today = new Date().toISOString().slice(0,10);
+  const sched = typeof window.computePickupSchedule === 'function'
+    ? window.computePickupSchedule()
+    : { batchLabel:'當週梯次', deliveryStr:'當週五～日（3日內）' };
+  const batchSeq = `第 ${idx+1}/${totalOrders} 袋`;
+  const cpr = window.COPYRIGHT_STATEMENT || '🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+
+  const pickCheckItems = [];
+  if(stats.strokePages>0) pickCheckItems.push(`<li>☐ <b>筆畫寫字帖</b>：${stats.strokePages} 頁（收錄 ${stats.strokeChars} 字・${order.strokeMode==='B'?'教育部格':'筆順引導'}）</li>`);
+  if(stats.examQPages>0) pickCheckItems.push(`<li>☐ <b>${esc(order.grade)}年級${esc(order.sem)} ${esc(order.subj)}測驗卷</b>：試卷 ${stats.examQPages} 頁</li>`);
+  if(stats.examAnsPages>0) pickCheckItems.push(`<li>☐ <b>免費附贈解答</b>：${stats.examAnsPages} 頁</li>`);
+  if(stats.paddedBlank) pickCheckItems.push(`<li>☐ <b>雙面防串頁墊頁</b>：1 頁</li>`);
+
+  const inner = document.createElement('div');
+  inner.className = 'cover-wrap';
+  inner.innerHTML = `
+    <!-- 上半聯：貼於包裝袋外【取貨單】（不顯示取貨地點、不顯示已入帳金額） -->
+    <div class="cover-half cover-half-pickup">
+      <div>
+        <div class="cover-brand">
+          <h2>🌻 向日葵國小伴學誌｜訂製教材取貨單</h2>
+          <span>批號：${batchSeq}｜${esc(sched.batchLabel)}</span>
+        </div>
+        <div class="cover-hero">
+          <div class="cover-box">
+            <div class="lbl">📦 取貨編號（PICKUP ID）</div>
+            <div class="val-big">${esc(order.order_id)}</div>
+          </div>
+          <div class="cover-box">
+            <div class="lbl">👨‍👩‍👧 取貨家長稱呼＋手機末四碼</div>
+            <div class="val-mid">${esc(order.parent_label)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="cover-grid">
+        <div><b>年級／科目：</b><span>國小 ${esc(order.grade)} 年級 ${esc(order.sem)}｜${esc(order.subj)}（${esc(order.pubName)}）</span></div>
+        <div><b>訂購方案：</b><span>${esc(order.planName)}（${esc(order.packType||'懶人包')}）</span></div>
+        <div><b>教材張數：</b><span>共 ${order.sheets||20} 張內容（印製 ${stats.contentPages-1} 頁＋本取貨聯）</span></div>
+        <div><b>領取時程：</b><span><b>${esc(sched.deliveryStr)}</b>（送達起 3 日內憑編號領取）</span></div>
+      </div>
+      <div style="font-size:.78rem;color:#666;border-top:1px dashed #ddd;padding-top:5px;margin-top:6px;display:flex;justify-content:space-between;gap:8px">
+        <span>※ 客製教材僅供個人練習，請核對取貨編號與家長稱呼後領取</span>
+        <span>印製日：${today}</span>
+      </div>
+    </div>
+
+    <!-- 中間裁切虛線 -->
+    <div class="cut-line"><span>✂️ ──── 沿此虛線對半裁切（上聯外貼包裝袋 ／ 下聯留存揀貨或入袋核對） ──── ✂️</span></div>
+
+    <!-- 下半聯：內部檢貨存查【揀貨單】（含帳務核對、後五碼、詳細單元與項目勾選） -->
+    <div class="cover-half cover-half-picklist">
+      <div>
+        <div class="cover-brand" style="border-bottom-color:#8b5a2b;margin-bottom:8px">
+          <h2 style="color:#6b3e00;font-size:1.05rem">📋 內部揀貨裝袋明細單（核對留存聯）</h2>
+          <span>批號 ${batchSeq}｜單號 ${esc(order.order_id)}</span>
+        </div>
+        <div class="cover-grid" style="border-top:none;padding-top:0;font-size:.84rem">
+          <div><b>家長／電話：</b><span>${esc(order.parent_label)}${order.contact?`（${esc(order.contact)}）`:''}</span></div>
+          <div><b>下單／梯次：</b><span>${esc(order.created_at||'—')}｜${esc(sched.batchLabel)}</span></div>
+          <div><b>年級／版本：</b><span>${esc(order.grade)}年級${esc(order.sem)}・${esc(order.pubName)}・${esc(order.subj)}</span></div>
+          <div><b>範圍／規格：</b><span>${esc(order.scopeName)}・${esc(order.diffName)}・${order.ruby?'附注音':'無注音'}</span></div>
+        </div>
+        <div class="cover-items">
+          <h4>📦 裝袋項目逐筆檢核（總印製：${stats.contentPages} 頁）</h4>
+          <ul class="cover-list">${pickCheckItems.join('')}</ul>
+          ${order.custom_units?`<div style="font-size:.78rem;color:#555;margin-top:4px">📌 指定單元/課次：${esc(order.custom_units)}</div>`:''}
+          ${order.custom_words?`<div style="font-size:.78rem;color:#555;margin-top:2px">📌 指定生字：${esc(order.custom_words)}</div>`:''}
+        </div>
+      </div>
+      <div class="cover-foot">
+        <div style="font-size:.82rem;color:#333">
+          <b>💳 後五碼：</b>${esc(order.remit_last5||'未填')}　｜　<b>應付／張數：</b>${order.sheets||20} 張 / NT$ ${esc(order.amount)}
+          ${order.reconcile_note?`<br><span style="color:#136529">📝 對帳備註：${esc(order.reconcile_note)}</span>`:''}
+        </div>
+        <div class="cover-status ${order.isPaid?'paid':'unpaid'}" style="font-size:.95rem;padding:4px 10px">
+          ${order.isPaid ? `✅ 已入帳 $${esc(order.amount)}` : `⏳ 待核帳 $${esc(order.amount)}`}
+        </div>
+      </div>
+    </div>
+  `;
+  pg.appendChild(inner);
+  if(window.createWatermarkLayer) pg.appendChild(window.createWatermarkLayer(794,1122,wmText));
+  pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　雙聯取貨／揀貨單 ${order.order_id}（${order.parent_label}）`}));
+  return pg;
+}
+
+// 將橫式國語測驗卷（1122×794）封裝進直式 A4 容器（794×1122）並順時針旋轉 90 度，支援整批免切換方向一鍵列印
+function wrapLandscapePageForBatch(landPg){
+  const holder = document.createElement('div');
+  holder.className = 'a4 batch-land-holder';
+  holder.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+  const inner = document.createElement('div');
+  inner.className = 'ex-land-inner exam-a4';
+  [...landPg.childNodes].forEach(node=>{
+    if(node.classList && node.classList.contains('edge')) return;
+    inner.appendChild(node.cloneNode(true));
+  });
+  holder.appendChild(inner);
+  return holder;
+}
+
+const LAZY_EXAM_PROFILES = [
+  { name:'觀念選擇＋是非基礎卷', diff:'easy', nMc:10, nTf:7, nFill:4, nMatch:0, nCalc:0, nWord:0 },
+  { name:'綜合五題型平衡評量卷', diff:'mid',  nMc:6,  nTf:4, nFill:4, nMatch:1, nCalc:3, nWord:0 },
+  { name:'填空寫作＋圖文配對卷', diff:'mid',  nMc:4,  nTf:0, nFill:7, nMatch:1, nCalc:4, nWord:2 },
+  { name:'觀念是非＋實作應用卷', diff:'mid',  nMc:0,  nTf:8, nFill:5, nMatch:0, nCalc:4, nWord:2 },
+  { name:'精選選擇＋實戰加強卷', diff:'mid',  nMc:9,  nTf:0, nFill:5, nMatch:0, nCalc:5, nWord:0 },
+  { name:'閱讀素養＋圖表挑戰卷', diff:'hard', nMc:6,  nTf:4, nFill:0, nMatch:1, nCalc:3, nWord:4 },
+  { name:'高分易錯診斷特訓卷', diff:'hard', nMc:7,  nTf:6, nFill:4, nMatch:0, nCalc:3, nWord:0 },
+  { name:'全範圍綜合魔王總複習', diff:'mix',  nMc:5,  nTf:4, nFill:4, nMatch:1, nCalc:3, nWord:2 }
+];
+window.LAZY_EXAM_PROFILES = LAZY_EXAM_PROFILES;
+window.normalizeTemplateSig = normalizeTemplateSig;
+
+// 依單張試卷答案彙整出精簡「免費附贈紙本解答彙整頁」（每頁最多容納 5 份試卷對照）
+function buildBatchAnswerPagesA4(records, order, wmText){
+  const out = [];
+  if(!records.length) return out;
+  const optMap = order.subj==='英語' ? ['(A)','(B)','(C)','(D)'] : ['①','②','③','④'];
+  const matchL = 'ㄅㄆㄇㄈㄉㄊㄋㄌ';
+  const perPage = 5;
+  const cpr = window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
+  const totalPages = Math.ceil(records.length / perPage);
+
+  for(let p=0; p<totalPages; p++){
+    const slice = records.slice(p*perPage, (p+1)*perPage);
+    const pg = document.createElement('div');
+    pg.className = 'a4 exam-a4';
+    pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+    const inner = document.createElement('div');
+    inner.className = 'ex-inner';
+    inner.style.padding = '22px 28px';
+    inner.innerHTML = `<div class="ex-hd" style="margin-bottom:10px;padding-bottom:6px">
+      <h3 style="font-size:17px">🎁 免費附贈紙本解答彙整｜國小 ${esc(order.grade)} 年級${esc(order.sem)} ${esc(order.subj)}（${p+1}/${totalPages}）</h3>
+      <div class="ex-sub">取貨編號：${esc(order.order_id)}　｜　家長：${esc(order.parent_label)}　｜　共 ${records.length} 份不重複試卷詳解對照</div>
+    </div>`;
+
+    slice.forEach(rec=>{
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 11px;margin-bottom:9px;background:#fafcff;font-size:12px;line-height:1.45';
+      const secHtml = rec.sections.map(sec=>{
+        let qNumStart = 1;
+        for(const s of rec.sections){ if(s===sec)break; qNumStart += s.qs.length; }
+        const items = sec.qs.map((q,qi)=>{
+          let ans = q.a;
+          if(sec.kind==='mc'){ const ix=q.opts.indexOf(q.a); ans = `${optMap[ix]||''} ${q.a}`; }
+          else if(sec.kind==='match'){ ans = q.pairs.map((pr,j)=>`${j+1}→${matchL[q.right.indexOf(pr[1])]}`).join('/'); }
+          return `<b>${qNumStart+qi}.</b>${esc(ans)}`;
+        }).join('　');
+        return `<div style="margin-top:3px"><span style="color:#b35a00;font-weight:700">${esc(sec.title)}：</span>${items}</div>`;
+      }).join('');
+      card.innerHTML = `<div style="font-weight:800;color:#1e3a5f;border-bottom:1px dashed #cbd5e1;padding-bottom:3px;margin-bottom:4px">第 ${rec.sheetNo} 份｜${esc(rec.profileName)}　<small style="font-weight:600;color:#64748b">範圍：${esc(rec.unitsLabel)}</small></div>${secHtml}`;
+      inner.appendChild(card);
+    });
+
+    pg.appendChild(inner);
+    if(window.createWatermarkLayer) pg.appendChild(window.createWatermarkLayer(794,1122,wmText||''));
+    pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　免費附贈解答彙整 第 ${p+1} / ${totalPages} 頁`}));
+    out.push(pg);
+  }
+  return out;
+}
+
+// 依單筆訂單設定產生測驗卷 DOM 頁面陣列（支援 1 份自訂單張、及 10/20 張完全不重複懶人包）
+function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
+  const prevRuby = $('exRuby').checked;
+  const prevTwo = $('exTwoPage').checked;
+  const prevExam = curExam;
+
+  $('exRuby').checked = !!order.ruby;
+  $('exTwoPage').checked = true;
+
+  let allU = (((window.CURRICULUM||{})[order.grade]||{})[order.subj]||{})[order.sem] || [];
+  if(order.subj==='國語' && window.TW){
+    const twKey = order.sem==='下'?'114下':'115上';
+    const pKey = (order.pub==='std'||!order.pub)?'k':order.pub;
+    const twLs = ((TW[twKey]||TW['115上']||{})[pKey]||[]).filter(x=>x.g==+order.grade);
+    if(twLs.length) allU = twLs.map(x=>({name:x.t,topics:[`生字 ${x.c.length} 字`]}));
+  }
+  let pickedIdx = allU.map((_,i)=>i);
+  if(order.scope==='mid'){
+    const mid = Math.ceil(allU.length/2);
+    pickedIdx = pickedIdx.slice(0,mid);
+  }else if(order.scope==='final'){
+    const mid = Math.ceil(allU.length/2);
+    pickedIdx = pickedIdx.slice(mid);
+  }else if(order.scope==='unit' && order.custom_units){
+    const keys = order.custom_units.split(/[、,，;；/]/).map(s=>s.trim()).filter(Boolean);
+    const m = allU.map((u,i)=>keys.some(k=>u.name.includes(k)||k.includes(u.name))?i:-1).filter(i=>i>=0);
+    if(m.length) pickedIdx = m;
+  }
+
+  const rawSheets = +order.sheets || (order.packType==='客製包' ? 1 : 20);
+  const examSheetsTarget = order.sampleLimit ? 1 : Math.max(1, Math.min(25, order.plan==='both' ? Math.floor(rawSheets/2) : rawSheets));
+  const isZh = order.subj==='國語';
+  const box = $('examSheet');
+  const savedNodes = [...box.childNodes];
+
+  const excludeQuestions = new Set();
+  const excludeSigs = new Set();
+  const qDomPages = [];
+  const ansRecords = [];
+  let singleAnsPageCount = 0;
+
+  const pickSheetUnits = (sIdx)=>{
+    const L = pickedIdx.length;
+    if(L <= 1) return pickedIdx;
+    if(order.packType==='客製包' && order.custom_units && examSheetsTarget===1) return pickedIdx;
+    if(sIdx < L) return [pickedIdx[sIdx]];
+    if(sIdx < L * 2){
+      const a = (sIdx - L) % L;
+      const b = (a + 1 + Math.floor((sIdx - L) / L)) % L;
+      return a===b ? [pickedIdx[a]] : [pickedIdx[a], pickedIdx[b]];
+    }
+    if(L >= 3){
+      const a = sIdx % L;
+      return [pickedIdx[a], pickedIdx[(a+1)%L], pickedIdx[(a+2)%L]];
+    }
+    return pickedIdx;
+  };
+
+  for(let s=0; s<examSheetsTarget; s++){
+    const profIdx = order.sampleLimit && order.previewSheetIdx != null ? +order.previewSheetIdx : s;
+    const isPreviewLazy = !!order.sampleLimit && order.packType==='懶人包';
+    const prof = (examSheetsTarget > 1 || order.packType==='懶人包')
+      ? LAZY_EXAM_PROFILES[profIdx % LAZY_EXAM_PROFILES.length]
+      : { name:'客製專屬評量卷', diff:order.diff||'mid', nMc:isZh?7:7, nTf:5, nFill:4, nMatch:1, nCalc:2, nWord:1 };
+
+    const sheetIdxArr = pickSheetUnits(profIdx);
+    const sheetUnits = sheetIdxArr.map(i=>allU[i]?.name).filter(Boolean);
+    const effDiff = (order.packType==='懶人包' || order.diff==='mix') ? prof.diff : (order.diff||prof.diff);
+    const wantSingleExamAns = (examSheetsTarget === 1 && !!withAns && !order.sampleLimit);
+
+    const cfg = {
+      pub: order.pub, grade: String(order.grade), sem: order.sem, subject: order.subj,
+      diff: effDiff, layout: order.layout||'2col', withAns: wantSingleExamAns, units: sheetUnits,
+      unitIndices: sheetIdxArr, allUnitsCount: allU.length, wmText,
+      excludeQuestions, excludeSigs,
+      nMc: prof.nMc, nTf: prof.nTf, nFill: prof.nFill,
+      nMatch: prof.nMatch, nCalc: prof.nCalc, nWord: prof.nWord
+    };
+
+    curExam = generateExamQuestions(cfg);
+    renderExam();
+    if(typeof autoBalanceExamToTarget==='function'){
+      // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面滿滿無大塊空白
+      autoBalanceExamToTarget(2, isZh?34:32, cfg, false);
+    }
+    const rawPages = [...box.querySelectorAll('.a4')];
+    const diffZh = {easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度'}[effDiff] || '標準評量';
+    const unitsLabel = sheetUnits.length ? sheetUnits.join('、') : '全冊綜合';
+
+    rawPages.forEach((p, pIdx)=>{
+      const isTrailingSingleAns = wantSingleExamAns && rawPages.length>1 && pIdx===rawPages.length-1;
+      if(!isTrailingSingleAns && (examSheetsTarget > 1 || isPreviewLazy)){
+        const subEl = p.querySelector('.ex-sub');
+        const sideLabel = pIdx===0 ? '正面第1頁' : '背面第2頁';
+        const labelNo = isPreviewLazy ? `樣本第 ${profIdx+1} 張（${sideLabel}）` : `第 ${s+1}/${examSheetsTarget} 份（${sideLabel}）`;
+        if(subEl){
+          subEl.textContent = `${labelNo}・${prof.name}　｜　難度：${diffZh}　｜　範圍：${unitsLabel}`;
+        }
+        const capEl = p.querySelector('.cap');
+        if(capEl){
+          capEl.textContent = `${window.COPYRIGHT_STATEMENT||''}　｜　${labelNo}`;
+        }
+      }
+    });
+
+    const converted = keepLandscapeRaw
+      ? rawPages
+      : rawPages.map(p => p.classList.contains('ex-land') ? wrapLandscapePageForBatch(p) : p);
+
+    if(wantSingleExamAns && converted.length > 1){
+      singleAnsPageCount = 1;
+    }
+    qDomPages.push(...converted);
+
+    if(withAns && examSheetsTarget > 1 && curExam && curExam.sections){
+      ansRecords.push({
+        sheetNo: s+1,
+        profileName: prof.name,
+        unitsLabel,
+        sections: curExam.sections
+      });
+    }
+  }
+
+  let ansDomPages = [];
+  if(withAns && examSheetsTarget > 1 && ansRecords.length){
+    ansDomPages = buildBatchAnswerPagesA4(ansRecords, order, wmText);
+  }
+
+  box.innerHTML = '';
+  savedNodes.forEach(n=>box.appendChild(n));
+  curExam = prevExam;
+  $('exRuby').checked = prevRuby;
+  $('exTwoPage').checked = prevTwo;
+
+  const allPages = [...qDomPages, ...ansDomPages];
+  const ansCount = examSheetsTarget > 1 ? ansDomPages.length : singleAnsPageCount;
+  const qCount = Math.max(0, allPages.length - ansCount);
+  return { pages: allPages, qPages: qCount, ansPages: ansCount };
+}
+
+// 供家長前台即時預覽呼叫：同時回傳指定張次之正面＋背面雙面 DOM 陣列，以及單頁相容函式
+window.buildExamPreviewPagesForStore = function(order){
+  const res = buildExamPagesForOrder(
+    { ...order, sampleLimit: 1 },
+    false,
+    '向日葵國小伴學誌・線上樣本預覽請勿截圖轉售',
+    true
+  );
+  return res.pages.slice(0, 2);
+};
+window.buildExamPreviewForStore = function(order){
+  const pages = window.buildExamPreviewPagesForStore(order);
+  const sideIdx = +order.previewPageSide === 1 && pages.length > 1 ? 1 : 0;
+  return pages[sideIdx] || pages[0] || null;
+};
+
+async function generateBatchAll(){
+  if(!curBatchOrders.length){
+    curBatchOrders = loadOrdersFromLocalDB() || parseBatchCsv($('batchCsvInput').value);
+    renderBatchTable(curBatchOrders);
+  }
+  // 僅針對「參數合法」且「管理員有打勾選取列印 (selectedForPrint)」的家長訂單進行產製！
+  const selectedOrders = curBatchOrders.filter(o=>o.valid && o.selectedForPrint);
+  if(!selectedOrders.length){
+    $('batchMsg').style.color='#c0392b';
+    $('batchMsg').textContent='⚠️ 目前沒有勾選任何欲列印的訂單！請先在上方表格左欄勾選「🖨️ 印製」（或點擊「☑️ 僅勾選已入帳訂單」）。';
+    return;
+  }
+  const sheet = $('batchSheet');
+  sheet.innerHTML = '';
+  const withCover = $('batchWithCover').checked;
+  const withAns = $('batchWithAns').checked;
+  const duplexPad = $('batchDuplexPad').checked;
+  const orderWm = $('batchOrderWm').checked;
+  const baseWm = (($('wmText')?$('wmText').value:'')||'向日葵國小伴學誌・專屬訂製請勿轉售').trim();
+
+  let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
+  st.textContent='@media print{@page{size:A4 portrait;margin:0}}';
+
+  let grandTotalPages = 0;
+  for(let i=0;i<selectedOrders.length;i++){
+    const ord = selectedOrders[i];
+    const wmText = orderWm ? `${baseWm}（${ord.parent_label}・#${ord.order_id}）` : baseWm;
+    let strokeRes = {pages:[], charCount:0};
+    let examRes = {pages:[], qPages:0, ansPages:0};
+
+    if(ord.plan==='stroke' || ord.plan==='both'){
+      if(window.buildStrokePagesForOrder){
+        strokeRes = await window.buildStrokePagesForOrder(ord, wmText);
+      }
+    }
+    if(ord.plan==='exam' || ord.plan==='both'){
+      examRes = buildExamPagesForOrder(ord, withAns, wmText);
+    }
+
+    const contentPages = (withCover?1:0) + strokeRes.pages.length + examRes.pages.length;
+    const needBlank = duplexPad && (contentPages % 2 === 1) && (i < selectedOrders.length - 1);
+    const totalPages = contentPages + (needBlank?1:0);
+    const stats = {
+      withCover, strokePages: strokeRes.pages.length, strokeChars: strokeRes.charCount,
+      examPages: examRes.pages.length, examQPages: examRes.qPages, examAnsPages: examRes.ansPages,
+      contentPages, paddedBlank: needBlank, totalPages
+    };
+
+    const orderPages = [];
+    if(withCover){
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】A4 取貨封面頁`, el: buildCoverPageA4(ord, i, selectedOrders.length, stats, wmText)});
+    }
+    strokeRes.pages.forEach((p,idx)=>{
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】筆畫練習寫字帖 第 ${idx+1}/${strokeRes.pages.length} 頁`, el:p});
+    });
+    examRes.pages.forEach((p,idx)=>{
+      const isAns = withAns && examRes.ansPages>0 && idx >= examRes.qPages;
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】${ord.subj}評量測驗卷 ${isAns?`解答頁 ${idx-examRes.qPages+1}`:`第 ${idx+1} 頁`}`, el:p});
+    });
+    if(needBlank){
+      const blank = document.createElement('div');
+      blank.className = 'a4';
+      blank.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+      blank.innerHTML += `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:13px">（雙面列印防串頁空白背面 — 下一張為下一筆訂單取貨封面）</div>`;
+      orderPages.push({label:`【訂單 ${ord.order_id}】雙面列印防串頁空白背面`, el:blank});
+    }
+
+    orderPages.forEach(item=>{
+      const cap = document.createElement('div');
+      cap.className = 'pcap';
+      cap.textContent = item.label;
+      sheet.appendChild(cap);
+      sheet.appendChild(item.el);
+      grandTotalPages++;
+    });
+  }
+
+  $('batchMsg').style.color='#1f9d55';
+  $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印約 ${Math.ceil(grandTotalPages/2)} 張紙），按「🖨️ 列印勾選的訂單」即可直接印出裝袋！`;
+}
+
+function downloadBatchTemplate(){
+  const blob = new Blob(['\uFEFF'+SAMPLE_BATCH_CSV], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '向日葵國小伴學誌_每週批次訂單範本.csv';
+  a.click();
+}
+
+function exportReconcileCsv(){
+  const cols = ['order_id','created_at','parent_label','contact','planName','grade','sem','pubName','subj','scopeName','diffName','amount','remit_last5','reconcile_status','reconcile_note'];
+  const headers = ['取貨編號','下單時間','家長稱呼＋末四碼','聯絡電話','訂購方案','年級','學期','版本','科目','範圍','難度','應付金額','匯款後五碼','對帳狀態','對帳備註紀錄'];
+  const escCsv = v => { const s=String(v==null?'':v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
+  const lines = [headers.join(','), ...curBatchOrders.map(o=>cols.map(c=>escCsv(o[c])).join(','))];
+  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `向日葵國小伴學誌_對帳與訂單紀錄_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function initExamUI(){
+  if(!$('exGrade'))return;
+  $('exGrade').onchange=()=>{if($('exRuby'))$('exRuby').checked=(+$('exGrade').value<=2);fillSubjects();if(curExam)generateFromUI();};
+  $('exSem').onchange=()=>{fillUnits();if(curExam)generateFromUI();};
+  $('exSubj').onchange=()=>{fillUnits();if(curExam)generateFromUI();};
+  $('exPub').onchange=()=>{fillUnits();if(curExam)generateFromUI();};
+  if($('exTermType'))$('exTermType').onchange=()=>{applyTermSelection();if(curExam)generateFromUI();};
+  $('exUnitAll').onclick=()=>{document.querySelectorAll('#exUnits input').forEach(i=>i.checked=true);if(curExam)generateFromUI();};
+  $('exUnitNone').onclick=()=>{document.querySelectorAll('#exUnits input').forEach(i=>i.checked=false);if(curExam)generateFromUI();};
+  $('btnExGen').onclick=generateFromUI;
+  $('btnExDice').onclick=rollMixedDice;
+  $('btnExXlsx').onclick=()=>exportExamXlsx().catch(e=>{$('exMsg').textContent='匯出失敗：'+e.message;});
+  $('btnExPrint').onclick=()=>{if(!curExam)generateFromUI();window.print();};
+  ['exLayout','exTwoPage','exAns','exRuby','exDiff','chkMc','chkTf','chkFill','chkMatch','chkCalc','chkWord','numMc','numTf','numFill','numMatch','numCalc','numWord'].forEach(id=>{const e=$(id);if(!e)return;e.onchange=generateFromUI;if(e.type==='number')e.oninput=generateFromUI;});
+
+  const refreshWatermarks=()=>{
+    if($('viewStroke')&&$('viewStroke').style.display!=='none'&&typeof render==='function') render();
+    if($('viewExam')&&$('viewExam').style.display!=='none'&&curExam) renderExam();
+    if($('batchSheet')){
+      $('batchSheet').querySelectorAll('.wm-layer').forEach(oldWm=>{
+        const w=+oldWm.dataset.wmW||794, h=+oldWm.dataset.wmH||1122;
+        const newWm=window.createWatermarkLayer(w,h,'');
+        oldWm.replaceWith(newWm);
+      });
+    }
+  };
+  ['wmEnable','wmText','wmAlpha','wmScale','wmAngle','wmDensity'].forEach(id=>{
+    const e=$(id); if(!e)return;
+    e.onchange=refreshWatermarks;
+    if(e.type==='text') e.oninput=refreshWatermarks;
+  });
+  if(typeof window.refreshBatchSysClock==='function') window.refreshBatchSysClock();
+  if($('btnBatchSample')){
+    $('btnBatchSample').onclick=()=>{
+      $('batchCsvInput').value=SAMPLE_BATCH_CSV;
+      curBatchOrders=parseBatchCsv(SAMPLE_BATCH_CSV);
+      saveOrdersToLocalDB();
+      renderBatchTable(curBatchOrders);
+    };
+  }
+  if($('btnBatchTpl')) $('btnBatchTpl').onclick=downloadBatchTemplate;
+  if($('btnBatchParse')){
+    $('btnBatchParse').onclick=()=>{
+      curBatchOrders=parseBatchCsv($('batchCsvInput').value);
+      saveOrdersToLocalDB();
+      renderBatchTable(curBatchOrders);
+    };
+  }
+  if($('batchFile')){
+    $('batchFile').onchange=e=>{
+      const f=e.target.files&&e.target.files[0]; if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>{
+        $('batchCsvInput').value=String(r.result||'');
+        curBatchOrders=parseBatchCsv($('batchCsvInput').value);
+        saveOrdersToLocalDB();
+        renderBatchTable(curBatchOrders);
+      };
+      r.readAsText(f,'UTF-8');
+    };
+  }
+  if($('btnSelPaid')){
+    $('btnSelPaid').onclick=()=>{
+      curBatchOrders.forEach(o=>{ o.selectedForPrint = o.valid && o.isPaid; });
+      saveOrdersToLocalDB();
+      renderBatchTable(curBatchOrders);
+    };
+  }
+  if($('btnSelAll')){
+    $('btnSelAll').onclick=()=>{
+      curBatchOrders.forEach(o=>{ o.selectedForPrint = o.valid; });
+      saveOrdersToLocalDB();
+      renderBatchTable(curBatchOrders);
+    };
+  }
+  if($('btnSelNone')){
+    $('btnSelNone').onclick=()=>{
+      curBatchOrders.forEach(o=>{ o.selectedForPrint = false; });
+      saveOrdersToLocalDB();
+      renderBatchTable(curBatchOrders);
+    };
+  }
+  if($('btnExportRecCsv')) $('btnExportRecCsv').onclick=exportReconcileCsv;
+  if($('btnClearLocalOrders')){
+    $('btnClearLocalOrders').onclick=()=>{
+      localStorage.removeItem(LOCAL_ORDERS_KEY);
+      $('batchCsvInput').value=SAMPLE_BATCH_CSV;
+      curBatchOrders=parseBatchCsv(SAMPLE_BATCH_CSV);
+      saveOrdersToLocalDB();
+      renderBatchTable(curBatchOrders);
+    };
+  }
+  if($('btnBatchGen')) $('btnBatchGen').onclick=()=>generateBatchAll();
+  if($('btnBatchPrint')){
+    $('btnBatchPrint').onclick=async()=>{
+      if(!$('batchSheet').querySelectorAll('.a4').length) await generateBatchAll();
+      if(!$('batchSheet').querySelectorAll('.a4').length) return;
+      let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
+      st.textContent='@media print{@page{size:A4 portrait;margin:0}}';
+      window.print();
+    };
+  }
+
+  // 初始化載入本機已保存之訂單（含前台剛送出的訂單）或範例訂單
+  const initialOrders = loadOrdersFromLocalDB();
+  if(initialOrders && initialOrders.length){
+    curBatchOrders = initialOrders;
+    syncCsvBoxFromOrders();
+  }else{
+    if($('batchCsvInput')) $('batchCsvInput').value = SAMPLE_BATCH_CSV;
+    curBatchOrders = parseBatchCsv(SAMPLE_BATCH_CSV);
+    saveOrdersToLocalDB();
+  }
+  renderBatchTable(curBatchOrders);
+
+  if($('exRuby'))$('exRuby').checked=(+$('exGrade').value<=2);
+  fillSubjects();
+}
+initExamUI();
+})();

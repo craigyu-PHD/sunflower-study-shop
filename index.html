@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>向日葵國小伴學誌｜客製化生字練習本 ＆ 評量測驗卷線上訂購</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<header class="noprint">
+  <div class="wrap hd-top">
+    <div>
+      <h1>🌻 向日葵國小伴學誌</h1>
+      <p id="hdSubTitle">108課綱對齊・客製化生字練習本 ＆ 評量測驗卷・桃園藝文特區警衛室取貨</p>
+    </div>
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-tab="store" type="button">🛒 家長線上訂購</button>
+      <button class="nav-tab admin-only" data-tab="batch" type="button" style="display:none">📦 訂單對帳＆批次印製 <span id="navOrdBadge" class="nav-badge">0</span></button>
+      <button class="nav-tab admin-only" data-tab="stroke" type="button" style="display:none">✍️ 寫字帖工作台</button>
+      <button class="nav-tab admin-only" data-tab="exam" type="button" style="display:none">📝 測驗卷工作台</button>
+      <button id="btnAdminAuth" class="btn-admin-entry" type="button">🔐 管理員後台</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<!-- 全域防轉售浮水印與版權頁尾設定列（僅管理員後台顯示） -->
+<section id="wmBar" class="card wm-bar noprint admin-only" style="display:none">
+  <div class="row" style="justify-content:space-between;margin:0;gap:8px 12px">
+    <label class="chk" style="font-weight:700;color:#b35a00;white-space:nowrap"><input type="checkbox" id="wmEnable" checked> 🛡️ 浮水印</label>
+    <label style="flex:1;min-width:210px;display:flex;align-items:center;gap:6px;white-space:nowrap">文字：
+      <input type="text" id="wmText" value="向日葵國小伴學誌・專屬訂製請勿轉售" style="flex:1;min-width:160px;font:inherit;padding:4px 9px;border:1.5px solid #e6d3b5;border-radius:7px">
+    </label>
+    <label style="white-space:nowrap">濃淡：
+      <select id="wmAlpha">
+        <option value="0.04" selected>極淡（4%・推薦預設）</option>
+        <option value="0.08">淡雅（8%・柔和底紋）</option>
+        <option value="0.15">標準（15%・清晰適中）</option>
+        <option value="0.25">明顯防偽（25%）</option>
+        <option value="0.38">重度（38%・防翻拍）</option>
+        <option value="0.52">超濃（52%・強烈印記）</option>
+      </select>
+    </label>
+    <label style="white-space:nowrap">大小：
+      <select id="wmScale">
+        <option value="1">標準（100%）</option>
+        <option value="1.6">加大（160%）</option>
+        <option value="2.2">大幅（220%）</option>
+        <option value="3.0" selected>特大（300%・預設）</option>
+        <option value="3.5">超大（350%）</option>
+      </select>
+    </label>
+    <label style="white-space:nowrap">角度：
+      <select id="wmAngle">
+        <option value="-38">大斜角（-38°）</option>
+        <option value="-24" selected>標準斜角（-24°）</option>
+        <option value="-12">微斜角（-12°）</option>
+        <option value="0">水平正印（0°）</option>
+        <option value="24">反斜角（+24°）</option>
+      </select>
+    </label>
+    <label style="white-space:nowrap">密度：
+      <select id="wmDensity">
+        <option value="1">單點置中（1處）</option>
+        <option value="3" selected>稀疏三點（3處）</option>
+        <option value="5">五點均布（5處）</option>
+      </select>
+    </label>
+  </div>
+</section>
+
+<!-- ==================== 前台：家長線上訂購系統 (#viewStore) ==================== -->
+<div id="viewStore">
+  <!-- 1. 交易規則、取貨須知與消保法法令公告區 -->
+  <section class="card store-hero noprint">
+    <div class="store-hero-top">
+      <div>
+        <span class="batch-pill">📅 目前開放預購梯次：<b id="stBatchLabel">本週最新批次</b></span>
+        <h2 style="margin:6px 0 2px;font-size:1.3rem;color:#7a3b00">🌻 國小 1～6 年級客製化生字練習本 ＆ 評量測驗卷訂購單</h2>
+      </div>
+      <div class="price-highlight">每張 <b>NT$ 5 元</b> <small>｜累計滿 <b>20 張（NT$ 100 元）</b>出貨（評量卷免費附贈解答）</small></div>
+    </div>
+
+    <div class="rules-grid">
+      <div class="rule-box">
+        <div class="rule-title">📍 專屬取貨地點與導航</div>
+        <div class="rule-body">
+          <div><b>桃園市桃園區「豪情世家」社區警衛室</b></div>
+          <div style="color:#555;font-size:.86rem;margin:2px 0 6px">地址：桃園市桃園區同德七街 46 號</div>
+          <div class="map-embed-wrap">
+            <iframe title="豪情世家取貨地圖預覽" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=%E6%A1%83%E5%9C%92%E5%B8%82%E6%A1%83%E5%9C%92%E5%8D%80%E5%90%8C%E5%BE%B7%E4%B8%83%E8%A1%9746%E8%99%9F%E8%B1%AA%E6%83%85%E4%B8%96%E5%AE%B6&amp;t=&amp;z=16&amp;ie=UTF8&amp;iwloc=&amp;output=embed"></iframe>
+          </div>
+          <a class="btn-map" style="margin-top:7px" href="https://www.google.com/maps/search/?api=1&query=%E6%A1%83%E5%9C%92%E5%B8%82%E6%A1%83%E5%9C%92%E5%8D%80%E5%90%8C%E5%BE%B7%E4%B8%83%E8%A1%9746%E8%99%9F%E8%B1%AA%E6%83%85%E4%B8%96%E5%AE%B6" target="_blank" rel="noopener noreferrer">🗺️ 開啟 Google 地圖導航</a>
+        </div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-title">⏰ 截單時間與交貨／取件規定</div>
+        <div class="rule-body">
+          <p><b>📌 每週三晚上 21:00（9點）準時截單：</b></p>
+          <ul class="rule-list">
+            <li><b style="color:#136529">當週三 21:00 前完成匯款</b> → <b>當週週五送達警衛室</b></li>
+            <li><b style="color:#b33a00">當週三 21:00 後才匯款</b> → <b>順延至次週週五交貨</b></li>
+            <li>送達後請於<b>週五起 3 日內（週五～週日）</b>憑「取貨編號」與「家長稱呼＋手機末四碼」領取</li>
+          </ul>
+          <div id="stPickupWindow" class="pickup-window-pill">📅 本批預計取件：當週五～週日（3 日內領取）</div>
+        </div>
+      </div>
+      <div class="rule-box">
+        <div class="rule-title">🏦 全額先匯款後印製規定</div>
+        <div class="rule-body">
+          <p>本伴學誌採<b>「先匯款、核帳後印製」</b>專屬客製化排程：</p>
+          <ul class="rule-list">
+            <li>警衛室僅提供代收與領取服務，<b>恕不接受現場現金付款或貨到付款</b></li>
+            <li><b>每張 NT$ 5 元</b>（評量卷每張皆為<b>正反兩面滿滿題目</b>並免費附解答），累計滿 <b>20 張（NT$ 100 元）</b>即可出貨</li>
+            <li>逾截單時間仍查無入帳紀錄者，系統自動順延下批或列為<b>「無效單」不予印製</b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="legal-notice">
+      <div class="legal-title">⚖️ 《消費者保護法》客製化商品法令聲明與退換貨規範（訂購前請詳閱）</div>
+      <ul>
+        <li><b>法規依據與排除 7 日鑑賞期</b>：本伴學誌教材係依每位家長個別指定之「年級、學期、版本、單元範圍、字數版面規格及專屬防偽浮水印」即時量身印製。依據<b>《消費者保護法》第 19 條第 1 項但書</b>及行政院發布之<b>《通訊交易解除權合理例外情事適用準則》第 2 條第 2 款</b>規定，本商品屬於<b>「依消費者要求所為之客製化給付」</b>，經事先告知消費者後，<b>依法不適用 7 日猶豫期（鑑賞期）無條件解除契約及退款之規定</b>。</li>
+        <li><b>印製排程與瑕疵保障</b>：訂單一經核帳排印後，恕不接受取消訂單、更換年級科目或退換貨；惟若因賣方印製缺頁、模糊不清或內容與訂購單設定不符，請於取貨後 3 日內聯繫我們，將免費為您重新印製補發。</li>
+        <li><b>著作權與防轉售聲明</b>：依 108 課綱原創編製，每頁均印有專屬防偽浮水印，僅供個人練習使用，嚴禁翻印或轉售。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2. 由大到小商品選配 ＋ 右側即時真實縮小版預覽 -->
+  <section class="card noprint">
+    <h2><span class="step">1</span> 選擇教材規格與即時版面預覽</h2>
+    <div class="store-builder">
+      <!-- 左欄：由大到小選單 -->
+      <div class="store-controls">
+        <div class="sub" style="margin-top:0">① 選擇教材與購買方案（每張 5 元，累計滿 20 張＝100 元出貨）</div>
+        <div class="pack-tabs">
+          <label class="pack-tab active" id="lblPackLazy">
+            <input type="radio" name="stPackMode" value="lazy" checked>
+            <b>📝 評量懶人包（20 張＝$100・附解答）</b>
+            <span>純評量測驗卷：自動將所選科目各單元與 8 大題型拆成 20 張雙面滿滿、絕不重複考卷！</span>
+          </label>
+          <label class="pack-tab" id="lblPackStroke">
+            <input type="radio" name="stPackMode" value="stroke_pack">
+            <b>✍️ 生字練習本（獨立自選課次・5/10/20 張）</b>
+            <span>獨立挑選課次，依課序全字列出不缺漏；選 10/20 張可依序循環、雙倍呈現份數！</span>
+          </label>
+          <label class="pack-tab" id="lblPackCustom">
+            <input type="radio" name="stPackMode" value="custom">
+            <b>🎨 客製自由配（單張 $5 元・湊滿 20 張出貨）</b>
+            <span>單張微調生字字詞或評量範圍與難度（每張 $5 起），購物車累計滿 20 張即可出貨！</span>
+          </label>
+        </div>
+
+        <div class="sub">② 基本學籍設定（由大到小）</div>
+        <div class="row">
+          <label>年級
+            <select id="stGrade">
+              <option value="1">國小 1 年級</option>
+              <option value="2">國小 2 年級</option>
+              <option value="3" selected>國小 3 年級</option>
+              <option value="4">國小 4 年級</option>
+              <option value="5">國小 5 年級</option>
+              <option value="6">國小 6 年級</option>
+            </select>
+          </label>
+          <label>學期
+            <select id="stSem">
+              <option value="上" selected>上學期</option>
+              <option value="下">下學期</option>
+            </select>
+          </label>
+          <label>教科書版本
+            <select id="stPub">
+              <option value="k" selected>康軒版</option>
+              <option value="n">南一版</option>
+              <option value="h">翰林版</option>
+              <option value="std">108課綱通用</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- 評量測驗懶人包專屬設定（純評量卷，不綁生字練習） -->
+        <div id="stLazyPanel" class="cfg-panel">
+          <div class="sub">③ 選擇 20 張不重複評量測驗懶人包（每組 20 張 × $5 ＝ $100・免費附解答）</div>
+          <div class="row" style="align-items:flex-end">
+            <label id="stLazySubjWrap" style="flex:1;min-width:140px">評量科目
+              <select id="stLazySubj"></select>
+            </label>
+            <label style="flex:1.4;min-width:185px">主軸範圍
+              <select id="stLazyScope">
+                <option value="all" selected>全學期單元推進（由淺入深）</option>
+                <option value="mid">期中前半冊推進</option>
+                <option value="final">期末後半冊推進</option>
+              </select>
+            </label>
+          </div>
+          <div class="hint" id="stLazyPlanDesc" style="margin-top:4px;color:#7a4b10">💡 純評量測驗懶人包內含：20 張「每張皆正反兩面滿滿題目」、依各單元與 8 大題型輪替的不重複考卷，免費附贈解答（$100）。</div>
+        </div>
+
+        <!-- 生字練習本獨立專區（不與評量綁定，客戶自選課次，嚴格按課序全字列出、週而復始） -->
+        <div id="stStrokePackPanel" class="cfg-panel" style="display:none">
+          <div class="sub">③ 獨立客製生字練習本（自選課次・不隨機、依課序全字列出與雙倍循環）</div>
+          <div class="row">
+            <label style="flex:1;min-width:165px">選擇張數（可雙倍重複份數）
+              <select id="stSpSheets">
+                <option value="5">5 張（$25・單輪複習／湊滿20張出貨）</option>
+                <option value="10" selected>10 張（$50・依序雙倍份數呈現）</option>
+                <option value="20">20 張（$100・全冊循環直接達標出貨）</option>
+              </select>
+            </label>
+            <label style="flex:1.2;min-width:185px">練習簿風格
+              <select id="stSpMode">
+                <option value="A" selected>模式一：筆順引導（多筆畫自動 2 欄）</option>
+                <option value="B">模式二：教育部標準格子風格</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label style="flex:1;min-width:180px">每頁基準欄數（彈性 7～8 欄）
+              <select id="stSpCols">
+                <option value="7">每頁 7 欄（低年級／較大格）</option>
+                <option value="8" selected>每頁 8 欄（中高年級／多字）</option>
+              </select>
+            </label>
+            <label class="chk"><input type="checkbox" id="stSpZy" checked> 附直式注音格</label>
+          </div>
+          <div class="row" style="justify-content:space-between;margin-top:4px">
+            <span class="sub" style="margin:0">📚 勾選要練習的課次（全課生字必出不漏）：</span>
+            <div>
+              <button type="button" class="btn" id="btnSpLsMid">期中課次</button>
+              <button type="button" class="btn" id="btnSpLsFinal">期末課次</button>
+              <button type="button" class="btn" id="btnSpLsAll">全選</button>
+              <button type="button" class="btn" id="btnSpLsNone">全取消</button>
+            </div>
+          </div>
+          <div id="stSpLessonList" class="units-box units-box-store"></div>
+          <div id="stSpCoverageInfo" class="hint" style="margin-top:5px;color:#7a4b10"></div>
+        </div>
+
+        <!-- 客製包專屬設定 -->
+        <div id="stCustomPanel" class="cfg-panel" style="display:none">
+          <div class="sub">③ 選擇單項客製教材類型（每張 NT$ 5 元，可分批加入購物車湊滿 20 張）</div>
+          <div class="row">
+            <label class="mode" style="flex:1;min-width:180px"><input type="radio" name="stCustomType" value="stroke" checked>
+              <b>✍️ 客製生字練習單（$5/張）</b><span>自由挑課次、筆順模式與每頁字數（多筆畫自動雙欄）</span>
+            </label>
+            <label class="mode" style="flex:1;min-width:180px"><input type="radio" name="stCustomType" value="exam">
+              <b>📝 客製評量測驗卷（$5/張・附解答）</b><span>自由挑課綱單元、難度與單雙欄版面</span>
+            </label>
+          </div>
+
+          <!-- 客製：生字練習本細項 -->
+          <div id="stCustomStrokeBox">
+            <div class="row">
+              <label style="flex:1.2;min-width:175px">練習簿風格
+                <select id="stStrokeMode">
+                  <option value="A" selected>模式一：筆畫順序引導（自動雙欄）</option>
+                  <option value="B">模式二：教育部標準格子風格</option>
+                </select>
+              </label>
+              <label style="min-width:165px">每頁基準欄數（7～8 欄）
+                <select id="stStrokeCols">
+                  <option value="7">每頁 7 欄（低年級大格）</option>
+                  <option value="8" selected>每頁 8 欄（中高年級標準）</option>
+                </select>
+              </label>
+              <label class="chk"><input type="checkbox" id="stStrokeZy" checked> 附直式注音格</label>
+            </div>
+            <div class="row" style="justify-content:space-between">
+              <span class="sub" style="margin:0">📚 勾選要練習的課次（滑鼠移到課次可浮動預覽該課生字）：</span>
+              <div>
+                <button type="button" class="btn" id="btnStLsMid">期中課次</button>
+                <button type="button" class="btn" id="btnStLsFinal">期末課次</button>
+                <button type="button" class="btn" id="btnStLsAll">全選</button>
+                <button type="button" class="btn" id="btnStLsNone">全取消</button>
+              </div>
+            </div>
+            <div id="stLessonList" class="units-box units-box-store"></div>
+            <div id="stCustomStrokeFoolproof" class="hint" style="margin-top:5px;color:#7a4b10"></div>
+            <div class="row" style="margin-top:6px">
+              <label style="width:100%">✏️ 或額外指定想多練的國字（選填，自填可逐張單張購買）：
+                <input type="text" id="stCustomWords" placeholder="例如：永遠愛學習（若自行輸入國字且未選課次，可單買 1 張正反面）" style="width:100%;font:inherit;padding:5px 9px;border:1.5px solid #e6d3b5;border-radius:7px;margin-top:3px">
+              </label>
+            </div>
+          </div>
+
+          <!-- 客製：評量練習本細項 -->
+          <div id="stCustomExamBox" style="display:none">
+            <div class="row">
+              <label>評量科目 <select id="stExamSubj"></select></label>
+              <label>難度設定
+                <select id="stExamDiff">
+                  <option value="easy">基礎熟練</option>
+                  <option value="mid" selected>標準評量</option>
+                  <option value="hard">素養挑戰</option>
+                  <option value="mix">混合難度（由簡入深）</option>
+                </select>
+              </label>
+              <label>版面配置
+                <select id="stExamLayout">
+                  <option value="2col" selected>雙欄（標準考卷）</option>
+                  <option value="1col">單欄（字大好寫）</option>
+                </select>
+              </label>
+              <label class="chk"><input type="checkbox" id="stExamRuby" checked> 國字附注音</label>
+            </div>
+            <div class="row" style="justify-content:space-between">
+              <span class="sub" style="margin:0">📖 勾選要評量的單元／課次範圍（滑鼠移到文字可浮動預覽重點）：</span>
+              <div>
+                <button type="button" class="btn" id="btnStUnMid">期中範圍</button>
+                <button type="button" class="btn" id="btnStUnFinal">期末範圍</button>
+                <button type="button" class="btn" id="btnStUnAll">全選</button>
+                <button type="button" class="btn" id="btnStUnNone">全取消</button>
+              </div>
+            </div>
+            <div id="stUnitList" class="units-box units-box-store"></div>
+          </div>
+        </div>
+
+        <!-- 加入購物車操作列 -->
+        <div class="add-cart-bar">
+          <label style="font-weight:700"><span id="stQtyLabel">本項張數／組數：</span>
+            <input type="number" id="stQty" value="1" min="1" max="60" style="width:4.4em;text-align:center;font-weight:700"> <span id="stQtyUnit">組（20張）</span>
+          </label>
+          <span id="stItemPriceHint" style="font-weight:700;color:#b34700">（每張 5 元 × 20 張 ＝ 小計 NT$ 100 元）</span>
+          <button id="btnAddToCart" type="button" class="btn pri big">➕ 加入購物車</button>
+        </div>
+        <div id="stAddMsg" class="msg" style="color:#1f9d55;font-weight:700"></div>
+      </div>
+
+      <!-- 右欄：即時真實縮小版預覽（含分頁＋正反雙面同時檢視＋防截圖保護） -->
+      <div class="store-preview-pane" oncontextmenu="return false">
+        <div class="preview-hd">
+          <b>🔍 即時真實版面範例預覽（每張含正面＋背面）</b>
+          <span id="stPreviewBadge" class="badge-ok">隨左側選項即時更新</span>
+        </div>
+        <div id="stPreviewPager" class="preview-pager">
+          <button type="button" id="btnPrevSheet" class="btn" style="padding:3px 8px;font-size:.82rem;white-space:nowrap">◀ 上張</button>
+          <select id="stPreviewSheetSel" style="flex:1;min-width:0;font-size:.82rem;padding:3px 6px"></select>
+          <select id="stPreviewSideSel" style="width:auto;flex:none;font-size:.82rem;padding:3px 6px" title="切換正反雙面並列或單面放大檢視">
+            <option value="both" selected>正反雙面（同時看正＋背）</option>
+            <option value="0">僅看正面（放大）</option>
+            <option value="1">僅看背面（放大）</option>
+          </select>
+          <button type="button" id="btnNextSheet" class="btn" style="padding:3px 8px;font-size:.82rem;white-space:nowrap">下張 ▶</button>
+        </div>
+        <div id="stPreviewViewport" class="preview-viewport">
+          <div id="stPreviewScale" class="preview-scale"></div>
+          <div class="preview-guard-mask">
+            <span>🔒 線上樣本預覽（核對版型範圍・核帳後印製完整 20 張）</span>
+          </div>
+        </div>
+        <p id="stPreviewCatalogNote" class="hint" style="margin-top:6px;line-height:1.45">※ 可切換預覽各張主題與<b>正面／背面</b>（每張考卷皆為正反兩面滿滿題目・核帳後 20 張全數展開印製）。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 購物車明細、自動算金額與匯款結帳送出區 -->
+  <section class="card noprint" id="stCheckoutSection">
+    <h2><span class="step">2</span> 購物車明細與匯款結帳回報</h2>
+    <div id="stCartEmpty" class="cart-empty">🛒 購物車目前是空的，請先從上方選好教材並點擊「➕ 加入購物車」。</div>
+    <div id="stCartContent" style="display:none">
+      <div id="stCartTableWrap" style="width:100%"></div>
+      <div id="stCartSummary" class="cart-summary-bar"></div>
+      <div id="stThresholdBanner" class="cap-banner warn" style="display:none;margin:8px 0"></div>
+
+      <!-- 匯款資訊與訂購人資料表單 -->
+      <div class="checkout-grid">
+        <div class="bank-card">
+          <h4>🏦 第一步：請先完成轉帳匯款</h4>
+          <div class="bank-line"><span>銀行代碼：</span><b id="stBankCode">822（中國信託）</b></div>
+          <div class="bank-line"><span>匯款帳號：</span><b id="stBankAcc" style="font-size:1.15rem;color:#c85000;letter-spacing:.05em">0000-0000-0000</b>
+            <button type="button" class="btn" id="btnCopyAcc" style="padding:2px 8px;font-size:.8rem">📋 複製</button>
+          </div>
+          <div class="bank-line"><span>應匯總額：</span><b id="stRemitTotal" style="font-size:1.35rem;color:#d93025">NT$ 0 元</b></div>
+          <div id="stRemitScheduleNote" style="margin-top:8px;padding:8px 10px;background:#fff5e0;border:1px solid #ffb86c;border-radius:8px;font-size:.85rem;color:#7a3b00;line-height:1.5">
+            ⏰ <b>交貨時程提醒：</b>當週三 <b>21:00（9點）前</b>完成匯款 → 當週五送達警衛室；<b>21:00 之後</b>完成匯款或下單 → 自動順延至<b>次週五</b>交貨取件！
+          </div>
+        </div>
+
+        <div class="buyer-form">
+          <h4>📝 第二步：填寫取貨核對與匯款後五碼</h4>
+          <div class="form-row">
+            <label>👨‍👩‍👧 家長稱呼＋手機末四碼 <span class="req">*必填（警衛室取貨核對用）</span></label>
+            <input type="text" id="stParentLabel" placeholder="例如：王媽媽#8821 或 林先生#3094">
+          </div>
+          <div class="form-row">
+            <label>📞 聯絡手機或 Email <span class="req">*必填（帳務問題聯繫用）</span></label>
+            <input type="text" id="stContact" placeholder="例如：0912-345-678">
+          </div>
+          <div class="form-row">
+            <label>💳 匯款帳號後五碼 <span class="req">*必填（請填轉出存摺／卡號末 5 碼數字）</span></label>
+            <input type="text" id="stRemitLast5" maxlength="5" placeholder="例如：12345">
+          </div>
+          <label class="chk legal-chk">
+            <input type="checkbox" id="stAgreeTerms">
+            <span>我已詳閱並同意：本客製化教材依<b>《消費者保護法》第19條但書規定不適用 7 日鑑賞期</b>；採先匯款後印製（<b>當週三 21:00 前匯款當週五取，21:00 後次週五交貨</b>），請於送達起 3 日內至桃園區「豪情世家」警衛室領取完畢。</span>
+          </label>
+          <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button id="btnStSubmit" type="button" class="btn ok big" style="flex:1">✅ 確認已匯款・送出訂購單</button>
+          </div>
+          <div id="stSubmitMsg" class="msg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 訂購完成憑證卡片 -->
+    <div id="stSuccessCard" class="order-success-card" style="display:none"></div>
+  </section>
+</div>
+
+<!-- ==================== 管理員登入彈窗 (#adminModal) ==================== -->
+<div id="adminModal" class="modal-backdrop noprint" style="display:none">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #f0dec0;padding-bottom:8px;margin-bottom:12px">
+      <h3 style="margin:0;color:#7a3b00">🔐 管理員後台安全登入</h3>
+      <button type="button" id="btnCloseModal" class="btn" style="padding:3px 10px">✕</button>
+    </div>
+    <p class="hint" style="margin-bottom:10px">後台包含「訂單對帳管理、雙聯取貨揀貨單印製、筆畫寫字帖與評量測驗卷工作台」，僅限授權管理員存取。</p>
+    <div class="form-row">
+      <label>👤 管理員帳號：</label>
+      <input type="text" id="admUser" value="admin" placeholder="預設 admin">
+    </div>
+    <div class="form-row">
+      <label>🔑 管理員密碼：</label>
+      <input type="password" id="admPass" placeholder="請輸入管理員密碼">
+    </div>
+    <div id="admAuthMsg" class="msg"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button type="button" id="btnAdmLocalUnlock" class="btn" style="display:none">💻 本機離線模式解鎖</button>
+      <button type="button" id="btnAdmLoginSubmit" class="btn pri big">🔓 驗證並進入後台</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 分頁一：筆畫練習寫字帖（後台） ==================== -->
+<div id="viewStroke" style="display:none">
+<section class="card noprint">
+  <h2><span class="step">1</span> 輸入生字</h2>
+  <div class="sub">📚 從課本帶入</div>
+  <div class="row">
+    <select id="twTerm"></select>
+    <select id="twGrade"><option value="1">1年級</option><option value="2">2年級</option><option value="3">3年級</option><option value="4">4年級</option><option value="5">5年級</option><option value="6">6年級</option></select>
+    <select id="twPub"><option value="n">南一</option><option value="k">康軒</option><option value="h">翰林</option></select>
+    <select id="twLesson"></select>
+  </div>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="twS" checked> 生字</label>
+    <label class="chk"><input type="checkbox" id="twR"> 認讀字</label>
+    <button id="twLoad" class="btn pri">帶入本課</button>
+    <button id="twAll" class="btn">整冊帶入</button>
+  </div>
+  <div id="twWords" class="hint"></div>
+  <div class="sub">✏️ 或直接輸入國字</div>
+  <textarea id="input" rows="1" placeholder="例如：永遠愛學習"></textarea>
+</section>
+
+<section class="card noprint">
+  <h2><span class="step">2</span> 設定練習簿</h2>
+  <div class="modes">
+    <label class="mode"><input type="radio" name="xMode" value="A" checked>
+      <b>模式一：筆畫順序引導</b><span>範字 → 每一筆一格（紅色為這一筆）→ 最後完整書寫。適合初學者看清楚筆順。</span></label>
+    <label class="mode"><input type="radio" name="xMode" value="B">
+      <b>模式二：教育部風格</b><span>範字 ＋ 筆順欄 ＋ 滿版練習格，版面清爽，由上到下、由左至右。</span></label>
+  </div>
+  <div class="row">
+    <label>格子大小
+      <select id="xSize"><option value="low">低年級（大格）</option><option value="high" selected>中高年級（小格）</option></select></label>
+    <label>每頁欄數（最少 7～8 欄）
+      <select id="xCols"><option value="7" selected>7 欄（低年級／標準大格）</option><option value="8">8 欄（中高年級／緊湊多字）</option></select></label>
+    <label class="chk"><input type="checkbox" id="xZy" checked> 加注音空格（直式，格子右側）</label>
+  </div>
+  <div class="row" id="xAopts">
+    <label class="chk"><input type="checkbox" id="xRef" checked> 每字首格附範字</label>
+    <label class="chk"><input type="checkbox" id="xNum" checked> 範字標示筆畫數字</label>
+    <label class="chk"><input type="checkbox" id="xGhost" checked> 步驟格顯示未寫筆畫（淺灰）</label>
+    <label>結尾完整書寫格數 <input type="number" id="xBlank" value="5" min="0" max="10"></label>
+    <label title="超過此筆畫數自動拆為兩欄並排，避免多筆畫字壓縮同頁其他字格">折兩欄上限 <input type="number" id="xSplitLimit" value="12" min="8" max="24"> 畫</label>
+    <label class="chk"><input type="checkbox" id="xTrace"> 結尾首格淺灰描字</label>
+  </div>
+  <div class="row" id="xBopts" style="display:none">
+    <label>淺灰描紅格數 <input type="number" id="xTraceN" value="2" min="0" max="4"></label>
+  </div>
+</section>
+
+<section class="card noprint">
+  <h2><span class="step">3</span> 預覽與輸出</h2>
+  <div class="row">
+    <button id="btnGen" class="btn pri big">更新預覽</button>
+    <button id="btnXlsx" class="btn ok big">📊 匯出 Excel（A4 直式）</button>
+    <button id="btnPrint" class="btn big">🖨️ 直接列印預覽</button>
+    <button id="btnSave" class="btn">儲存設定</button>
+    <button id="btnLoad" class="btn">載入上次</button>
+  </div>
+  <div id="msg" class="msg"></div>
+  <p class="hint">下方預覽即為 A4 直式（210×297 mm）實際輸出範圍；Excel 開啟後會以「分頁預覽」顯示 A4 範圍。筆順資料為內建開源字形資料，個別字與教育部標準筆順可能略有差異。</p>
+</section>
+
+<section id="sheet"></section>
+</div>
+
+<!-- ==================== 分頁二：國小評量測驗卷 ==================== -->
+<div id="viewExam" style="display:none">
+<section class="card noprint">
+  <h2><span class="step">1</span> 選擇課綱與單元範圍（108課綱）</h2>
+  <div class="row">
+    <label>版本 <select id="exPub"><option value="std">108課綱通用</option><option value="n">南一版</option><option value="k">康軒版</option><option value="h">翰林版</option></select></label>
+    <label>年級 <select id="exGrade"><option value="1">1年級</option><option value="2">2年級</option><option value="3">3年級</option><option value="4">4年級</option><option value="5">5年級</option><option value="6">6年級</option></select></label>
+    <label>學期 <select id="exSem"><option value="上">上學期</option><option value="下">下學期</option></select></label>
+    <label>科目 <select id="exSubj"></select></label>
+    <label>評量 <select id="exTermType"><option value="all">全冊總複習</option><option value="mid">期中複習卷</option><option value="final">期末複習卷</option><option value="unit">自選單元</option></select></label>
+  </div>
+  <div class="row">
+    <span class="sub" style="margin:0">📖 單元大綱（可自由搭配勾選）：</span>
+    <button id="exUnitAll" class="btn" type="button">全選</button>
+    <button id="exUnitNone" class="btn" type="button">全不選</button>
+  </div>
+  <div id="exUnits" class="units-box"></div>
+</section>
+
+<section class="card noprint">
+  <h2><span class="step">2</span> 客製化題型、難度與版面控制</h2>
+  <div class="row">
+    <label>難度 <select id="exDiff"><option value="easy">基礎熟練</option><option value="mid" selected>標準評量</option><option value="hard">素養挑戰</option><option value="mix">混合難度</option></select></label>
+    <label>版面 <select id="exLayout"><option value="1col">單欄（字大好寫）</option><option value="2col" selected>雙欄（緊湊省紙）</option></select></label>
+    <label class="chk"><input type="checkbox" id="exTwoPage" checked> 兩頁一張（正反雙面）</label>
+    <label class="chk"><input type="checkbox" id="exAns" checked> 附解答頁</label>
+    <label class="chk"><input type="checkbox" id="exRuby"> 國字附注音</label>
+    <button id="btnExDice" class="btn pri" type="button">🎲 混合式隨機配題</button>
+  </div>
+  <div class="qtype-grid">
+    <label class="chk"><input type="checkbox" id="chkMc" checked> 選擇題 <input type="number" id="numMc" value="5" min="0" max="12"> <small>上限12</small></label>
+    <label class="chk"><input type="checkbox" id="chkTf" checked> 是非題 <input type="number" id="numTf" value="4" min="0" max="10"> <small>上限10</small></label>
+    <label class="chk"><input type="checkbox" id="chkFill" checked> 填空題 <input type="number" id="numFill" value="4" min="0" max="10"> <small>上限10</small></label>
+    <label class="chk"><input type="checkbox" id="chkMatch" checked> 配對題 <input type="number" id="numMatch" value="1" min="0" max="3"> <small>上限3組</small></label>
+    <label class="chk"><input type="checkbox" id="chkCalc" checked> 計算／實作 <input type="number" id="numCalc" value="3" min="0" max="8"> <small>上限8</small></label>
+    <label class="chk"><input type="checkbox" id="chkWord" checked> 應用／素養 <input type="number" id="numWord" value="2" min="0" max="6"> <small>上限6</small></label>
+  </div>
+  <div id="exCapInfo" class="hint" style="margin-top:6px"></div>
+</section>
+
+<section class="card noprint">
+  <h2><span class="step">3</span> 預覽與輸出</h2>
+  <div class="row">
+    <button id="btnExGen" class="btn pri big" type="button">📝 依設定產生測驗卷</button>
+    <button id="btnExXlsx" class="btn ok big" type="button">📊 匯出 Excel（A4 直式）</button>
+    <button id="btnExPrint" class="btn big" type="button">🖨️ 直接列印預覽</button>
+  </div>
+  <div id="exCapInfo2" class="cap-banner"></div>
+  <div id="exMsg" class="msg"></div>
+  <p class="hint">系統會依題數自動微調字級與間距，讓試卷工整填滿兩頁（正反一張），解答與解析另置第三頁。</p>
+</section>
+
+<section id="examSheet"></section>
+</div>
+
+<!-- ==================== 分頁三：訂單對帳管理＋雙聯取貨揀貨單＋批次印製 ==================== -->
+<div id="viewBatch" style="display:none">
+<section class="card noprint">
+  <h2><span class="step">1</span> 當前系統批次時程與對帳總覽</h2>
+  <!-- 明確顯示當前週次、截單時間點與 9 點前後交貨分界 -->
+  <div id="batchSysClockBar" class="sys-clock-bar"></div>
+
+  <!-- 即時對帳統計看板 -->
+  <div id="recStatsBar" class="rec-stats-bar"></div>
+
+  <!-- 批次選擇與對帳匯出工具列 -->
+  <div class="row" style="justify-content:space-between;background:#fffaf2;padding:8px 12px;border-radius:9px;border:1px solid #f0dec0">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <b style="color:#7a3b00;font-size:.9rem">🖨️ 列印對象勾選：</b>
+      <button type="button" class="btn pri" id="btnSelPaid">☑️ 僅勾選已入帳（推薦）</button>
+      <button type="button" class="btn" id="btnSelAll">☑️ 全選</button>
+      <button type="button" class="btn" id="btnSelNone">⬜ 全取消</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <button type="button" class="btn ok" id="btnExportRecCsv">💾 匯出對帳紀錄 CSV</button>
+      <button type="button" class="btn" id="btnClearLocalOrders" style="font-size:.82rem;color:#a71d2a">🗑️ 清空測試單</button>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:8px">
+    <label class="chk"><input type="checkbox" id="batchWithCover" checked> 每份訂單插「<b>A4 雙聯裁切單（上聯取貨單／下聯揀貨單）</b>」</label>
+    <label class="chk"><input type="checkbox" id="batchWithAns" checked> 測驗卷免費附解答彙整頁</label>
+    <label class="chk"><input type="checkbox" id="batchDuplexPad" checked> 雙面防串頁墊頁</label>
+    <label class="chk"><input type="checkbox" id="batchOrderWm" checked> 浮水印加家長編號防轉傳</label>
+  </div>
+  <div id="batchSummary" class="cap-banner ok" style="display:none"></div>
+  <div id="batchTableWrap" style="width:100%;margin-top:8px"></div>
+
+  <!-- 離線／CSV 批次匯入與備份（收合於下方，畫面乾淨免捲動） -->
+  <details class="sync-details" style="margin-top:10px">
+    <summary>📂 進階工具：CSV 批次匯入 / 範例測試 / 檢視原始訂單文字</summary>
+    <div class="sync-details-body">
+      <div class="row">
+        <label class="btn" style="display:inline-flex;align-items:center;gap:6px">📂 選擇 CSV 檔 <input type="file" id="batchFile" accept=".csv,.txt" style="display:none"></label>
+        <button id="btnBatchSample" class="btn pri" type="button">📋 載入範例訂單（5 筆測試）</button>
+        <button id="btnBatchTpl" class="btn" type="button">⬇️ 下載空白 CSV 範本</button>
+        <button id="btnBatchParse" class="btn ok" type="button">🔍 解析下方 CSV 內容</button>
+      </div>
+      <textarea id="batchCsvInput" rows="4" style="font-size:.82rem;letter-spacing:.01em;font-family:monospace;margin-top:6px" placeholder="CSV 欄位：order_id,parent_label,plan,grade,sem,pub,subj,scope,diff,ruby,custom_words,custom_units,paid_status,amount,sheets,packType,remit_last5,contact,reconcile_note"></textarea>
+    </div>
+  </details>
+</section>
+
+<section class="card noprint">
+  <h2><span class="step">2</span> 依勾選訂單一鍵產製與週五裝袋列印</h2>
+  <div class="row">
+    <button id="btnBatchGen" class="btn pri big" type="button">🚀 依勾選訂單生成教材（含雙聯取貨／揀貨單）</button>
+    <button id="btnBatchPrint" class="btn ok big" type="button">🖨️ 列印勾選的訂單（直接裝袋）</button>
+  </div>
+  <div id="batchMsg" class="msg"></div>
+  <p class="hint">💡 每筆訂單最前頁為「A4 雙聯裁切單」：上半聯外貼包裝袋（隱藏地點與金額保護隱私），沿虛線撕開後，下半聯供揀貨裝袋與留存對帳！</p>
+</section>
+
+<section id="batchSheet"></section>
+</div>
+</main>
+
+<div id="storeLessonPopover" class="lesson-float-pop" aria-hidden="true"></div>
+<script src="lib/exceljs.min.js"></script>
+<script src="data/textbook.js"></script>
+<script src="data/zy.js"></script>
+<script src="data/curriculum.js"></script>
+<script src="data/exam_bank.js"></script>
+<script src="data/proc_bank.js"></script>
+<script src="app.js"></script>
+<script src="exam.js"></script>
+<script src="store.js"></script>
+</body></html>
