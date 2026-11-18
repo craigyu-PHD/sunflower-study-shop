@@ -195,6 +195,8 @@ function bindLessonHoverPopover(box){
     };
   });
 }
+window.bindLessonHoverPopover = bindLessonHoverPopover;
+if($('exUnits')) bindLessonHoverPopover($('exUnits'));
 
 function renderStrokeChecklist(boxId, list, defaultCount){
   const box = $(boxId); if(!box) return;
@@ -338,8 +340,8 @@ function syncPreviewPagerOptions(){
   if(prevVal >= 0 && prevVal < meta.length) sel.value = String(prevVal);
   else sel.value = '0';
   const showNav = meta.length > 1;
-  if($('btnPrevSheet')) $('btnPrevSheet').style.display = showNav ? '' : 'none';
-  if($('btnNextSheet')) $('btnNextSheet').style.display = showNav ? '' : 'none';
+  if($('btnPrevSheet')){ $('btnPrevSheet').style.display = ''; $('btnPrevSheet').disabled = !showNav; }
+  if($('btnNextSheet')){ $('btnNextSheet').style.display = ''; $('btnNextSheet').disabled = !showNav; }
   return meta;
 }
 
@@ -479,7 +481,6 @@ async function updateStorePreview(){
   }
 
   const sideMode = $('stPreviewSideSel')?.value || 'both';
-  if($('stPreviewSideSel')) $('stPreviewSideSel').style.display = '';
 
   scaleBox.innerHTML = '';
   if(previewType === 'stroke' && window.buildStrokePagesForOrder){
@@ -741,7 +742,7 @@ function renderStoreCart(){
   }).join('');
 
   wrap.innerHTML = `<table class="batch-tbl cart-tbl">
-    <colgroup><col><col style="width:118px"><col style="width:50px"><col style="width:60px"><col style="width:36px"></colgroup>
+    <colgroup><col><col style="width:112px"><col style="width:52px"><col style="width:58px"><col style="width:42px"></colgroup>
     <thead><tr><th>訂購項目／年級科目與規格明細</th><th style="text-align:center">數量</th><th style="text-align:center">張數</th><th style="text-align:right">小計</th><th style="text-align:center">刪</th></tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>`;
@@ -978,6 +979,10 @@ function initStore(){
       if($('stQty')) $('stQty').value = '1';
       if($('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
       if($('stPreviewSideSel')) $('stPreviewSideSel').value = 'both';
+      document.querySelectorAll('input[name=stSideRadio]').forEach(sr => {
+        sr.checked = sr.value === 'both';
+        if(sr.parentElement) sr.parentElement.classList.toggle('active', sr.checked);
+      });
       scheduleStorePreview();
     };
   });
@@ -1014,13 +1019,28 @@ function initStore(){
     if(el.tagName === 'INPUT') el.oninput = scheduleStorePreview;
   });
 
-  // 右側 20 張預覽翻頁器＆正反面切換綁定
+  // 右側預覽翻頁器＆正反面切換綁定
   if($('stPreviewSheetSel')){
     $('stPreviewSheetSel').onchange = updateStorePreview;
   }
   if($('stPreviewSideSel')){
-    $('stPreviewSideSel').onchange = updateStorePreview;
+    $('stPreviewSideSel').onchange = () => {
+      const v = $('stPreviewSideSel').value;
+      document.querySelectorAll('input[name=stSideRadio]').forEach(sr => {
+        sr.checked = sr.value === v;
+        if(sr.parentElement) sr.parentElement.classList.toggle('active', sr.checked);
+      });
+      updateStorePreview();
+    };
   }
+  document.querySelectorAll('input[name=stSideRadio]').forEach(sr => {
+    sr.onchange = () => {
+      if(!sr.checked) return;
+      if($('stPreviewSideSel')) $('stPreviewSideSel').value = sr.value;
+      document.querySelectorAll('.side-opt').forEach(lbl => lbl.classList.toggle('active', lbl.querySelector('input')?.checked));
+      updateStorePreview();
+    };
+  });
   if($('btnPrevSheet')){
     $('btnPrevSheet').onclick = () => {
       const sel = $('stPreviewSheetSel'); if(!sel || sel.options.length <= 1) return;

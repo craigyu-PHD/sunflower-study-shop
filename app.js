@@ -235,7 +235,7 @@ function buildLayout(){
     let curPageCols=[];
     const flushPage=()=>{
       if(!curPageCols.length)return;
-      const pageCols=Math.max(minCols, Math.min(maxCols, curPageCols.length));
+      const pageCols=cols;
       const pCwMax=Math.floor(CONTENT_W/pageCols);
       const pSqMax=Math.floor(zy?pCwMax/1.3:pCwMax);
       const R=Math.max(1,...curPageCols.map(c=>c.list.length));
@@ -252,18 +252,11 @@ function buildLayout(){
 
     charGroups.forEach(grp=>{
       const needCols=grp.colLists.length;
-      if(curPageCols.length+needCols<=cols){
-        // 尚在基準欄數內，直接納入
-      }else if(curPageCols.length+needCols<=maxCols){
-        // 例如基準 7 欄已用 6 欄、下字為高筆畫需 2 欄：彈性擴充至 8 欄而不浪費第 7 欄
-      }else if(curPageCols.length>=minCols){
-        // 例如基準 8 欄已用 7 欄、下字需 2 欄：剛好達最少 7 欄即換頁，維持每頁 7～8 欄滿版
-        flushPage();
-      }else if(curPageCols.length>0){
+      if(curPageCols.length+needCols>cols && curPageCols.length>0){
         flushPage();
       }
       grp.colLists.forEach(list=>{
-        if(curPageCols.length>=maxCols) flushPage();
+        if(curPageCols.length>=cols) flushPage();
         curPageCols.push({ch:grp.ch, list});
       });
     });

@@ -334,14 +334,21 @@
           <span id="stPreviewBadge" class="badge-ok">隨左側選項即時更新</span>
         </div>
         <div id="stPreviewPager" class="preview-pager">
-          <button type="button" id="btnPrevSheet" class="btn" style="padding:3px 8px;font-size:.82rem;white-space:nowrap">◀ 上張</button>
-          <select id="stPreviewSheetSel" style="flex:1;min-width:0;font-size:.82rem;padding:3px 6px"></select>
-          <select id="stPreviewSideSel" style="width:auto;flex:none;font-size:.82rem;padding:3px 6px" title="切換正反雙面並列或單面放大檢視">
-            <option value="both" selected>正反雙面上下並列（大圖清晰・同時看正＋背）</option>
-            <option value="0">僅看正面（放大）</option>
-            <option value="1">僅看背面（放大）</option>
+          <div class="preview-pager-row1">
+            <button type="button" id="btnPrevSheet" class="btn pager-nav-btn">◀ 上張</button>
+            <select id="stPreviewSheetSel"></select>
+            <button type="button" id="btnNextSheet" class="btn pager-nav-btn">下張 ▶</button>
+          </div>
+          <div id="stPreviewSideStack" class="preview-side-stack" role="radiogroup" aria-label="預覽面數切換">
+            <label class="side-opt"><input type="radio" name="stSideRadio" value="0"> <span>📄 僅看正面（第 1 面放大檢視）</span></label>
+            <label class="side-opt"><input type="radio" name="stSideRadio" value="1"> <span>📄 僅看背面（第 2 面放大檢視）</span></label>
+            <label class="side-opt active"><input type="radio" name="stSideRadio" value="both" checked> <span>📑 正反雙面（同時上下完整檢視正＋背面）</span></label>
+          </div>
+          <select id="stPreviewSideSel" style="display:none" aria-hidden="true">
+            <option value="0">僅看正面</option>
+            <option value="1">僅看背面</option>
+            <option value="both" selected>正反雙面上下並列</option>
           </select>
-          <button type="button" id="btnNextSheet" class="btn" style="padding:3px 8px;font-size:.82rem;white-space:nowrap">下張 ▶</button>
         </div>
         <div id="stPreviewViewport" class="preview-viewport">
           <div id="stPreviewScale" class="preview-scale"></div>

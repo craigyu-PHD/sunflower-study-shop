@@ -201,7 +201,7 @@ function zhFormat(html){
     tok.startsWith('<') ? tok : tok
       .replace(/……/g,'…')
       .replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>`<span class="tcy">${VPUNC_MAP[m]||m}</span>`)
-      .replace(/(\d+\.|\b\d{2,3}\b)/g,'<span class="tcy">$1</span>')
+      .replace(/(\d+\.|\d+)/g,'<span class="tcy">$1</span>')
   ).join('');
 }
 
@@ -252,46 +252,59 @@ function rubyHtml(str){
   }).join('');
 }
 
-// 直書國語專用：隱藏式等寬格子（所有格子統一 viewBox 寬 42，主字軸 x=14，注音軸 x=30）
+// 直書國語專用：隱藏式等寬格子（所有格子統一 viewBox 寬 42；有注音時主軸 x=14、注音軸 x=30；無注音時全部置中 x=21）
 const VPUNC_MAP={'「':'﹁','」':'﹂','『':'﹃','』':'﹄','（':'︵','）':'︶','(':'︵',')':'︶','【':'︻','】':'︼','〔':'︹','〕':'︺','《':'︽','》':'︾','〈':'︿','〉':'﹀','…':'⋮','—':'︱','→':'↓','；':'；','：':'：','，':'，','。':'。','、':'、','？':'？','！':'！','／':'／'};
 const toVertPunc=s=>String(s).replace(/……/g,'…').replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>VPUNC_MAP[m]||m);
-function gCellHan(ch,zy){
+function gCellHan(ch,zy,mainX=14){
+  const x = zy ? 14 : mainX;
   const dot=zy&&zy.startsWith('˙'), tone=zy&&/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
   const ph=zy?zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split(''):[];
   const ys=ph.length===1?[14]:(ph.length===2?[9,19]:[7,14,21]);
   const fs=ph.length===1?10.5:(ph.length===2?9.2:7.8);
   if(dot)ys.forEach((_,i)=>{ys[i]+=2;});
-  const chEl=`<text x="14" y="14" dominant-baseline="central" text-anchor="middle" font-size="21.5" font-family="BiauKai,DFKai-SB,標楷體,Kaiti TC,serif" fill="#111">${esc(ch)}</text>`;
+  const chEl=`<text x="${x}" y="14" dominant-baseline="central" text-anchor="middle" font-size="21.5" font-family="BiauKai,DFKai-SB,標楷體,Kaiti TC,serif" fill="#111">${esc(ch)}</text>`;
   const phEls=ph.map((p,i)=>`<text x="30" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#222">${esc(p)}</text>`).join('');
   const dotEl=dot?`<text x="30" y="3.5" dominant-baseline="central" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#222">˙</text>`:'';
   const toneEl=tone?`<text x="38" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#222">${esc(tone)}</text>`:'';
   return {h:28, svg:`<svg class="gcell g-han" viewBox="0 0 42 28" xmlns="http://www.w3.org/2000/svg">${chEl}${dotEl}${phEls}${toneEl}</svg>`};
 }
-function gCellZy(zy){
+function gCellZy(zy,mainX=14){
   const dot=zy.startsWith('˙'), tone=/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
   const ph=zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split('');
   const ys=ph.length===1?[16]:(ph.length===2?[10.5,21.5]:[8,16,24]);
   const fs=ph.length===1?14:(ph.length===2?12:10);
   if(dot)ys.forEach((_,i)=>{ys[i]+=2.2;});
-  const phEls=ph.map((p,i)=>`<text x="14" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#111">${esc(p)}</text>`).join('');
-  const dotEl=dot?`<text x="14" y="4" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">˙</text>`:'';
-  const toneEl=tone?`<text x="26" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="12" font-weight="bold" fill="#111">${esc(tone)}</text>`:'';
+  const phEls=ph.map((p,i)=>`<text x="${mainX}" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#111">${esc(p)}</text>`).join('');
+  const dotEl=dot?`<text x="${mainX}" y="4" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">˙</text>`:'';
+  const toneEl=tone?`<text x="${mainX+12}" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="12" font-weight="bold" fill="#111">${esc(tone)}</text>`:'';
   return {h:32, svg:`<svg class="gcell g-zy" viewBox="0 0 42 32" xmlns="http://www.w3.org/2000/svg">${dotEl}${phEls}${toneEl}</svg>`};
 }
-function gCellPunc(p){
+function gCellPunc(p,mainX=14){
   const vp=VPUNC_MAP[p]||p;
-  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="14" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="BiauKai,DFKai-SB,標楷體,Noto Sans TC,serif" fill="#111">${esc(vp)}</text></svg>`};
+  const isClosePunc=/^[」』）)】〕》〉。，、；：？！…]$/.test(p);
+  return {h:22, isClosePunc, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="BiauKai,DFKai-SB,標楷體,Noto Sans TC,serif" fill="#111">${esc(vp)}</text></svg>`};
 }
-function gCellBlank(h=48){
-  return {h, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><text x="14" y="7" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︵</text><text x="14" y="${h-7}" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︶</text></svg>`};
+function gCellBlank(h=48,mainX=14){
+  return {h, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="7" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︵</text><text x="${mainX}" y="${h-7}" dominant-baseline="central" text-anchor="middle" font-size="17" font-family="Noto Sans TC,serif" fill="#111">︶</text></svg>`};
 }
-function gCellLabel(txt,bold=false,color='#111',fs=15){
-  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="14" y="11" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-weight="${bold?'700':'500'}" font-family="BiauKai,DFKai-SB,Noto Sans TC,serif" fill="${color}">${esc(txt)}</text></svg>`};
+function gCellLabel(txt,bold=false,color='#111',fs=15,mainX=14){
+  const len = String(txt).length;
+  const effFs = len >= 4 ? Math.min(fs, 10.8) : (len === 3 ? Math.min(fs, 12.2) : (len === 2 ? Math.min(fs, 14) : fs));
+  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="${effFs}" font-weight="${bold?'700':'600'}" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="${color}">${esc(txt)}</text></svg>`};
+}
+function gCellScore(pts,mainX=14){
+  // 垂直堆疊置中配分標籤（緊黏前字，絕不獨立跳至次欄）
+  return {h:46, isScore:true, svg:`<svg class="gcell" style="height:2.09em" viewBox="0 0 42 46" xmlns="http://www.w3.org/2000/svg">
+    <text x="${mainX}" y="7" dominant-baseline="central" text-anchor="middle" font-size="12" font-family="Noto Sans TC,serif" fill="#555">︵</text>
+    <text x="${mainX}" y="19" dominant-baseline="central" text-anchor="middle" font-size="12.5" font-weight="700" font-family="Noto Sans TC,sans-serif" fill="#444">${esc(pts)}</text>
+    <text x="${mainX}" y="31" dominant-baseline="central" text-anchor="middle" font-size="12" font-family="BiauKai,DFKai-SB,標楷體,serif" fill="#444">分</text>
+    <text x="${mainX}" y="41" dominant-baseline="central" text-anchor="middle" font-size="12" font-family="Noto Sans TC,serif" fill="#555">︶</text>
+  </svg>`};
 }
 function gCellSpace(h=22){
   return {h, svg:`<svg class="gcell" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"></svg>`};
 }
-function tokenizeZhCells(str, useZy){
+function tokenizeZhCells(str, useZy, mainX=14){
   const cells=[];
   const norm=String(str).replace(/……/g,'…').replace(/[（(][\s　]*[）)]/g,'@@BLANK@@');
   const re=/(@@BLANK@@|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?|\d+\.|\d+|\n|[^\d\n@ㄅ-ㄩ˙ˊˇˋ]+)/g;
@@ -299,15 +312,15 @@ function tokenizeZhCells(str, useZy){
   while((m=re.exec(norm))!==null){
     const tk=m[0];
     if(tk==='\n'){cells.push({newline:true});continue;}
-    if(tk==='@@BLANK@@'){cells.push(gCellBlank(46));continue;}
-    if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(tk)){cells.push(gCellZy(tk));continue;}
-    if(/^\d+\.?$/.test(tk)){cells.push(gCellLabel(tk,true,'#111',15));continue;}
+    if(tk==='@@BLANK@@'){cells.push(gCellBlank(46,mainX));continue;}
+    if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(tk)){cells.push(gCellZy(tk,mainX));continue;}
+    if(/^\d+\.?$/.test(tk)){cells.push(gCellLabel(tk,true,'#111',14.5,mainX));continue;}
     // 一般國字與標點片段：透過破音字詞庫覆寫解析
     const resolved=resolveTextZhuyin(tk);
     for(const {ch,zy} of resolved){
       if(ch===' '||ch==='　')continue;
-      if(zy){cells.push(gCellHan(ch,useZy?zy:''));}
-      else{cells.push(gCellPunc(ch));}
+      if(zy){cells.push(gCellHan(ch,useZy?zy:'',mainX));}
+      else{cells.push(gCellPunc(ch,mainX));}
     }
   }
   return cells;
@@ -2790,10 +2803,13 @@ function generateExamQuestions(cfg){
         if(!item){
           for(let sIdx=0;sIdx<2&&!item;sIdx++){
             const semTry = sIdx===0 ? cfg.sem : (cfg.sem==='上'?'下':'上');
-            for(let uTry=0;uTry<4&&!item;uTry++){
-              for(let vTry=0;vTry<5&&!item;vTry++){
-                const cand=genMathForUnit(g,semTry,uTry,effD,kindKey,vTry+randSeed);
-                if(!isGlobalDup(cand,true)){item=cand;break;}
+            for(let uTry=0;uTry<10&&!item;uTry++){
+              for(const dTry of [effD, 'easy', 'mid', 'hard']){
+                for(let vTry=0;vTry<8&&!item;vTry++){
+                  const cand=genMathForUnit(g,semTry,uTry,dTry,kindKey,vTry+randSeed);
+                  if(!isGlobalDup(cand,true)){item=cand;break;}
+                }
+                if(item) break;
               }
             }
           }
@@ -2801,6 +2817,18 @@ function generateExamQuestions(cfg){
         if(!item && mathStaticPool.length){
           const stCand=mathStaticPool.find(r=>!isGlobalDup(r,true));
           if(stCand) item={...stCand};
+        }
+        if(!item){
+          const adjGs=[g>1?g-1:g+1, g<6?g+1:g-1].filter(x=>x!==g);
+          for(const ag of adjGs){
+            for(let uTry=0;uTry<10&&!item;uTry++){
+              for(let vTry=0;vTry<6&&!item;vTry++){
+                const cand=genMathForUnit(ag,cfg.sem,uTry,effD,kindKey,vTry+randSeed);
+                if(!isGlobalDup(cand,true)){item=cand;break;}
+              }
+            }
+            if(item) break;
+          }
         }
         // 最終保底（所有題型與變化庫皆完全窮盡時）：至少題幹完全不重
         if(!item){
@@ -3042,7 +3070,16 @@ function renderExam(){
     const brk=zhMode?'︵　︶':'(　)';
     const noRaw=zhMode?`<span class="tcy">${b.num}.</span>`:`${b.num}.`;
     const noText=(kind==='mc'||kind==='tf')?`${noRaw} ${brk}`:noRaw;
-    const qHtml=`${rubyHtml(q.q)}<span class="qpts">（${q.pts}分）</span>`;
+    const rawQ = String(q.q || '');
+    const ptsTag = `<span class="qpts">（${q.pts}分）</span>`;
+    let qHtml = '';
+    if(rawQ.length >= 2){
+      const headPart = rawQ.slice(0, -1);
+      const tailChar = rawQ.slice(-1);
+      qHtml = `${rubyHtml(headPart)}<span class="qend-glue">${rubyHtml(tailChar)}${ptsTag}</span>`;
+    } else {
+      qHtml = `<span class="qend-glue">${rubyHtml(rawQ)}${ptsTag}</span>`;
+    }
     let body=`<div class="qt">${qHtml}</div>`;
     if(q.svg) body+=`<div class="ex-svg">${q.svg}</div>`;
     if(kind==='mc'){
@@ -3061,6 +3098,7 @@ function renderExam(){
   if(isZh){
     // 國語科：改採真實國小考卷「上下雙排直書」欄流（每頁分為上排＋下排，單題不留半欄空白、可排更多題！）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
+    const mainX=useZy?14:21;
     const zhFs=($('exTwoPage').checked&&sections.reduce((a,x)=>a+x.qs.length,0)>=22)?12.5:13.2;
     const tierMaxH = 342;
     const maxColUnits=Math.floor((tierMaxH/zhFs)*22*0.92); // 單排內（約342px高）可容納之 SVG 高度單位
@@ -3074,6 +3112,16 @@ function renderExam(){
       startCol(false);
       cells.forEach(c=>{
         if(c.newline){if(cur.length)cols.push(cur);startCol(true);return;}
+        if(c.isScore || c.isClosePunc){
+          // 配分標籤與句尾閉括號／標點絕不單獨開出新欄：微超則緊貼欄底，否則帶上最後一個字一起轉至次欄
+          if(h+c.h <= maxColUnits+28 || cur.length <= (indentUnits>0?2:1)){
+            cur.push(c);h+=c.h;return;
+          }
+          const prev = cur.pop();
+          cols.push(cur);startCol(true);
+          if(prev){cur.push(prev);h+=prev.h;}
+          cur.push(c);h+=c.h;return;
+        }
         if(h+c.h>maxColUnits&&cur.length>(indentUnits>0?1:0)){
           cols.push(cur);startCol(true);
         }
@@ -3086,24 +3134,24 @@ function renderExam(){
     const buildZhQ=b=>{
       const kind=b.kind, q=b.item;
       const wrap=document.createElement('div');wrap.className='ex-zh-q';
-      const headCells=[gCellLabel(`${b.num}.`,true,'#111',15)];
+      const headCells=[gCellLabel(`${b.num}.`,true,'#111',15,mainX)];
       if(kind==='mc'||kind==='tf'){
-        headCells.push(gCellBlank(42));
+        headCells.push(gCellBlank(42,mainX));
       }
       const indentH=headCells.reduce((a,c)=>a+c.h,0);
 
       if(kind==='match'){
-        const stemCells=[...headCells,...tokenizeZhCells(q.q,useZy),gCellLabel(`(${q.pts}分)`,true,'#444',13.5)];
+        const stemCells=[...headCells,...tokenizeZhCells(q.q,useZy,mainX),gCellScore(q.pts,mainX)];
         const allCols=[...packCols(stemCells,indentH)];
         q.pairs.forEach((pr,i)=>{
           const pCells=[
             gCellSpace(12),
-            gCellLabel(`${i+1}.`,true,'#111',14),
-            gCellBlank(36),
-            ...tokenizeZhCells(pr[0],useZy),
+            gCellLabel(`${i+1}.`,true,'#111',14,mainX),
+            gCellBlank(36,mainX),
+            ...tokenizeZhCells(pr[0],useZy,mainX),
             gCellSpace(14),
-            gCellLabel(matchLabels[i],true,'#7a3b00',15),
-            ...tokenizeZhCells(q.right[i],useZy)
+            gCellLabel(matchLabels[i],true,'#7a3b00',15,mainX),
+            ...tokenizeZhCells(q.right[i],useZy,mainX)
           ];
           allCols.push(pCells);
         });
@@ -3115,14 +3163,14 @@ function renderExam(){
         return {el:wrap, colCount:allCols.length};
       }
 
-      const bodyCells=[...headCells,...tokenizeZhCells(q.q,useZy),gCellLabel(`(${q.pts}分)`,true,'#444',13.5)];
+      const bodyCells=[...headCells,...tokenizeZhCells(q.q,useZy,mainX),gCellScore(q.pts,mainX)];
       const qCols=packCols(bodyCells, indentH);
 
       if(kind==='mc'){
         const optCells=[gCellSpace(indentH)];
         q.opts.forEach((o,i)=>{
-          optCells.push(gCellLabel(optLabels[i],true,'#111',15));
-          optCells.push(...tokenizeZhCells(o,useZy));
+          optCells.push(gCellLabel(optLabels[i],true,'#111',15,mainX));
+          optCells.push(...tokenizeZhCells(o,useZy,mainX));
           if(i<q.opts.length-1)optCells.push(gCellSpace(10));
         });
         qCols.push(...packCols(optCells,indentH));
@@ -3161,18 +3209,18 @@ function renderExam(){
     const mw=document.createElement('div');mw.className='ex-zh-tier';
     mw.style.setProperty('--ex-fs',zhFs+'px');
     const hdM=document.createElement('div');hdM.className='ex-zh-hd';
-    hdM.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
-      <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　　</span></div>`);
+    hdM.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期 國語評量卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
+      <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　</span></div>`);
     mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
-    const maxW=mw.clientWidth-12;
-    const hdW=hdM.offsetWidth+12;
+    const maxW=mw.clientWidth-26;
+    const hdW=hdM.getBoundingClientRect().width+16;
 
     flat.forEach(b=>{
       if(b.type==='sec'){
         const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));
-        mw.appendChild(d); b.pxW=d.offsetWidth+10;
+        mw.appendChild(d); b.pxW=d.getBoundingClientRect().width+12;
       }else{
-        mw.appendChild(b.el); b.pxW=b.el.offsetWidth+8;
+        mw.appendChild(b.el); b.pxW=b.el.getBoundingClientRect().width+12;
       }
     });
     document.body.removeChild(meas);
@@ -3182,7 +3230,7 @@ function renderExam(){
     const tierUsedW=[];
     flat.forEach((b,bi)=>{
       const nextW=(b.type==='sec'&&flat[bi+1])?flat[bi+1].pxW:0;
-      if(wUsed+b.pxW+nextW > maxW-8 && cur.length){
+      if(wUsed+b.pxW+nextW > maxW && cur.length){
         tiers.push(cur); tierUsedW.push(wUsed);
         cur=[]; wUsed=0;
       }
@@ -3218,7 +3266,7 @@ function renderExam(){
       const buildTierEl=(items, usedW, isFirstTop)=>{
         const tierEl=document.createElement('div');
         tierEl.className='ex-zh-tier '+(isFirstTop?'top':'bot');
-        const spareW=Math.max(0,(maxW-20)-usedW);
+        const spareW=Math.max(0,(maxW-18)-usedW);
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
         if(spareW>24 && items.length>=2){
@@ -3233,8 +3281,8 @@ function renderExam(){
         }
         if(isFirstTop){
           const hd=document.createElement('div');hd.className='ex-zh-hd';
-          hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
-            <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　　</span></div>`);
+          hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期 國語評量卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
+            <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　</span></div>`);
           tierEl.appendChild(hd);
         }
         items.forEach(b=>{
@@ -3730,15 +3778,22 @@ function fillSubjects(){
 function fillUnits(){
   const g=$('exGrade').value, s=$('exSubj').value, sem=$('exSem').value, pub=$('exPub').value;
   let list=((CURRICULUM[g]||{})[s]||{})[sem]||[];
+  let twMap=null;
   if(s==='國語'&&window.TW){
     const twKey=sem==='上'?'115上':'114下';
     const pKey=pub==='std'?'n':pub;
     const twLs=((TW[twKey]||{})[pKey]||[]).filter(x=>x.g==+g);
     if(twLs.length){
+      twMap=new Map(twLs.map(x=>[x.t,x]));
       list=twLs.map(x=>({name:x.t,topics:[`生字 ${x.c.length} 字`]}));
     }
   }
-  $('exUnits').innerHTML=list.map((u,idx)=>`<label class="uchk" title="${esc(u.name)}（${esc(u.topics.join('、'))}）"><input type="checkbox" data-uidx="${idx}" value="${esc(u.name)}" checked><span class="uchk-main"><span class="uchk-name">${esc(u.name)}</span><small>${esc(u.topics.join('、'))}</small></span></label>`).join('');
+  $('exUnits').innerHTML=list.map((u,idx)=>{
+    const tw=twMap?twMap.get(u.name):null;
+    const sChars=tw?(tw.c.filter(c=>c[1]==='s').map(c=>c[0]).join('')||tw.c.map(c=>c[0]).join('')):'';
+    const rChars=tw?tw.c.filter(c=>c[1]==='r').map(c=>c[0]).join(''):'';
+    return `<label class="uchk" data-pop-title="${esc(u.name)}" data-pop-chars="${esc(sChars)}" data-pop-rchars="${esc(rChars)}" data-pop-topics="${esc((u.topics||[]).join('、'))}"><input type="checkbox" data-uidx="${idx}" value="${esc(u.name)}" checked><span class="uchk-main"><span class="uchk-name">${esc(u.name)}</span><small>${esc(u.topics.join('、'))}</small></span></label>`;
+  }).join('');
   applyTermSelection();
   document.querySelectorAll('#exUnits input').forEach(chk=>{
     chk.onchange=()=>{
@@ -3746,6 +3801,7 @@ function fillUnits(){
       generateFromUI();
     };
   });
+  if(window.bindLessonHoverPopover) window.bindLessonHoverPopover($('exUnits'));
 }
 function clampInput(id){
   const e=$(id), mx=+e.max||20, mn=+e.min||0;
