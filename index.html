@@ -337,7 +337,7 @@
           <button type="button" id="btnPrevSheet" class="btn" style="padding:3px 8px;font-size:.82rem;white-space:nowrap">◀ 上張</button>
           <select id="stPreviewSheetSel" style="flex:1;min-width:0;font-size:.82rem;padding:3px 6px"></select>
           <select id="stPreviewSideSel" style="width:auto;flex:none;font-size:.82rem;padding:3px 6px" title="切換正反雙面並列或單面放大檢視">
-            <option value="both" selected>正反雙面（同時看正＋背）</option>
+            <option value="both" selected>正反雙面上下並列（大圖清晰・同時看正＋背）</option>
             <option value="0">僅看正面（放大）</option>
             <option value="1">僅看背面（放大）</option>
           </select>
@@ -535,7 +535,7 @@
     <label class="chk"><input type="checkbox" id="chkCalc" checked> 計算／實作 <input type="number" id="numCalc" value="3" min="0" max="8"> <small>上限8</small></label>
     <label class="chk"><input type="checkbox" id="chkWord" checked> 應用／素養 <input type="number" id="numWord" value="2" min="0" max="6"> <small>上限6</small></label>
   </div>
-  <div id="exCapInfo" class="hint" style="margin-top:6px"></div>
+  <div id="exMsg" class="msg"></div>
 </section>
 
 <section class="card noprint">
@@ -546,7 +546,7 @@
     <button id="btnExPrint" class="btn big" type="button">🖨️ 直接列印預覽</button>
   </div>
   <div id="exCapInfo2" class="cap-banner"></div>
-  <div id="exMsg" class="msg"></div>
+  <div id="exMsg2" class="msg"></div>
   <p class="hint">系統會依題數自動微調字級與間距，讓試卷工整填滿兩頁（正反一張），解答與解析另置第三頁。</p>
 </section>
 

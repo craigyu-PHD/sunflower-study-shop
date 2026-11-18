@@ -2536,31 +2536,54 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
       const c3=pool[(vIdx+2+randSeed)%nP];
       const c4=pool[(vIdx+3+randSeed)%nP];
       const ch=c1[0], zy=c1[2], rad=c1[3]||'口', st=c1[4]||8, lsName=c1.lesson||'本課';
+      const isR = c1[1]==='r';
+      const kindTag = isR ? '認讀' : '生字';
       if(kindKey==='mc'){
-        if(vIdx%3===0){
+        const mMod = vIdx % 5;
+        if(mMod===0){
           const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
-          return {q:`（${lsName}）「${ch}」這個字的正確注音是哪一個？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}，屬${rad}部。`};
+          return {q:`（${lsName}）「${ch}」這個${kindTag}字的正確注音是哪一個？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}，屬${rad}部。`};
         }
-        if(vIdx%3===1){
+        if(mMod===1){
+          const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[0]);
+          return {q:`（${lsName}）注音「${zy}」在課文裡對應的正確國字是哪一個？`,opts:uniqueOpts(ch,others.length>=3?others:['天','地','人']),a:ch,exp:`${zy} 寫作「${ch}」（${rad}部）。`};
+        }
+        if(mMod===2){
           const rDist=shuffle([...new Set(pool.map(x=>x[3]).filter(x=>x&&x!==rad)),'水','木','手','心']).slice(0,3);
           return {q:`（${lsName}）國字「${ch}」的部首是哪一個？`,opts:uniqueOpts(`${rad}部`,rDist.map(x=>`${x}部`)),a:`${rad}部`,exp:`「${ch}」屬${rad}部，共 ${st} 畫。`};
         }
-        return {q:`（${lsName}）國字「${ch}」的總筆畫數是多少畫？`,opts:uniqueOpts(`${st} 畫`,[`${+st+1} 畫`,`${Math.max(1,+st-1)} 畫`,`${+st+2} 畫`]),a:`${st} 畫`,exp:`「${ch}」共 ${st} 畫。`};
+        if(mMod===3){
+          return {q:`（${lsName}）國字「${ch}」的總筆畫數是多少畫？`,opts:uniqueOpts(`${st} 畫`,[`${+st+1} 畫`,`${Math.max(1,+st-1)} 畫`,`${+st+2} 畫`]),a:`${st} 畫`,exp:`「${ch}」共 ${st} 畫。`};
+        }
+        const sameRad = pool.find(x=>x[0]!==ch&&x[3]===rad);
+        const diffRads = shuffle(pool.filter(x=>x[0]!==ch&&x[3]!==rad)).slice(0,3).map(x=>x[0]);
+        if(sameRad && diffRads.length>=3){
+          return {q:`（${lsName}）下列哪一個字和「${ch}」屬於相同部首（${rad}部）？`,opts:uniqueOpts(sameRad[0],diffRads),a:sameRad[0],exp:`「${ch}」與「${sameRad[0]}」皆為${rad}部。`};
+        }
+        const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
+        return {q:`（${lsName}）詞句中的「${ch}」讀音為何？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}。`};
       }
       if(kindKey==='tf'){
-        if(vIdx%2===0){
+        const tMod = vIdx % 3;
+        if(tMod===0){
           const fakeZy=isTrue?zy:c2[2];
-          return {q:`（${lsName}）國字「${ch}」的讀音是「${fakeZy}」。`,a:isTrue?'○':'✕',exp:`「${ch}」正確讀音為 ${zy}。`};
+          return {q:`（${lsName}）國字「${ch}」的正確讀音是「${fakeZy}」。`,a:isTrue?'○':'✕',exp:`「${ch}」正確讀音為 ${zy}。`};
+        }
+        if(tMod===1){
+          const fakeRad=isTrue?rad:(c2[3]!==rad?c2[3]:'言');
+          return {q:`（${lsName}）檢查字形：「${ch}」和部首「${fakeRad}部」配對正確。`,a:isTrue?'○':'✕',exp:`「${ch}」屬於${rad}部。`};
         }
         const fakeSt=isTrue?st:(+st+2);
         return {q:`（${lsName}）國字「${ch}」屬於「${rad}部」，總筆畫共 ${fakeSt} 畫。`,a:isTrue?'○':'✕',exp:`「${ch}」屬${rad}部，共 ${st} 畫。`};
       }
       if(kindKey==='fill'){
-        if(vIdx%2===0) return {q:`（${lsName}）寫出國字注音與總筆畫：「${ch}」讀作（　　），共（　）畫。`,a:`${zy}；${st}`};
-        return {q:`（${lsName}）看注音寫國字與部首：「${zy}」寫作（　），是（　）部。`,a:`${ch}；${rad}`};
+        const fMod = vIdx % 3;
+        if(fMod===0) return {q:`（${lsName}）寫出國字注音與總筆畫：「${ch}」讀作（　　），共（　）畫。`,a:`${zy}；${st}`};
+        if(fMod===1) return {q:`（${lsName}）看注音寫國字與部首：「${zy}」寫作（　），是（　）部。`,a:`${ch}；${rad}`};
+        return {q:`（${lsName}）${kindTag}字注音雙拼：「${c1[0]}」（　　）、「${c2[0]}」（　　）。`,a:`${c1[2]}；${c2[2]}`};
       }
       if(kindKey==='match'){
-        return {q:`${lsName}生字與注音部首配對`,pairs:[
+        return {q:`${lsName}生字與認讀字綜合配對`,pairs:[
           [`「${c1[0]}」的注音`,c1[2]],
           [`「${c2[0]}」的部首`,`${c2[3]||'口'}部`],
           [`「${c3[0]}」的注音`,c3[2]],
@@ -2568,10 +2591,11 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
         ]};
       }
       if(kindKey==='calc'){
-        return {q:`（${lsName}）造詞與造句練習：請用本課生字「${ch}」（${zy}）先造一個語詞，再寫出一個完整的句子。`,a:`例：使用「${ch}」造詞並完成通順句子。`};
+        if(vIdx%2===0) return {q:`（${lsName}）一字多詞練習：請用「${ch}」（${zy}）造出兩個不同的完整語詞。`,a:`例：依「${ch}」字義寫出兩個正確語詞。`};
+        return {q:`（${lsName}）造詞與造句練習：請用本課字「${ch}」（${zy}）先造一個語詞，再寫出一個完整的句子。`,a:`例：使用「${ch}」造詞並完成通順句子。`};
       }
       if(kindKey==='word'){
-        return {q:`【${lsName}閱讀與字詞應用】小華在複習〈${lsName}〉時，整理了「${c1[0]}（${c1[2]}）」、「${c2[0]}（${c2[2]}）」和「${c3[0]}（${c3[2]}）」三個重點生字。問題：(1)「${c1[0]}」是什麼部首？共幾畫？ (2)請挑其中兩個生字各造一個語詞。`,a:`(1) ${rad}部，共 ${st} 畫。(2) 依本課生字正確造詞。`};
+        return {q:`【${lsName}字詞應用】在〈${lsName}〉中我們學到「${c1[0]}（${c1[2]}）」、「${c2[0]}（${c2[2]}）」和「${c3[0]}（${c3[2]}）」。問題：(1)「${c1[0]}」是什麼部首、共幾畫？ (2)請挑選其中一個字寫出語詞並造句。`,a:`(1) ${rad}部，共 ${st} 畫。(2) 依該字造詞與完整句子。`};
       }
     }
   }
@@ -3035,10 +3059,11 @@ function renderExam(){
   };
 
   if(isZh){
-    // 國語科：一字一格、一符一格、一空一格之隱藏式格子欄流（100% 零重疊）
+    // 國語科：改採真實國小考卷「上下雙排直書」欄流（每頁分為上排＋下排，單題不留半欄空白、可排更多題！）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
-    const zhFs=($('exTwoPage').checked&&sections.reduce((a,x)=>a+x.qs.length,0)>=18)?13:14;
-    const maxColUnits=Math.floor((736/zhFs)*22*0.93); // 每欄可容納之 SVG 高度單位
+    const zhFs=($('exTwoPage').checked&&sections.reduce((a,x)=>a+x.qs.length,0)>=22)?12.5:13.2;
+    const tierMaxH = 342;
+    const maxColUnits=Math.floor((tierMaxH/zhFs)*22*0.92); // 單排內（約342px高）可容納之 SVG 高度單位
 
     const packCols=(cells, indentUnits=0)=>{
       const cols=[]; let cur=[], h=0;
@@ -3068,16 +3093,15 @@ function renderExam(){
       const indentH=headCells.reduce((a,c)=>a+c.h,0);
 
       if(kind==='match'){
-        // 配對題：題幹一欄 + 每一配對獨立一欄（上方：1. ︵　︶ 題目；下方：ㄅ 選項）
         const stemCells=[...headCells,...tokenizeZhCells(q.q,useZy),gCellLabel(`(${q.pts}分)`,true,'#444',13.5)];
         const allCols=[...packCols(stemCells,indentH)];
         q.pairs.forEach((pr,i)=>{
           const pCells=[
-            gCellSpace(22),
+            gCellSpace(12),
             gCellLabel(`${i+1}.`,true,'#111',14),
-            gCellBlank(40),
+            gCellBlank(36),
             ...tokenizeZhCells(pr[0],useZy),
-            gCellSpace(26),
+            gCellSpace(14),
             gCellLabel(matchLabels[i],true,'#7a3b00',15),
             ...tokenizeZhCells(q.right[i],useZy)
           ];
@@ -3095,12 +3119,11 @@ function renderExam(){
       const qCols=packCols(bodyCells, indentH);
 
       if(kind==='mc'){
-        // 選項欄：接在題幹後或新欄整齊排列
         const optCells=[gCellSpace(indentH)];
         q.opts.forEach((o,i)=>{
           optCells.push(gCellLabel(optLabels[i],true,'#111',15));
           optCells.push(...tokenizeZhCells(o,useZy));
-          if(i<q.opts.length-1)optCells.push(gCellSpace(14));
+          if(i<q.opts.length-1)optCells.push(gCellSpace(10));
         });
         qCols.push(...packCols(optCells,indentH));
       }
@@ -3130,81 +3153,104 @@ function renderExam(){
       });
     });
 
-    // 以隱藏之真實 A4 橫式容器量測每一大題與每一題之實際像素寬度，確保第 1 頁絕不超出左界被切掉
+    // 以隱藏之真實「上下雙排」單排容器量測每一大題與每一題實際像素寬度
     const meas=document.createElement('div');
     meas.className='a4 exam-a4 ex-land';
     meas.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden';
-    const mw=document.createElement('div');mw.className='ex-zh-wrap';
+    const mwOuter=document.createElement('div');mwOuter.className='ex-zh-tiers';
+    const mw=document.createElement('div');mw.className='ex-zh-tier';
     mw.style.setProperty('--ex-fs',zhFs+'px');
     const hdM=document.createElement('div');hdM.className='ex-zh-hd';
     hdM.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
-      <div class="ex-zh-info"><span>班級：　　</span><span>姓名：　　　</span><span>座號：　　</span><span>得分：　　　　</span></div>`);
-    mw.appendChild(hdM);meas.appendChild(mw);document.body.appendChild(meas);
-    const maxW=mw.clientWidth-52; // 扣除左右 padding 26*2
+      <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　　</span></div>`);
+    mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
+    const maxW=mw.clientWidth-12;
     const hdW=hdM.offsetWidth+12;
 
     flat.forEach(b=>{
       if(b.type==='sec'){
         const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));
-        mw.appendChild(d); b.pxW=d.offsetWidth+12;
+        mw.appendChild(d); b.pxW=d.offsetWidth+10;
       }else{
-        mw.appendChild(b.el); b.pxW=b.el.offsetWidth+10;
+        mw.appendChild(b.el); b.pxW=b.el.offsetWidth+8;
       }
     });
     document.body.removeChild(meas);
 
-    const zhPages=[]; let cur=[], wUsed=hdW, pIdx=0;
-    const zhPageUsedW=[];
+    // 依「第1頁上排 → 第1頁下排 → 第2頁上排 → 第2頁下排...」順序拆排
+    const tiers=[]; let cur=[], wUsed=hdW;
+    const tierUsedW=[];
     flat.forEach((b,bi)=>{
       const nextW=(b.type==='sec'&&flat[bi+1])?flat[bi+1].pxW:0;
       if(wUsed+b.pxW+nextW > maxW-8 && cur.length){
-        zhPages.push(cur); zhPageUsedW.push(wUsed);
-        cur=[]; wUsed=0; pIdx++;
+        tiers.push(cur); tierUsedW.push(wUsed);
+        cur=[]; wUsed=0;
       }
       cur.push(b);wUsed+=b.pxW;
     });
-    if(cur.length){zhPages.push(cur); zhPageUsedW.push(wUsed);}
+    if(cur.length){tiers.push(cur); tierUsedW.push(wUsed);}
+
+    // 將雙排組成 A4 頁（每頁 2 排：上排＋下排）
+    const zhPages=[];
+    const zhPageFills=[];
+    for(let tIdx=0; tIdx<tiers.length; tIdx+=2){
+      const topItems = tiers[tIdx] || [];
+      const botItems = tiers[tIdx+1] || [];
+      const topW = tierUsedW[tIdx] || 0;
+      const botW = tierUsedW[tIdx+1] || 0;
+      zhPages.push({top:topItems, bot:botItems, topW, botW});
+      zhPageFills.push(maxW>0 ? Math.min(1, (topW+botW)/(2*maxW)) : 1);
+    }
     curExam._zhPages=zhPages;
-    const zhLastRatio = maxW>0 ? Math.min(1, (zhPageUsedW[zhPageUsedW.length-1]||0)/maxW) : 1;
-    curExam._lastPageFill = zhLastRatio;
-    curExam._pageFills = zhPageUsedW.map(w=>Math.min(1, w/Math.max(1,maxW)));
+    curExam._lastPageFill = zhPageFills[zhPageFills.length-1] || 0;
+    curExam._pageFills = zhPageFills;
     const totZ=zhPages.length+(meta.withAns?1:0);
     updateCapInfo(zhPages.length);
 
-    zhPages.forEach((items,p)=>{
+    zhPages.forEach((pgObj,p)=>{
       const cap=document.createElement('div');cap.className='pcap';
-      cap.textContent=`A4 橫式直書（由右至左）　第 ${p+1} / ${totZ} 頁`;box.appendChild(cap);
+      cap.textContent=`A4 橫式上下雙排直書（由右至左）　第 ${p+1} / ${totZ} 頁`;box.appendChild(cap);
       const pg=document.createElement('div');pg.className='a4 exam-a4 ex-land';
       pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-      const inner=document.createElement('div');inner.className='ex-zh-wrap';
-      inner.style.setProperty('--ex-fs',zhFs+'px');
-      // 第一優先：依本頁剩餘空間均勻放寬直欄間距與實作格子寬度，維持舒適閱讀同時填滿整頁（不留大塊空白）
-      const usedW = zhPageUsedW[p] || 0;
-      const spareW = Math.max(0, (maxW - 28) - usedW);
-      const qCountOnPg = Math.max(1, items.filter(b=>b.type==='q').length);
-      const itemCnt = Math.max(1, items.length + (p===0?1:0));
-      if(spareW > 30 && items.length >= 2){
-        const qGap = Math.min(20, 3 + (spareW * 0.48) / qCountOnPg);
-        const colGap = Math.min(22, 4 + (spareW * 0.40) / itemCnt);
-        const hasBox = items.some(b=>b.kind==='calc'||b.kind==='word');
-        inner.style.setProperty('--zh-col-gap', colGap.toFixed(1)+'px');
-        inner.style.setProperty('--zh-q-gap', qGap.toFixed(1)+'px');
-        if(hasBox && spareW > 70){
-          inner.style.setProperty('--zh-box-calc', '2.9em');
-          inner.style.setProperty('--zh-box-word', '4.3em');
+      const outer=document.createElement('div');outer.className='ex-zh-tiers';
+      outer.style.setProperty('--ex-fs',zhFs+'px');
+
+      const buildTierEl=(items, usedW, isFirstTop)=>{
+        const tierEl=document.createElement('div');
+        tierEl.className='ex-zh-tier '+(isFirstTop?'top':'bot');
+        const spareW=Math.max(0,(maxW-20)-usedW);
+        const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
+        const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
+        if(spareW>24 && items.length>=2){
+          const qGap=Math.min(22, 3+(spareW*0.48)/qCount);
+          const colGap=Math.min(22, 4+(spareW*0.40)/itemCnt);
+          tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
+          tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
+          if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>60){
+            tierEl.style.setProperty('--zh-box-calc','2.8em');
+            tierEl.style.setProperty('--zh-box-word','4.0em');
+          }
         }
-      }
-      if(p===0){
-        const hd=document.createElement('div');hd.className='ex-zh-hd';
-        hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
-          <div class="ex-zh-info"><span>班級：　　</span><span>姓名：　　　</span><span>座號：　　</span><span>得分：　　　　</span></div>`);
-        inner.appendChild(hd);
-      }
-      items.forEach(b=>{
-        if(b.type==='sec'){const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));inner.appendChild(d);}
-        else inner.appendChild(b.el);
-      });
-      pg.appendChild(inner);
+        if(isFirstTop){
+          const hd=document.createElement('div');hd.className='ex-zh-hd';
+          hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語評量測驗卷（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>
+            <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　　</span></div>`);
+          tierEl.appendChild(hd);
+        }
+        items.forEach(b=>{
+          if(b.type==='sec'){const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));tierEl.appendChild(d);}
+          else tierEl.appendChild(b.el);
+        });
+        return tierEl;
+      };
+
+      const topEl=buildTierEl(pgObj.top, pgObj.topW, p===0);
+      topEl.classList.add('tier-top');
+      const botEl=buildTierEl(pgObj.bot, pgObj.botW, false);
+      botEl.classList.add('tier-bot');
+      outer.appendChild(topEl);
+      outer.appendChild(botEl);
+      pg.appendChild(outer);
       if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
       const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
       pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${p+1} / ${totZ} 頁`}));
@@ -3272,8 +3318,9 @@ function renderExam(){
     }
     curExam._measured={D:chosenD,pages};
     const vFills = pages.map((cols,idx)=>{
-      const maxColH = Math.max(...cols.map(col=>col.reduce((a,b)=>a+b.h,0)), 0);
-      return Math.min(1, maxColH / Math.max(1, chosenCapHs[idx]||1054));
+      const capTotal = Math.max(1, chosenCapHs[idx]||1054) * cols.length;
+      const sumColH = cols.reduce((s,col)=>s+col.reduce((a,b)=>a+b.h,0), 0);
+      return Math.min(1, sumColH / capTotal);
     });
     curExam._pageFills = vFills;
     curExam._lastPageFill = vFills[vFills.length-1] || 0;
@@ -3291,18 +3338,18 @@ function renderExam(){
       const pageMaxH = chosenCapHs[pgIdx] || 1054;
       const colHeights = cols.map(col=>col.reduce((a,b)=>a+b.h,0));
       const maxUsedH = Math.max(...colHeights, 0);
-      const spareH = Math.max(0, pageMaxH * 0.93 - maxUsedH);
+      const spareH = Math.max(0, pageMaxH * 0.94 - maxUsedH);
       const maxColBlocks = Math.max(...cols.map(col=>col.filter(b=>b.type==='q').length), 1);
       let effLh = chosenD.lh, effGap = chosenD.gap, effCalcH = chosenD.calcH, effWordH = chosenD.wordH;
-      if(spareH > 35 && maxUsedH > 120){
+      if(spareH > 20 && maxUsedH > 120){
         const hasCalc = cols.some(col=>col.some(b=>b.kind==='calc'));
         const hasWord = cols.some(col=>col.some(b=>b.kind==='word'));
         const ratioFill = maxUsedH / Math.max(1, pageMaxH);
-        const lhBoost = ratioFill < 0.78 ? Math.min(0.22, (0.86 - ratioFill) * 0.75) : 0.06;
-        effLh = Math.min(1.76, +(chosenD.lh + lhBoost).toFixed(2));
-        effGap = Math.min(26, Math.round(chosenD.gap + Math.min(16, (spareH * 0.48) / maxColBlocks)));
-        if(hasCalc) effCalcH = Math.min(62, Math.round(chosenD.calcH + Math.min(22, spareH * 0.16)));
-        if(hasWord) effWordH = Math.min(82, Math.round(chosenD.wordH + Math.min(26, spareH * 0.22)));
+        const lhBoost = ratioFill < 0.84 ? Math.min(0.28, (0.90 - ratioFill) * 0.85) : 0.08;
+        effLh = Math.min(1.82, +(chosenD.lh + lhBoost).toFixed(2));
+        effGap = Math.min(36, Math.round(chosenD.gap + Math.min(24, (spareH * 0.56) / maxColBlocks)));
+        if(hasCalc) effCalcH = Math.min(78, Math.round(chosenD.calcH + Math.min(32, spareH * 0.22)));
+        if(hasWord) effWordH = Math.min(98, Math.round(chosenD.wordH + Math.min(38, spareH * 0.28)));
       }
       inner.style.setProperty('--ex-fs',chosenD.fs+'px');inner.style.setProperty('--ex-lh',effLh);
       inner.style.setProperty('--ex-gap',effGap+'px');
@@ -3691,7 +3738,7 @@ function fillUnits(){
       list=twLs.map(x=>({name:x.t,topics:[`生字 ${x.c.length} 字`]}));
     }
   }
-  $('exUnits').innerHTML=list.map((u,idx)=>`<label class="uchk" title="${esc(u.name)}（${esc(u.topics.join('、'))}）"><span class="uchk-main"><input type="checkbox" data-uidx="${idx}" value="${esc(u.name)}" checked> <span class="uchk-name">${esc(u.name)}</span></span><small>（${esc(u.topics.join('、'))}）</small></label>`).join('');
+  $('exUnits').innerHTML=list.map((u,idx)=>`<label class="uchk" title="${esc(u.name)}（${esc(u.topics.join('、'))}）"><input type="checkbox" data-uidx="${idx}" value="${esc(u.name)}" checked><span class="uchk-main"><span class="uchk-name">${esc(u.name)}</span><small>${esc(u.topics.join('、'))}</small></span></label>`).join('');
   applyTermSelection();
   document.querySelectorAll('#exUnits input').forEach(chk=>{
     chk.onchange=()=>{
@@ -3785,8 +3832,8 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     if(!trimmed) break;
   }
 
-  // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或末頁 < 80% 滿度時，啟動第二優先微調補題
-  const limits={mc:14,tf:12,fill:12,match:2,calc:8,word:5};
+  // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或末頁 < 86% 滿度時，啟動第二優先微調補題（單題溢頁僅略過該大題，不中斷其餘精簡題型補滿）
+  const limits={mc:16,tf:14,fill:14,match:3,calc:9,word:5};
   const enabledSet=new Set(['mc','tf','fill','match','calc','word']);
   if(syncUi){
     [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
@@ -3794,20 +3841,26 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     });
   }
   const growCycle=['mc','fill','tf','calc','word','match'].filter(k=>enabledSet.has(k));
-  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && (curExam._lastPageFill||0)<0.80);
-  let gStep=0;
-  while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<32){
+  const blockedKinds=new Set();
+  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && (curExam._lastPageFill||0)<0.86);
+  let gStep=0, stalled=0;
+  while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<44 && blockedKinds.size<growCycle.length && stalled<growCycle.length*2){
     const k=growCycle[gStep % growCycle.length];
+    gStep++;
+    if(blockedKinds.has(k)){stalled++;continue;}
     const sec=curExam.sections.find(s=>s.kind===k);
     const curLen=sec?sec.qs.length:0;
-    if(curLen < limits[k]){
-      const ok=addOneToKind(k);
-      if(ok && curExam._lastPageCount>targetPages){
-        removeOneFromKind(k);
-        break;
-      }
+    if(curLen >= limits[k]){blockedKinds.add(k);stalled++;continue;}
+    const ok=addOneToKind(k);
+    if(!ok){
+      blockedKinds.add(k);stalled++;
+    }else if(curExam._lastPageCount>targetPages){
+      removeOneFromKind(k);
+      blockedKinds.add(k);
+      stalled++;
+    }else{
+      stalled=0;
     }
-    gStep++;
   }
 
   if(syncUi){
@@ -3842,7 +3895,7 @@ function generateFromUI(arg){
   renderExam();
   if(!skipAutoBalance && $('exTwoPage') && $('exTwoPage').checked && $('exLayout').value==='2col'){
     const isZh=cfg.subject==='國語';
-    autoBalanceExamToTarget(2, isZh?25:24, cfg, true);
+    autoBalanceExamToTarget(2, isZh?48:42, cfg, true);
   }
 }
 let lastDiceSig='';
@@ -4138,26 +4191,27 @@ function renderBatchTable(orders){
   const rowsHtml = orders.map((o,i)=>{
     const shortPlan = o.plan==='both'?'綜合套組':(o.plan==='exam'?'評量測驗卷':'筆畫寫字帖');
     const stCls = o.isInvalid ? 'st-inv' : (o.isPaid ? 'st-paid' : 'st-pend');
-    return `<tr style="${o.selectedForPrint?'background:#f4fbf6':(o.isInvalid?'opacity:.6':'')}">
+    const rowCls = o.isInvalid ? 'row-inv' : (o.isPaid ? 'row-paid' : 'row-pend');
+    return `<tr class="${rowCls}${o.selectedForPrint?' is-picked':''}">
     <td style="text-align:center">
       <label class="chk" title="勾選是否列印此筆家長教材" style="justify-content:center">
         <input type="checkbox" class="ord-print-chk" data-idx="${i}" ${o.selectedForPrint?'checked':''} ${!o.valid?'disabled':''}>
       </label>
     </td>
     <td>
-      <div><b>${esc(o.order_id)}</b>・<span style="color:#7a3b00;font-weight:700">${esc(o.parent_label||'(未填)')}</span></div>
-      ${o.contact?`<div style="font-size:.76rem;color:#555">📞 ${esc(o.contact)}</div>`:''}
-      <div style="font-size:.74rem;color:#777">${o.created_at?`🕒 ${esc(o.created_at)}｜`:''}${esc(sched.batchLabel)}</div>
+      <div class="ord-id-line"><span class="ord-id-pill">${esc(o.order_id)}</span> <b class="ord-parent">${esc(o.parent_label||'(未填)')}</b></div>
+      ${o.contact?`<div style="font-size:.77rem;color:#475569;margin-top:2px">📞 ${esc(o.contact)}</div>`:''}
+      <div style="font-size:.74rem;color:#64748b">${o.created_at?`🕒 ${esc(o.created_at)}｜`:''}${esc(sched.batchLabel)}</div>
     </td>
     <td>
-      <div><b>${esc(shortPlan)}</b> <span class="badge-ok" style="font-size:.7rem;padding:1px 5px">${esc(o.packType||'懶人包')}</span>・<b>${o.sheets||20}張</b></div>
-      <div style="font-size:.78rem;color:#333">${o.grade?`${o.grade}年級${o.sem}`:'-'}・${esc(o.pubName)}・<b>${esc(o.subj)}</b>｜${esc(o.scopeName)}（${esc(o.diffName)}/${o.ruby?'注音':'無注音'}）</div>
-      ${o.custom_units?`<div style="font-size:.74rem;color:#666">單元：${esc(o.custom_units)}</div>`:''}
-      ${o.custom_words?`<div style="font-size:.74rem;color:#666">生字：${esc(o.custom_words.slice(0,16))}</div>`:''}
+      <div><b>${esc(shortPlan)}</b> <span class="ord-pack-tag">${esc(o.packType||'懶人包')}</span>・<b>${o.sheets||20} 張</b></div>
+      <div style="font-size:.8rem;color:#1e293b;margin-top:2px">${o.grade?`${o.grade}年級${o.sem}`:'-'}・${esc(o.pubName)}・<b>${esc(o.subj)}</b>｜${esc(o.scopeName)}（${esc(o.diffName)}/${o.ruby?'注音':'無注音'}）</div>
+      ${o.custom_units?`<div style="font-size:.75rem;color:#475569">範圍：${esc(o.custom_units)}</div>`:''}
+      ${o.custom_words?`<div style="font-size:.75rem;color:#475569">生字：${esc(o.custom_words.slice(0,16))}</div>`:''}
     </td>
     <td>
-      <b style="color:#c85000">$${esc(o.amount)}</b>
-      <div style="font-size:.76rem;color:#333;font-weight:700">末五碼：${esc(o.remit_last5||'未填')}</div>
+      <div class="ord-amt">$${esc(o.amount)}</div>
+      <div class="ord-last5">末五碼：${esc(o.remit_last5||'未填')}</div>
     </td>
     <td>
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
@@ -4505,7 +4559,7 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
     renderExam();
     if(typeof autoBalanceExamToTarget==='function'){
       // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面滿滿無大塊空白
-      autoBalanceExamToTarget(2, isZh?34:32, cfg, false);
+      autoBalanceExamToTarget(2, isZh?48:42, cfg, false);
     }
     const rawPages = [...box.querySelectorAll('.a4')];
     const diffZh = {easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度'}[effDiff] || '標準評量';

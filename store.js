@@ -356,35 +356,55 @@ let _customStrokeMinSheets = 1;
 
 function renderPreviewPagesDualOrSingle(scaleBox, pagesArr, sideMode, isLand){
   if(!pagesArr || !pagesArr.length) return;
+  const vp = $('stPreviewViewport');
+  const vpW = Math.max(250, (vp ? vp.clientWidth : 580) - 28);
+  const pageW = isLand ? 1122 : 794;
+  const pageH = isLand ? 794 : 1122;
+  const sc = Math.min(isLand ? 0.56 : 0.72, Math.max(0.24, +(vpW / pageW).toFixed(3)));
+  const scaledW = Math.round(pageW * sc);
+  const scaledH = Math.round(pageH * sc);
+
+  const wrapPageFrame = (pgEl) => {
+    const frame = document.createElement('div');
+    frame.className = 'preview-a4-frame';
+    frame.style.width = scaledW + 'px';
+    frame.style.height = scaledH + 'px';
+    pgEl.style.transform = `scale(${sc})`;
+    pgEl.style.transformOrigin = 'top left';
+    frame.appendChild(pgEl);
+    return frame;
+  };
+
+  scaleBox.style.transform = 'none';
+  scaleBox.style.width = '100%';
+  scaleBox.style.height = 'auto';
+
   const p0 = pagesArr[0];
   const p1 = pagesArr[1] || null;
   if(sideMode === 'both' && p1){
     const dual = document.createElement('div');
     dual.className = 'preview-dual-grid';
-    [['📄 正面（第1面）', p0], ['📄 背面（第2面）', p1]].forEach(([lbl, pgEl]) => {
+    [['📄 正面（第 1 面）', p0], ['📄 背面（第 2 面）', p1]].forEach(([lbl, pgEl]) => {
       const col = document.createElement('div');
       col.className = 'preview-side-col';
       const tag = document.createElement('div');
       tag.className = 'preview-side-tag';
       tag.textContent = lbl;
       col.appendChild(tag);
-      col.appendChild(pgEl);
+      col.appendChild(wrapPageFrame(pgEl));
       dual.appendChild(col);
     });
-    const dualScale = isLand ? 0.205 : 0.28;
-    const totalW = isLand ? (1122 * 2 + 22) : (794 * 2 + 22);
-    const totalH = (isLand ? 794 : 1122) + 38;
-    scaleBox.style.transform = `translateX(-50%) scale(${dualScale})`;
-    scaleBox.style.width = totalW + 'px';
-    scaleBox.style.height = totalH + 'px';
     scaleBox.appendChild(dual);
   } else {
     const picked = (sideMode === '1' && p1) ? p1 : p0;
-    const singleScale = isLand ? 0.32 : 0.41;
-    scaleBox.style.transform = `translateX(-50%) scale(${singleScale})`;
-    scaleBox.style.width = isLand ? '1122px' : '794px';
-    scaleBox.style.height = isLand ? '794px' : '1122px';
-    scaleBox.appendChild(picked);
+    const col = document.createElement('div');
+    col.className = 'preview-side-col';
+    const tag = document.createElement('div');
+    tag.className = 'preview-side-tag';
+    tag.textContent = (sideMode === '1' && p1) ? '📄 背面（第 2 面・放大檢視）' : '📄 正面（第 1 面・放大檢視）';
+    col.appendChild(tag);
+    col.appendChild(wrapPageFrame(picked));
+    scaleBox.appendChild(col);
   }
 }
 
@@ -1067,6 +1087,9 @@ function initStore(){
   fillStoreSubjects();
   updateItemPriceHint();
   switchTab('store');
+  window.addEventListener('resize', () => {
+    if($('viewStore') && $('viewStore').style.display !== 'none') scheduleStorePreview();
+  });
   setTimeout(updateStorePreview, 150);
 }
 
