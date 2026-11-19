@@ -119,7 +119,9 @@ function switchTab(tabName){
   } else if(tabName === 'batch'){
     const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
     if(typeof window.refreshBatchSysClock === 'function') window.refreshBatchSysClock();
+    if(typeof window.showBatchMinimap === 'function') window.showBatchMinimap();
   }
+  if(tabName !== 'batch' && typeof window.hideBatchMinimap === 'function') window.hideBatchMinimap();
 }
 
 function openAdminModal(){
@@ -716,7 +718,7 @@ async function updateStorePreview(){
     if(pagesArr){
       pagesArr = pagesArr.map(n => n.cloneNode(true));
     } else {
-      pagesArr = window.buildExamPreviewPagesForStore(orderCfg);
+      pagesArr = await window.buildExamPreviewPagesForStore(orderCfg);
       if(pagesArr && pagesArr.length){
         if(_storeExamCache.size > 24){
           const firstK = _storeExamCache.keys().next().value;
@@ -1507,6 +1509,14 @@ function initStore(){
   fillStoreSubjects();
   updateItemPriceHint();
   switchTab('store');
+  const __btt = $('btnBackToTop');
+  if(__btt){
+    __btt.onclick = () => window.scrollTo({top:0, behavior:'smooth'});
+    window.addEventListener('scroll', () => {
+      const batchVisible = $('viewBatch') && $('viewBatch').style.display !== 'none';
+      __btt.classList.toggle('show', !!batchVisible && window.scrollY > 400);
+    }, {passive:true});
+  }
   window.addEventListener('resize', () => {
     if($('viewStore') && $('viewStore').style.display !== 'none') scheduleStorePreview();
   });

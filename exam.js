@@ -7007,7 +7007,8 @@ function buildBatchAnswerPagesA4(records, order, wmText){
 }
 
 // 依單筆訂單設定產生測驗卷 DOM 頁面陣列（支援 1 份自訂單張、及 10/20 張完全不重複綜合包）
-function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
+const __batchYieldToUI = () => new Promise(r => setTimeout(r, 0));
+async function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false, onProgress=null){
   const prevRuby = $('exRuby').checked;
   const prevTwo = $('exTwoPage').checked;
   const prevExam = curExam;
@@ -7123,6 +7124,9 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
     }
     qDomPages.push(...converted);
 
+    if(onProgress) onProgress(s+1, examSheetsTarget);
+    await __batchYieldToUI();
+
     if(withAns && examSheetsTarget > 1 && curExam && curExam.sections){
       ansRecords.push({
         sheetNo: s+1,
@@ -7170,8 +7174,8 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
 }
 
 // 供家長前台即時預覽呼叫：同時回傳指定張次之正面＋背面雙面 DOM 陣列，以及單頁相容函式
-window.buildExamPreviewPagesForStore = function(order){
-  const res = buildExamPagesForOrder(
+window.buildExamPreviewPagesForStore = async function(order){
+  const res = await buildExamPagesForOrder(
     { ...order, sampleLimit: 1 },
     false,
     '向日葵國小伴學誌・線上樣本預覽請勿截圖轉售',
@@ -7179,8 +7183,8 @@ window.buildExamPreviewPagesForStore = function(order){
   );
   return res.pages.slice(0, 2);
 };
-window.buildExamPreviewForStore = function(order){
-  const pages = window.buildExamPreviewPagesForStore(order);
+window.buildExamPreviewForStore = async function(order){
+  const pages = await window.buildExamPreviewPagesForStore(order);
   const sideIdx = +order.previewPageSide === 1 && pages.length > 1 ? 1 : 0;
   return pages[sideIdx] || pages[0] || null;
 };
@@ -7252,6 +7256,7 @@ async function generateBatchAll(overrideOrders=null){
     $('batchProgressText').textContent='開始生成教材…';
     $('batchProgressFill').style.width='0%';
   }
+  await __batchYieldToUI();
   const clonePagesWithWm = (pages, targetWm) => pages.map(pg => {
     const c = pg.cloneNode(true);
     if(window.createWatermarkLayer){
@@ -7304,7 +7309,13 @@ async function generateBatchAll(overrideOrders=null){
         }
       }
       if(ord.plan==='exam' || ord.plan==='both'){
-        examRes = buildExamPagesForOrder(ord, withAns, wmText);
+        examRes = await buildExamPagesForOrder(ord, withAns, wmText, false, (done,total)=>{
+          if($('batchProgress') && selectedOrders.length){
+            const pct = ((i + done/total) / selectedOrders.length * 100);
+            $('batchProgressFill').style.width = `${pct.toFixed(1)}%`;
+            $('batchProgressText').textContent = `產製第 ${i+1} / ${selectedOrders.length} 筆・考卷 ${done}/${total} 張`;
+          }
+        });
       }
       batchContentCache.set(specKey, {
         strokePages: strokeRes.pages.map(p => p.cloneNode(true)),
@@ -7434,6 +7445,8 @@ async function generateBatchAll(overrideOrders=null){
     }
   }
 
+  if(typeof window.renderBatchMinimap === 'function') window.renderBatchMinimap(allSheetPairs);
+
   $('batchMsg').style.color='#1f9d55';
   $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印共 ${Math.ceil(grandTotalPages/2)} 張整數紙；每兩頁 1-2、3-4 綁定），可整批印製或針對單張補印！`;
   if($('batchProgress')){
@@ -7443,6 +7456,69 @@ async function generateBatchAll(overrideOrders=null){
   }
 }
 
+let __batchMinimapBound = false;
+function __batchMinimapScrollSync(){
+  const ticks = document.querySelectorAll('.batch-minimap-tick');
+  if(!ticks.length) return;
+  const sheet = $('batchSheet');
+  if(!sheet) return;
+  const mid = window.innerHeight * 0.5;
+  let activeSheet = null;
+  sheet.querySelectorAll('.a4[data-batch-sheet]').forEach(el=>{
+    const r = el.getBoundingClientRect();
+    if(r.top <= mid && r.bottom >= 0) activeSheet = el.dataset.batchSheet;
+  });
+  ticks.forEach(t=>t.classList.toggle('active', t.dataset.sheet===String(activeSheet)));
+}
+window.renderBatchMinimap = function(allSheetPairs){
+  const box = $('batchMinimap');
+  if(!box) return;
+  if(!Array.isArray(allSheetPairs) || !allSheetPairs.length){
+    box.classList.remove('show'); box.innerHTML='';
+    const tip0 = document.getElementById('batchMinimapTip'); if(tip0) tip0.classList.remove('show');
+    return;
+  }
+  let tipEl = document.getElementById('batchMinimapTip');
+  if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchMinimapTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
+  box.innerHTML = '<div class="batch-minimap-track"></div>';
+  const n = allSheetPairs.length;
+  const span = n>1 ? 92 : 0;
+  allSheetPairs.forEach((it, i)=>{
+    const t = document.createElement('div');
+    t.className = 'batch-minimap-tick' + (/空白|防串頁/.test(String(it.label||'')) ? ' is-blank' : '');
+    t.style.top = `${4 + (n>1 ? (i/(n-1))*span : 46)}%`;
+    t.dataset.sheet = String(it.sheetIdx);
+    const range = it.p2 > it.p1 ? `第${it.p1}-${it.p2}頁` : `第${it.p1}頁`;
+    t.dataset.tip = `第 ${it.sheetIdx+1} 張・${range}`;
+    t.onmouseenter = ()=>{ tipEl.textContent = t.dataset.tip; const r=t.getBoundingClientRect(); tipEl.style.top=(r.top+r.height/2)+'px'; tipEl.classList.add('show'); };
+    t.onmouseleave = ()=> tipEl.classList.remove('show');
+    t.onclick = ()=>{
+      const target = document.querySelector(`#batchSheet .a4[data-batch-sheet="${t.dataset.sheet}"]`);
+      if(target && target.scrollIntoView) target.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+    box.appendChild(t);
+  });
+  box.classList.add('show');
+  if(!__batchMinimapBound){
+    __batchMinimapBound = true;
+    window.addEventListener('scroll', ()=>{
+      const b = document.getElementById('batchMinimap');
+      if(b && b.classList.contains('show')) __batchMinimapScrollSync();
+    }, {passive:true});
+  }
+  requestAnimationFrame(__batchMinimapScrollSync);
+};
+window.showBatchMinimap = function(){
+  if(!window._batchSinglePgMeta || !window._batchSinglePgMeta.length) return;
+  const sheet = $('batchSheet');
+  if(!sheet || !sheet.querySelectorAll('.a4').length) return;
+  if(typeof window.renderBatchMinimap==='function') window.renderBatchMinimap(window._batchSinglePgMeta);
+};
+window.hideBatchMinimap = function(){
+  const b=$('batchMinimap'); if(b){ b.classList.remove('show'); b.innerHTML=''; }
+  const tip=document.getElementById('batchMinimapTip'); if(tip) tip.classList.remove('show');
+};
+
 function regenBatchExamSheet(orderId, exSheet, btn){
   const sheet = $('batchSheet');
   if(!sheet) return;
@@ -7450,11 +7526,11 @@ function regenBatchExamSheet(orderId, exSheet, btn){
   const ord = curBatchOrders.find(o=>String(o.order_id)===String(orderId));
   if(els.length < 2 || !ord) return;
   if(btn){ btn.disabled = true; btn.textContent = '⏳ 重新生成中…'; }
-  setTimeout(()=>{
+  setTimeout(async ()=>{
     try{
       const baseWm = (($('wmText')?$('wmText').value:'')||'向日葵國小伴學誌・專屬訂製請勿轉售').trim();
       const wm = $('batchOrderWm').checked ? `${baseWm}（${ord.parent_label}・#${ord.order_id}）` : baseWm;
-      const res = buildExamPagesForOrder({ ...ord, sampleLimit: 1, previewSheetIdx: exSheet }, false, wm);
+      const res = await buildExamPagesForOrder({ ...ord, sampleLimit: 1, previewSheetIdx: exSheet }, false, wm);
       const np = res.pages.slice(0,2);
       if(np.length < 2) throw new Error('產生頁數不足');
       np.forEach((n,i)=>{
