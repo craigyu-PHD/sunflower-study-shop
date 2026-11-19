@@ -3973,22 +3973,90 @@ function calcQuestionDifficulty(item, subj, kindKey, effDiff='mid'){
 }
 
 
+let __svgSeen = new Set();
+function __svgHash(s){
+  let h = 0;
+  for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
+  return h;
+}
+function svgBeakerTemps(){
+  return `<svg width="132" height="62" viewBox="0 0 132 62" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="18" width="34" height="34" rx="2" fill="#fecaca"/>
+    <path d="M6,8 L8,52 L42,52 L44,8" fill="none" stroke="#333" stroke-width="1.6"/>
+    <text x="25" y="14" font-size="8" text-anchor="middle" fill="#b91c1c">溫水 60℃</text>
+    <text x="25" y="40" font-size="9" text-anchor="middle" fill="#7f1d1d">食鹽</text>
+    <rect x="70" y="18" width="34" height="34" rx="2" fill="#bfdbfe"/>
+    <path d="M68,8 L70,52 L104,52 L106,8" fill="none" stroke="#333" stroke-width="1.6"/>
+    <text x="87" y="14" font-size="8" text-anchor="middle" fill="#1d4ed8">冰水 5℃</text>
+    <text x="87" y="40" font-size="9" text-anchor="middle" fill="#1e3a8a">食鹽</text>
+    <path d="M114,26 L126,26" stroke="#333" stroke-width="1.4" stroke-dasharray="3 3"/>
+    <text x="120" y="22" font-size="7" text-anchor="middle" fill="#333">比較</text>
+  </svg>`;
+}
+function svgThermometer(c){
+  const y = 48 - Math.round((c/50)*32);
+  return `<svg width="70" height="60" viewBox="0 0 70 60" xmlns="http://www.w3.org/2000/svg">
+    <rect x="18" y="8" width="8" height="36" rx="4" fill="#fff" stroke="#333" stroke-width="1.4"/>
+    <circle cx="22" cy="48" r="7" fill="#ef4444" stroke="#333" stroke-width="1.4"/>
+    <rect x="20" y="${y}" width="4" height="${48-y}" fill="#ef4444"/>
+    <text x="46" y="34" font-size="12" fill="#b91c1c" font-weight="700">${c}℃</text>
+  </svg>`;
+}
+function svgSpringScale(gw){
+  return `<svg width="90" height="64" viewBox="0 0 90 64" xmlns="http://www.w3.org/2000/svg">
+    <rect x="24" y="6" width="22" height="34" rx="3" fill="#f8fafc" stroke="#333" stroke-width="1.5"/>
+    <text x="35" y="27" font-size="10" text-anchor="middle" fill="#111">${gw}g</text>
+    <path d="M35,40 L35,48" stroke="#333" stroke-width="1.4"/>
+    <rect x="24" y="48" width="22" height="10" rx="2" fill="#cbd5e1" stroke="#333" stroke-width="1.2"/>
+  </svg>`;
+}
+function __buildSciSvg(kind, h){
+  switch(kind){
+    case 'magRepel': return svgMagnet('S','N','N','S');
+    case 'magAttract': return svgMagnet('S','N','S','N');
+    case 'magIron': return svgMagnetAttract();
+    case 'shadowNoon': return svgShadowSun('noon');
+    case 'shadowSide': return svgShadowSun('side');
+    case 'waterGlasses': return svgWaterGlasses();
+    case 'traffic': return svgTrafficLight();
+    case 'moon': return svgMoonPhase();
+    case 'airCup': return svgAirCup();
+    case 'circuit': return svgCircuit(true);
+    case 'lever': return svgLever(20,300,15);
+    case 'beakerTemps': return svgBeakerTemps();
+    case 'beaker': return svgBeaker([200,400,600,800][h % 4]);
+    case 'thermometer': return svgThermometer([5,15,25,35][h % 4]);
+    case 'spring': return svgSpringScale([50,100,150,200][h % 4]);
+    default: return null;
+  }
+}
+
 function attachMatchingSvg(item, subj, g){
   if(item.svg) return item;
   const q = String(item.q||'') + ' ' + String(item.a||'');
   if(subj==='生活'||subj==='自然科學'){
-    if(/同極|N\s*極和\s*N\s*極|相斥/.test(q)) item.svg = svgMagnet('S','N','N','S');
-    else if(/異極|N\s*極和\s*S\s*極|兩個極/.test(q)) item.svg = svgMagnet('S','N','S','N');
-    else if(/磁鐵.*吸|鐵釘|迴紋針/.test(q)) item.svg = svgMagnetAttract();
-    else if(/中午.*影子|仰角最高.*影子最短/.test(q)) item.svg = svgShadowSun('noon');
-    else if(/影子|太陽/.test(q)) item.svg = svgShadowSun('side');
-    else if(/拍打.*水|杯子.*聲音/.test(q)) item.svg = svgWaterGlasses();
-    else if(/紅燈|綠燈|紅綠燈/.test(q)) item.svg = svgTrafficLight();
-    else if(/月亮|月相|滿月|上弦月|初一到十五/.test(q)) item.svg = svgMoonPhase();
-    else if(/空氣佔有空間|空杯.*壓入水中/.test(q)) item.svg = svgAirCup();
-    else if(/電路|燈泡|導體|絕緣體/.test(q)) item.svg = svgCircuit(!/斷路|壞掉/.test(item.q));
-    else if(/20\s*公分.*300\s*克.*15\s*公分/.test(q)) item.svg = svgLever(20,300,15);
-    else if(/溶解|石蕊試紙|酸性|鹼性|水溶液/.test(q)) item.svg = svgBeaker(600);
+    const h = __svgHash(q);
+    let kind=null;
+    if(/同極|N\s*極和\s*N\s*極|相斥/.test(q)) kind='magRepel';
+    else if(/異極|N\s*極和\s*S\s*極|兩個極/.test(q)) kind='magAttract';
+    else if(/磁鐵.*吸|鐵釘|迴紋針/.test(q)) kind='magIron';
+    else if(/中午.*影子|仰角最高.*影子最短/.test(q)) kind='shadowNoon';
+    else if(/影子|太陽/.test(q)) kind='shadowSide';
+    else if(/拍打.*水|杯子.*聲音/.test(q)) kind='waterGlasses';
+    else if(/紅燈|綠燈|紅綠燈/.test(q)) kind='traffic';
+    else if(/月亮|月相|滿月|上弦月|初一到十五/.test(q)) kind='moon';
+    else if(/空氣佔有空間|空杯.*壓入水中/.test(q)) kind='airCup';
+    else if(/電路|燈泡|導體|絕緣體|電池/.test(q)) kind='circuit';
+    else if(/20\s*公分.*300\s*克.*15\s*公分/.test(q)) kind='lever';
+    else if(/水溫|溶解|石蕊試紙|酸性|鹼性|水溶液|食鹽|砂糖/.test(q)) kind=/水溫|溶解速度|快慢/.test(q)?'beakerTemps':'beaker';
+    else if(/溫度計|氣溫|攝氏/.test(q)) kind='thermometer';
+    else if(/彈簧|重量|公克|砝碼/.test(q)) kind='spring';
+    // 去重＋配圖節制：同一份考卷內同型圖只出現一次，且非每題都硬塞圖，
+    // 避免整份考卷反覆出現「同一張溶解杯／電池圖」。
+    if(kind && !__svgSeen.has(kind) && (h % 3 === 0 || __svgSeen.size < 2)){
+      __svgSeen.add(kind);
+      item.svg = __buildSciSvg(kind, h);
+    }
   }
   if(subj==='社會'){
     if(/圖例|比例尺|方向|方位/.test(q)) item.svg = svgCompassRose();
@@ -4306,6 +4374,7 @@ function normalizeTemplateSig(q){
 let randSeed=0;
 function generateExamQuestions(cfg){
   randSeed=rnd(0,97);
+  __svgSeen = new Set();
   const g=+cfg.grade, subj=cfg.subject, diff=cfg.diff;
   const tier=g<=2?'low':(g<=4?'mid':'high');
   const sections=[];
@@ -4729,6 +4798,14 @@ function updateCapInfo(pagesCount, ansPagesCount=null){
     el.className=cls; el.textContent=msg;
   });
 }
+// 題目高度快取：同一題目物件在不同密度下的實測高度只量一次，
+// 排版微調（增減題）時可跳過 90% 以上的 DOM 建構與量測。
+const __qHCache=new WeakMap();
+function __qHeightMap(q){
+  let m=__qHCache.get(q);
+  if(!m){ m=Object.create(null); __qHCache.set(q,m); }
+  return m;
+}
 function renderExam(measureOnly=false){
   const box=$('examSheet');
   if(!measureOnly) box.innerHTML='';
@@ -4905,7 +4982,10 @@ function renderExam(measureOnly=false){
       flat.push({type:'sec',text:sec.heading,cols:1.3});
       sec.qs.forEach((q,idx)=>{
         const b={type:'q',num:idx+1,kind:sec.kind,item:q};
-        const built=buildZhQ(b);
+        const zMap=__qHeightMap(q);
+        const zKey='zh:'+zhFs+'|'+b.num+'|'+(useZy?1:0);
+        let built=zMap[zKey];
+        if(!built){ built=buildZhQ(b); zMap[zKey]=built; }
         b.el=built.el; b.cols=built.colCount;
         flat.push(b);
       });
@@ -4926,14 +5006,25 @@ function renderExam(measureOnly=false){
     maxW=mw.clientWidth-38;
     const hdW=hdM.getBoundingClientRect().width+12;
 
+    const pendZh=[];
     flat.forEach(b=>{
       if(b.type==='sec'){
         const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));
-        mw.appendChild(d); b.pxW=d.getBoundingClientRect().width+7;
+        mw.appendChild(d); pendZh.push([b,d,null,null]);
       }else{
-        mw.appendChild(b.el); b.pxW=b.el.getBoundingClientRect().width+7;
+        const wMap=__qHeightMap(b.item);
+        const wKey='w:'+zhFs+'|'+b.num;
+        if(wMap[wKey]!=null){ b.pxW=wMap[wKey]; return; }
+        mw.appendChild(b.el); pendZh.push([b,b.el,wMap,wKey]);
       }
     });
+    // 一次性讀取寬度：先全部寫入 DOM，再統一讀取，避免每題觸發強制重排
+    for(let pi=0; pi<pendZh.length; pi++){
+      const pz=pendZh[pi];
+      const w=pz[1].getBoundingClientRect().width+7;
+      pz[0].pxW=w;
+      if(pz[2]) pz[2][pz[3]]=w;
+    }
     document.body.removeChild(meas);
 
     // 依「第1頁上排 → 第1頁下排 → 第2頁上排 → 第2頁下排...」順序拆排
@@ -5073,15 +5164,31 @@ function renderExam(measureOnly=false){
       const hdH=hdM.offsetHeight+12;
 
       const flat=[];
+      const pendV=[];
+      const hKey=candD.name+(($('exRuby')&&$('exRuby').checked)?'|r':'');
       sections.forEach(sec=>{
         const se=document.createElement('div');se.className='ex-sec';se.textContent=sec.heading;
-        colM.appendChild(se);flat.push({type:'sec',text:sec.heading,h:se.offsetHeight+10});
+        colM.appendChild(se);
+        const sb={type:'sec',text:sec.heading,h:0};flat.push(sb);pendV.push([sb,se,10]);
         sec.qs.forEach((q,idx)=>{
           const b={type:'q',num:idx+1,kind:sec.kind,item:q};
-          const qe=makeQEl(b,false);colM.appendChild(qe);
-          b.h=qe.offsetHeight+candD.gap+3;flat.push(b);
+          const hMap=__qHeightMap(q);
+          const cachedH=hMap[hKey];
+          if(cachedH!=null){
+            b.h=cachedH;
+          }else{
+            const qe=makeQEl(b,false);colM.appendChild(qe);
+            b.h=0;pendV.push([b,qe,candD.gap+3,hMap,hKey]);
+          }
+          flat.push(b);
         });
       });
+      // 一次性讀取高度：先全部寫入 DOM，再統一量測，避免逐題強制重排
+      for(let pi=0; pi<pendV.length; pi++){
+        const pv=pendV[pi]; const hh=pv[1].offsetHeight + pv[2];
+        if(pv[3]) pv[3][pv[4]]=hh;
+        pv[0].h=hh;
+      }
       document.body.removeChild(meas);
 
       const candPages=[], colsPerPage=twoCol?2:1;

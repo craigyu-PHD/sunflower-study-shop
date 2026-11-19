@@ -337,8 +337,30 @@
     g.restore();
   }
 
+  // ── 虛線字圖層（兩層疊加）：外層＝原尺寸極淺實字，內層＝同一字型縮小 0.92 倍的「原字虛線」。
+  //    直接用字型輪廓描邊，筆畫寬度、轉折、弧度與原本文字完全一致，不會出現骨架抖動的歪斜感。
+  function drawDashedGlyphLayer(g, sym, cx, cy, baseFs, compact, darkBg){
+    const latin = /^[0-9A-Za-z]+$/.test(sym);
+    const fam = latin
+      ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
+      : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
+    const fs = baseFs * (compact ? 0.9 : 0.92);
+    g.save();
+    g.font = `600 ${Math.round(fs)}px ${fam}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.strokeStyle = darkBg ? '#93c5fd' : '#1d4ed8';
+    g.lineWidth = Math.max(1, Math.min(1.5, fs * 0.011));
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+    g.setLineDash([Math.max(3, fs * 0.05), Math.max(2.2, fs * 0.038)]);
+    g.strokeText(sym, cx, cy);
+    g.setLineDash([]);
+    g.restore();
+  }
+
   function drawStrokeOrderOverlay(g, sym, centerX, glyphY, baseFs, clampBox, compact=false, darkBg=false){
-    drawSkeletonGuide(g, sym, centerX, glyphY, baseFs, compact, darkBg);
+    drawDashedGlyphLayer(g, sym, centerX, glyphY, baseFs, compact, darkBg);
     const strokes = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
     if(!strokes.length) return;
     const palette = darkBg
@@ -670,10 +692,10 @@
       const strokeColor = rowIdx === 1 ? '#94a3b8' : (rowIdx === 2 ? '#a8b8cc' : (rowIdx <= Math.ceil(totalRows * 0.55) ? '#cbd5e1' : '#e2e8f0'));
       if(isGuide || levelId === 'small'){
         g.save();
-        g.strokeStyle = strokeColor;
-        g.lineWidth = levelId === 'small' ? 1.25 : 0.95;
+        g.strokeStyle = rowIdx === 1 ? '#c7d2df' : '#dbe3ec';
+        g.lineWidth = levelId === 'small' ? 0.9 : 0.7;
         g.strokeText(sym, bx + bw/2, by + bh * 0.53);
-        g.fillStyle = rowIdx === 1 ? 'rgba(148,163,184,0.18)' : 'rgba(203,213,225,0.15)';
+        g.fillStyle = rowIdx === 1 ? 'rgba(203,213,225,0.42)' : 'rgba(226,232,240,0.35)';
         g.fillText(sym, bx + bw/2, by + bh * 0.53);
         g.restore();
       } else {

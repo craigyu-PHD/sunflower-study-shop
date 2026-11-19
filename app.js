@@ -15,6 +15,42 @@ async function loadChars(chars){
   await Promise.all(ks.map(loadShard));
   return chars.filter(c=>window.HZ_DATA&&HZ_DATA[c]);
 }
+// ---------- 背景預取筆順分片：課次一變就先下載，按「產生」時可秒出（線上原本最慢就是等分片下載）----------
+const __hzKeysOf=txt=>[...new Set([...String(txt||'')]
+  .filter(c=>/[\u3400-\u9fff\uf900-\ufaff]|[\u{20000}-\u{2fa1f}]/u.test(c))
+  .map(c=>(c.codePointAt(0)>>8).toString(16)))];
+function prefetchStrokeShards(txt){
+  const ks=__hzKeysOf(txt).filter(k=>!HZ_LOADED[k]);
+  if(!ks.length) return;
+  let i=0;
+  const step=()=>{
+    if(i>=ks.length) return;
+    const k=ks[i++];
+    if(HZ_LOADED[k]){step();return;}
+    try{
+      const s=document.createElement('script');
+      s.src='data/hz_'+k+'.js';s.async=true;
+      s.onload=()=>step();s.onerror=()=>step();
+      document.head.appendChild(s);
+    }catch(e){step();}
+  };
+  step();
+}
+window.prefetchStrokeShards=prefetchStrokeShards;
+(function(){
+  if(typeof setInterval!=='function') return;
+  let lastVal=null, timer=null;
+  setInterval(()=>{
+    const vs=document.getElementById('viewStroke');
+    const el=document.getElementById('input');
+    if(!el||!vs||vs.style.display==='none') return;
+    const v=el.value||'';
+    if(v===lastVal) return;
+    lastVal=v;
+    clearTimeout(timer);
+    timer=setTimeout(()=>prefetchStrokeShards(v),300);
+  },700);
+})();
 // ---------- 繪製單格 ----------
 const paths={};
 const P=d=>paths[d]||(paths[d]=new Path2D(d));
