@@ -95,24 +95,20 @@
       <div class="rule-box">
         <div class="rule-title">⏰ 結單時間與取件時段</div>
         <div class="rule-body">
-          <p><b>📌 每週三晚上 21:00（9點）準時截單：</b></p>
           <ul class="rule-list">
-            <li><b style="color:#136529">當週三 21:00 前完成匯款</b> → <b>當週五中午 12:00 起</b>開放警衛室取件</li>
-            <li><b style="color:#b33a00">當週三 21:00 後才匯款／下單</b> → <b>順延至次週五中午 12:00 起</b>開放取件</li>
-            <li><b>統一律定取件時段：</b><b style="color:#9c4200">每週五中午 12:00 以後 ～ 每週日晚上 21:00（9點）以前</b></li>
-            <li>請務必於上述時間內，憑<b>「取貨編號」＋「家長稱呼＋手機末四碼」</b>至警衛室領取；週五 12:00 前尚未配送就定位、週日 21:00 後本梯次即結案，恕不接受非規定時段領取</li>
+            <li><b>每週三 21:00 截單</b>：<span class="ok">截單前匯款 → 當週五 12:00 起取件</span>；<span class="late">截單後 → 順延次週五</span></li>
+            <li><b>取件時段</b>：每週五 12:00 ～ 週日 21:00，憑「取貨編號＋家長稱呼＋手機末四碼」至警衛室領取</li>
+            <li>逾時不另行補發，本梯次結案</li>
           </ul>
-          <div id="stPickupWindow" class="pickup-window-pill">📅 統一取件時段：每週五 12:00 以後 ～ 每週日 21:00 以前</div>
         </div>
       </div>
       <div class="rule-box">
         <div class="rule-title">🏦 全額先匯款後印製</div>
         <div class="rule-body">
-          <p>本伴學誌採<b>「先匯款、核帳後印製」</b>專屬客製化排程：</p>
           <ul class="rule-list">
-            <li>警衛室僅提供代收與領取服務，<b>恕不接受現場現金付款或貨到付款</b></li>
-            <li><b>每張 NT$ 5 元</b>（評量卷每張皆為<b>正反兩面滿滿題目</b>並免費附解答），累計滿 <b>20 張（NT$ 100 元）</b>即可出貨</li>
-            <li>逾截單時間仍查無入帳紀錄者，系統自動順延下批或列為<b>「無效單」不予印製</b></li>
+            <li><b>先匯款、核帳後印製</b>，警衛室僅代收領取，不收現金、不貨到付款</li>
+            <li><b>每張 NT$ 5</b>（評量卷正反滿版＋附解答），累計滿 <b>20 張（NT$ 100）</b>出貨</li>
+            <li>截單後仍查無入帳者，順延下批或列為無效單</li>
           </ul>
         </div>
       </div>
@@ -131,13 +127,6 @@
   <!-- 2. 由大到小商品選配 ＋ 右側即時真實縮小版預覽 -->
   <section class="card noprint">
     <h2><span class="step">1</span> 選擇教材規格與即時版面預覽</h2>
-    <div class="st-flow-bar" id="stFlowBar">
-      <span class="flow-step active" data-step="1">① 選教材方案</span>
-      <span class="flow-arrow">➜</span>
-      <span class="flow-step active" data-step="2">② 挑範圍與課次</span>
-      <span class="flow-arrow">➜</span>
-      <span class="flow-step" data-step="3">③ 看右側預覽 → 加入購物車</span>
-    </div>
     <div class="store-builder">
       <!-- 左欄：由大到小選單 -->
       <div class="store-controls">
@@ -145,7 +134,7 @@
         <div class="pack-tabs">
           <label class="pack-tab active" id="lblPackLazy">
             <input type="radio" name="stPackMode" value="lazy" checked>
-            <b>📝 評量懶人包 <em class="pack-badge hot">最省心</em></b>
+            <b>📝 評量綜合包 <em class="pack-badge hot">最省心</em></b>
             <span>20 張＝$100・附解答：各單元與題型自動輪替、正反兩面滿滿題目絕不重複。</span>
           </label>
           <label class="pack-tab" id="lblPackStroke">
@@ -195,9 +184,9 @@
         </div>
         </div>
 
-        <!-- 評量測驗懶人包專屬設定（純評量卷，不綁生字練習） -->
+        <!-- 評量測驗綜合包專屬設定（純評量卷，不綁生字練習） -->
         <div id="stLazyPanel" class="cfg-panel">
-          <div class="sub">③ 選擇 20 張不重複評量測驗懶人包（每組 20 張 × $5 ＝ $100・免費附解答）</div>
+          <div class="sub">③ 選擇 20 張不重複評量測驗綜合包（每組 20 張 × $5 ＝ $100・免費附解答）</div>
           <div class="row" style="align-items:flex-end">
             <label id="stLazySubjWrap" style="flex:1;min-width:140px">評量科目
               <select id="stLazySubj"></select>
@@ -210,7 +199,7 @@
               </select>
             </label>
           </div>
-          <div class="hint" id="stLazyPlanDesc" style="margin-top:4px;color:#7a4b10">💡 純評量測驗懶人包內含：20 張「每張皆正反兩面滿滿題目」、依各單元與 8 大題型輪替的不重複考卷，免費附贈解答（$100）。</div>
+          <div class="hint" id="stLazyPlanDesc" style="margin-top:4px;color:#7a4b10">💡 純評量測驗綜合包內含：20 張「每張皆正反兩面滿滿題目」、依各單元與 8 大題型輪替的不重複考卷，免費附贈解答（$100）。</div>
         </div>
 
         <!-- 生字練習本獨立專區（不與評量綁定，客戶自選課次，嚴格按課序全字列出、週而復始） -->
@@ -381,7 +370,7 @@
       </div>
 
       <!-- 右欄：即時真實縮小版預覽（含分頁＋正反雙面同時檢視＋防截圖保護） -->
-      <div class="store-preview-pane" oncontextmenu="return false">
+      <div class="store-preview-pane" oncontextmenu="return false"><div class="pv-fill">
         <div class="preview-hd">
           <b>🔍 即時真實版面範例預覽（每張含正面＋背面）</b>
           <span id="stPreviewBadge" class="badge-ok">隨左側選項即時更新</span>
@@ -392,7 +381,6 @@
             <select id="stPreviewSheetSel"></select>
             <button type="button" id="btnNextSheet" class="btn pager-nav-btn">下張 ▶</button>
           </div>
-          <div class="preview-dual-hint">📑 正反雙面同時檢視（第 1 面正面 ＋ 第 2 面背面）</div>
         </div>
         <div id="stPreviewViewport" class="preview-viewport">
           <div id="stPreviewScale" class="preview-scale"></div>
@@ -400,8 +388,7 @@
             <span>🔒 線上樣本預覽（核對版型範圍・核帳後印製完整 20 張）</span>
           </div>
         </div>
-        <p id="stPreviewCatalogNote" class="hint" style="margin-top:6px;line-height:1.45">※ 可切換預覽各張張次與主題（每張考卷皆為<b>正反兩面滿滿題目</b>・核帳後全數展開印製）。</p>
-      </div>
+      </div></div>
     </div>
   </section>
 
@@ -673,6 +660,7 @@
   <h2><span class="step">3</span> 預覽與輸出</h2>
   <div class="row">
     <button id="btnExGen" class="btn pri big" type="button">📝 依設定產生測驗卷</button>
+    <span class="duplex-tip">列印：國語橫式＝短邊翻頁（書本式）；其餘直式＝長邊翻頁。</span>
     <button id="btnExXlsx" class="btn ok big" type="button">📊 匯出 Excel（A4 直式）</button>
     <button id="btnExPrint" class="btn big" type="button">🖨️ 直接列印預覽</button>
   </div>

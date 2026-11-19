@@ -239,7 +239,106 @@
     return out;
   }
 
+  // ── 骨架圖層：以同一字型渲染實字 → Zhang-Suen 細線化 → 取得 1px 中心線（快取），
+  //    再以虛線疊在粗體實字正中央；直線必直、曲線必彎、轉折自然，完全不靠手繪座標。
+  const _skelCache = new Map();
+  function getSkeleton(sym){
+    if(_skelCache.has(sym)) return _skelCache.get(sym);
+    let out = null;
+    try{
+      const W = 420, H = 220, FS = 160;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const c = cv.getContext('2d', { willReadFrequently: true });
+      c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
+      const latin = /^[0-9A-Za-z]+$/.test(sym);
+      const fam = latin
+        ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
+        : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
+      c.font = `900 ${FS}px ${fam}`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = '#000'; c.strokeStyle = '#000'; c.lineJoin = 'round';
+      c.lineWidth = Math.max(1.4, FS * 0.045);
+      c.strokeText(sym, W / 2, H / 2); c.fillText(sym, W / 2, H / 2);
+      const d = c.getImageData(0, 0, W, H).data;
+      const img = new Uint8Array(W * H);
+      for(let i = 0; i < W * H; i++) img[i] = d[i * 4] < 140 ? 1 : 0;
+      let changed = true, guard = 0;
+      while(changed && guard++ < 60){
+        changed = false;
+        for(let step = 0; step < 2; step++){
+          const del = [];
+          for(let y = 1; y < H - 1; y++){
+            for(let x = 1; x < W - 1; x++){
+              const i = y * W + x;
+              if(!img[i]) continue;
+              const p2 = img[i - W], p3 = img[i - W + 1], p4 = img[i + 1], p5 = img[i + W + 1],
+                    p6 = img[i + W], p7 = img[i + W - 1], p8 = img[i - 1], p9 = img[i - W - 1];
+              const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+              if(B < 2 || B > 6) continue;
+              const A = (!p2 && p3) + (!p3 && p4) + (!p4 && p5) + (!p5 && p6) + (!p6 && p7) + (!p7 && p8) + (!p8 && p9) + (!p9 && p2);
+              if(A !== 1) continue;
+              if(step === 0){ if(p2 * p4 * p6 || p4 * p6 * p8) continue; }
+              else { if(p2 * p4 * p8 || p2 * p6 * p8) continue; }
+              del.push(i);
+            }
+          }
+          if(del.length){ changed = true; del.forEach(i => { img[i] = 0; }); }
+        }
+      }
+      // 沿骨架走訪給每個像素一個序號，供虛線節奏使用
+      const nb = (i) => {
+        const r = [];
+        for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
+          if(!dx && !dy) continue;
+          const j = i + dy * W + dx;
+          if(j >= 0 && j < W * H && img[j]) r.push(j);
+        }
+        return r;
+      };
+      const seen = new Uint8Array(W * H);
+      const pts = [];
+      let seq = 0;
+      const starts = [];
+      for(let i = 0; i < W * H; i++) if(img[i] && nb(i).length === 1) starts.push(i);
+      for(let i = 0; i < W * H; i++) if(img[i]) starts.push(i);
+      for(const s of starts){
+        if(seen[s]) continue;
+        const stack = [s];
+        while(stack.length){
+          const i = stack.pop();
+          if(seen[i]) continue;
+          seen[i] = 1;
+          pts.push([(i % W) - W / 2, Math.floor(i / W) - H / 2, seq++]);
+          nb(i).forEach(j => { if(!seen[j]) stack.push(j); });
+        }
+      }
+      out = { pts, FS };
+    }catch(e){ out = null; }
+    _skelCache.set(sym, out);
+    return out;
+  }
+
+  function drawSkeletonGuide(g, sym, cx, cy, baseFs, compact, darkBg){
+    const sk = getSkeleton(sym);
+    if(!sk) return;
+    const s = baseFs / sk.FS;
+    g.save();
+    g.fillStyle = darkBg ? '#93c5fd' : '#1d4ed8';
+    g.globalAlpha = 0.9;
+    const dot = compact ? 0.8 : 1.0;
+    const period = 5.2;
+    sk.pts.forEach(([px, py, n]) => {
+      if(((n * s) % period) < period * 0.5){
+        g.beginPath();
+        g.arc(cx + px * s, cy + py * s, dot, 0, Math.PI * 2);
+        g.fill();
+      }
+    });
+    g.restore();
+  }
+
   function drawStrokeOrderOverlay(g, sym, centerX, glyphY, baseFs, clampBox, compact=false, darkBg=false){
+    drawSkeletonGuide(g, sym, centerX, glyphY, baseFs, compact, darkBg);
     const strokes = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
     if(!strokes.length) return;
     const palette = darkBg
@@ -296,7 +395,6 @@
           curX = ex; curY = ey;
         }
       }
-      g.stroke();
       g.setLineDash([]);
 
       const ang = Math.atan2(tanY, tanX);

@@ -315,7 +315,7 @@ function updateItemPriceHint(){
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = `（${qty} 組・共 ${sheets} 張不重複評量卷 × $5 ＝ 小計 NT$ ${sheets*5} 元）`;
     }
-    pickSummary = `<b>📝 評量懶人包</b>｜國小 ${g} 年級${sem}學期・${pubName}｜<b>${subj}</b>（${scName}）｜共 ${sheets} 張（$${sheets*5}）`;
+    pickSummary = `<b>📝 評量綜合包</b>｜國小 ${g} 年級${sem}學期・${pubName}｜<b>${subj}</b>（${scName}）｜共 ${sheets} 張（$${sheets*5}）`;
   } else if(packMode === 'stroke_pack'){
     const spSheets = +($('stSpSheets')?.value || 10);
     sheets = qty * spSheets;
@@ -426,7 +426,7 @@ function getPreviewSheetMeta(){
     return list;
   }
 
-  // 純評量測驗懶人包（絕不綁定生字）
+  // 純評量測驗綜合包（絕不綁定生字）
   const scope = $('stLazyScope')?.value || 'all';
   const subj = $('stLazySubj')?.value || '國語';
   const allU = (((window.CURRICULUM || {})[g] || {})[subj] || {})[sem] || [];
@@ -559,7 +559,7 @@ async function updateStorePreview(){
     const scope = $('stLazyScope').value;
     const subj = $('stLazySubj').value || '國語';
     orderCfg = {
-      grade: g, sem, pub, subj, scope, diff: 'mix', packType: '懶人包',
+      grade: g, sem, pub, subj, scope, diff: 'mix', packType: '綜合包',
       ruby: +g <= 2, layout: '2col',
       custom_words: '', custom_units: '', sampleLimit: 1,
       previewSheetIdx: activeMeta.examIdx || 0
@@ -790,9 +790,9 @@ function buildCurrentSelectionsAsCartItems(){
     const amount = sheets * 5;
     items.push({
       id: 'C' + Date.now() + '_E',
-      packType: '懶人包',
+      packType: '綜合包',
       plan: 'exam',
-      planName: '📝 評量練習本 20 張懶人包',
+      planName: '📝 評量練習本 20 張綜合包',
       grade: g, sem, pub, pubName,
       subj,
       scope, scopeName,
@@ -939,7 +939,7 @@ function renderStoreCart(){
   const rowsHtml = storeCart.map((it, idx) => {
     totalSheets += it.sheets;
     totalAmount += it.amount;
-    const isLazy = it.packType === '懶人包';
+    const isLazy = it.packType === '綜合包';
     const qtyLabel = isLazy ? `${Math.max(1, Math.round(it.sheets/20))} 組` : `${it.sheets} 張`;
     const detail = [
       it.scopeName,
@@ -1000,7 +1000,7 @@ function renderStoreCart(){
       const idx = +btn.dataset.idx, delta = +btn.dataset.delta;
       const item = storeCart[idx];
       if(!item) return;
-      const step = item.unitSheets || (item.packType === '懶人包' ? 20 : 1);
+      const step = item.unitSheets || (item.packType === '綜合包' ? 20 : 1);
       item.sheets = Math.max(step, item.sheets + delta * step);
       item.qty = step > 1 ? Math.max(1, Math.round(item.sheets / step)) : item.sheets;
       item.amount = item.sheets * 5;
@@ -1055,13 +1055,13 @@ async function submitStoreOrder(){
     return;
   }
 
-  // 懶人包若購買多組（例如 2 組＝40 張）拆成 2 筆 20 張訂單；客製包依單項客製設定保留精準張數（如 5 張＝$25）
+  // 綜合包若購買多組（例如 2 組＝40 張）拆成 2 筆 20 張訂單；客製包依單項客製設定保留精準張數（如 5 張＝$25）
   const now = new Date();
   const timeStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const pickupBase = 'W' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(100 + Math.random()*900));
   const expandedItems = [];
   storeCart.forEach((it) => {
-    if(it.packType === '懶人包' && it.sheets > 20 && it.sheets % 20 === 0){
+    if(it.packType === '綜合包' && it.sheets > 20 && it.sheets % 20 === 0){
       const sets = Math.round(it.sheets / 20);
       for(let q = 0; q < sets; q++){
         expandedItems.push({ ...it, sheets: 20, amount: 100 });
@@ -1376,7 +1376,7 @@ function initStore(){
     };
   }
 
-  // 購買模式 4 選 1：評量懶人包 vs 生字練習本 vs 幼兒園運筆寫字帖 vs 客製自由配
+  // 購買模式 4 選 1：評量綜合包 vs 生字練習本 vs 幼兒園運筆寫字帖 vs 客製自由配
   document.querySelectorAll('input[name=stPackMode]').forEach(r => {
     r.onchange = () => {
       const val = r.checked ? r.value : (document.querySelector('input[name=stPackMode]:checked')?.value || 'lazy');

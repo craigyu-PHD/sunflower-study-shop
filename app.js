@@ -380,10 +380,12 @@ function cachedDataUrl(it,pg){
 // ---------- 預覽（A4 直式）----------
 async function generate(){
   const text=[...$('input').value].filter(c=>/[\u3400-\u9fff\uf900-\ufaff]|[\u{20000}-\u{2fa1f}]/u.test(c));
-  $('msg').textContent='';$('msg').style.color='';
+  $('msg').style.color='#7a3b00';
+  $('msg').textContent=text.length?'⏳ 正在載入筆順資料並繪製寫字帖...':'';
   const ok=await loadChars([...new Set(text)]);
   const miss=[...new Set(text)].filter(c=>!ok.includes(c));
   if(miss.length)$('msg').textContent='查無筆順資料，已略過：'+miss.join(' ');
+  else $('msg').textContent='';
   curChars=text.filter(c=>ok.includes(c));
   render();
   return curChars.length>0;

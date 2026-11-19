@@ -445,3 +445,42 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
   .bf-item select{flex:1;min-width:0}
   .backup-box{flex-direction:column;align-items:stretch}
 }
+
+/* ===== v6：訂購頁緊湊版面、左右下緣切齊、批次橫式預覽 ===== */
+.store-hero{padding-top:12px;padding-bottom:12px}
+.store-hero-top{padding-bottom:8px;margin-bottom:8px}
+.rules-grid{gap:8px;margin-bottom:8px}
+.rule-box{padding:8px 11px;font-size:.86rem;line-height:1.42}
+.rule-title{font-size:1.08rem;padding:5px 8px;margin-bottom:6px}
+.rule-list{margin:2px 0 4px;padding-left:15px}
+.rule-list li{margin:3px 0}
+.rule-list .ok{color:#136529;font-weight:700}
+.rule-list .late{color:#b33a00;font-weight:700}
+.map-embed-wrap{height:104px}
+.legal-notice{padding:7px 12px;font-size:.82rem;line-height:1.45}
+.legal-notice li{margin:2px 0}
+.legal-title{margin-bottom:2px}
+.pack-tab{border-width:2px;transition:.15s}
+.pack-tab:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(217,119,6,.18)}
+.pack-tab.active{background:linear-gradient(135deg,#fff3dc,#ffe2b3);border-color:#f97316;box-shadow:0 4px 12px rgba(249,115,22,.28)}
+.preview-hd b{font-size:.98rem}
+.store-preview-pane{background:linear-gradient(180deg,#fff9ef,#fdf2e0);border-color:#e9b872}
+@media(min-width:961px){
+  .store-builder{align-items:stretch}
+  .store-preview-pane{position:relative;top:auto;min-height:560px;padding:0}
+  .store-preview-pane > .pv-fill{position:absolute;inset:10px;display:flex;flex-direction:column;min-height:0}
+  .store-preview-pane .preview-viewport{flex:1 1 auto;min-height:0;max-height:none}
+}
+@media(max-width:960px){.store-preview-pane > .pv-fill{display:block}}
+
+/* 批次：螢幕上國語卷以橫式顯示；列印時旋轉並對翻面補償（預設長邊翻頁即可得書本式短邊效果） */
+.a4.batch-land-holder{width:1122px;height:794px}
+.a4.batch-land-holder > .ex-land-inner{top:0;left:0;transform:none}
+@media print{
+  .a4.batch-land-holder{width:794px;height:1122px}
+  .a4.batch-land-holder > .ex-land-inner{top:0;left:794px;transform:rotate(90deg);transform-origin:0 0}
+  .a4.batch-land-holder.batch-land-back > .ex-land-inner{top:1122px;left:0;transform:rotate(-90deg);transform-origin:0 0}
+}
+.batch-jump-bar{position:sticky;top:0;z-index:30;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff7e6;border:1.5px solid #f0c27d;border-radius:10px;padding:6px 10px;margin:0 0 8px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.batch-jump-bar select{flex:1;min-width:160px;max-width:420px}
+.duplex-tip{font-size:.8rem;color:#7a3b00;background:#fff4df;border:1px dashed #f0b35e;border-radius:7px;padding:3px 8px}

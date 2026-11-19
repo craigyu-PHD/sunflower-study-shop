@@ -2835,7 +2835,7 @@ function genMath(grade, diff, kind, vIdx=0){
   const pA=40,pB=35;return {q:`看圓形圖，若全班有 40 人，參加籃球（${pA}%）比音樂（${pB}%）多幾人？`,svg:svgPieChart(pA,'籃球',pB,'音樂'),opts:uniqueOpts('2 人',['4 人','5 人','8 人']),a:'2 人',exp:`40 × (40% - 35%) ＝ 2 人。`};
 }
 
-// ===== 2c. 跨題型多變化數學題庫（確保 20 張懶人包題型與結構不重複，絕非單純改數字）=====
+// ===== 2c. 跨題型多變化數學題庫（確保 20 張綜合包題型與結構不重複，絕非單純改數字）=====
 function genMathVariety(grade, sem, diff, kind, vIdx=0){
   const g=+grade, nm=pick(NAMES), nm2=pick(NAMES.filter(x=>x!==nm)), it=pick(ITEMS);
   const scale = g<=1 ? 1 : (g===2 ? 2 : (g===3 ? 4 : (g===4 ? 6 : 10)));
@@ -4309,7 +4309,7 @@ function generateExamQuestions(cfg){
   const g=+cfg.grade, subj=cfg.subject, diff=cfg.diff;
   const tier=g<=2?'low':(g<=4?'mid':'high');
   const sections=[];
-  // 全卷（及跨張懶人包）硬性防重集合：題幹、版型簽名、主題標籤、與「結構題型原型」皆嚴格禁止重複！
+  // 全卷（及跨張綜合包）硬性防重集合：題幹、版型簽名、主題標籤、與「結構題型原型」皆嚴格禁止重複！
   const examTopicsUsed=new Set(cfg.excludeTopics instanceof Set ? cfg.excludeTopics : []);
   const examArchetypesUsed=new Set(cfg.excludeArchetypes instanceof Set ? cfg.excludeArchetypes : []);
   const examQuestionsUsed=new Set();
@@ -4923,15 +4923,15 @@ function renderExam(measureOnly=false){
     hdM.innerHTML=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
       <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
     mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
-    maxW=mw.clientWidth-46;
-    const hdW=hdM.getBoundingClientRect().width+18;
+    maxW=mw.clientWidth-38;
+    const hdW=hdM.getBoundingClientRect().width+12;
 
     flat.forEach(b=>{
       if(b.type==='sec'){
         const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));
-        mw.appendChild(d); b.pxW=d.getBoundingClientRect().width+12;
+        mw.appendChild(d); b.pxW=d.getBoundingClientRect().width+7;
       }else{
-        mw.appendChild(b.el); b.pxW=b.el.getBoundingClientRect().width+12;
+        mw.appendChild(b.el); b.pxW=b.el.getBoundingClientRect().width+7;
       }
     });
     document.body.removeChild(meas);
@@ -4987,8 +4987,8 @@ function renderExam(measureOnly=false){
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
         if(spareW>14 && items.length>=2){
-          const qGap=Math.min(26, 3+(spareW*0.48)/qCount);
-          const colGap=Math.min(18, 2.5+(spareW*0.34)/itemCnt);
+          const qGap=Math.min(8, 2+(spareW*0.3)/qCount);
+          const colGap=Math.min(5, 2+(spareW*0.2)/itemCnt);
           tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
           tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
           if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>45){
@@ -5744,8 +5744,15 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
       nMc:k==='mc'?1:0, nTf:k==='tf'?1:0, nFill:k==='fill'?1:0,
       nMatch:k==='match'?1:0, nCalc:k==='calc'?1:0, nWord:k==='word'?1:0
     };
-    const extra=generateExamQuestions(singleCfg);
-    const exSec=extra&&extra.sections&&extra.sections.find(s=>s.kind===k);
+    let extra=generateExamQuestions(singleCfg);
+    let exSec=extra&&extra.sections&&extra.sections.find(s=>s.kind===k);
+    if(!exSec||!exSec.qs.length){
+      // 題庫已被前面各份用盡：退而只避開「本份」已有題目，確保每份仍能補滿版面
+      const ownQ=new Set(), ownS=new Set();
+      curExam.sections.forEach(s=>s.qs.forEach(q=>{ownQ.add(q.q);ownS.add(normalizeTemplateSig(q.q));}));
+      extra=generateExamQuestions({...singleCfg, excludeQuestions:ownQ, excludeSigs:ownS, excludeTopics:new Set(), excludeArchetypes:new Set()});
+      exSec=extra&&extra.sections&&extra.sections.find(s=>s.kind===k);
+    }
     if(!exSec||!exSec.qs.length) return false;
     const qNew=exSec.qs[0];
     if(baseCfg.excludeQuestions) baseCfg.excludeQuestions.add(qNew.q);
@@ -5783,7 +5790,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   }
 
   // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或第2頁／末欄仍留白時，啟動第二優先補題（先批次快速逼近，再微調，最後一次完整繪製）
-  const limits={mc:24,tf:20,fill:20,match:3,calc:14,word:8};
+  const limits={mc:32,tf:26,fill:28,match:3,calc:16,word:9};
   const enabledSet=new Set(['mc','tf','fill','match','calc','word']);
   [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
     if(syncUi){
@@ -5794,25 +5801,28 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   });
   const growCycle=['mc','fill','tf','calc','word','match'].filter(k=>enabledSet.has(k));
   const blockedKinds=new Set();
-  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.92 || (curExam._lastTailFill||0)<0.90 || (curExam._pageFills||[]).some(f=>f<0.90)));
+  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.955 || (curExam._lastTailFill||0)<0.95 || (curExam._pageFills||[]).some(f=>f<0.95)));
   let gStep=0, stalled=0;
-  // 若目前仍只有 1 頁且目標為 2 頁，先一次批量補 3 題輕量題再量測，大幅節省 DOM reflow 時間
-  if(curExam._lastPageCount < targetPages && growCycle.length){
+  // 若目前仍只有 1 頁且目標為 2 頁，或最後一頁填充率低於 86%，先批量補題再量測，大幅節省 DOM reflow 時間
+  for(let round=0; round<4 && (curExam._lastPageCount < targetPages || ((curExam._lastPageFill||0)<0.86 || (curExam._lastTailFill||0)<0.86)) && totalQCount()<maxTotal && growCycle.length; round++){
     let batchAdded = 0;
-    for(let b=0; b<4 && totalQCount()<maxTotal; b++){
+    const stepBatch = curExam._lastPageCount < targetPages ? 4 : 3;
+    for(let b=0; b<stepBatch && totalQCount()<maxTotal; b++){
       const k = growCycle[gStep % growCycle.length];
       gStep++;
       const sec=curExam.sections.find(s=>s.kind===k);
       if((sec?sec.qs.length:0) < limits[k] && addOneToKind(k, false)) batchAdded++;
     }
-    if(batchAdded) renderExam(true);
+    if(!batchAdded) break;
+    renderExam(true);
     while(curExam._lastPageCount > targetPages && batchAdded > 0){
       const k = growCycle[(gStep - 1 + growCycle.length) % growCycle.length];
       if(removeOneFromKind(k, true)) batchAdded--;
       else break;
     }
+    if(curExam._lastPageCount > targetPages) break;
   }
-  while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<56 && blockedKinds.size<growCycle.length && stalled<growCycle.length*2){
+  while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<60 && blockedKinds.size<growCycle.length && stalled<growCycle.length*2){
     const k=growCycle[gStep % growCycle.length];
     gStep++;
     if(blockedKinds.has(k)){stalled++;continue;}
@@ -5865,7 +5875,7 @@ function generateFromUI(arg){
   renderExam(willBalance);
   if(willBalance){
     const isZh=cfg.subject==='國語';
-    autoBalanceExamToTarget(2, isZh?54:48, cfg, true);
+    autoBalanceExamToTarget(2, isZh?80:60, cfg, true);
   }
 }
 let lastDiceSig='';
@@ -5912,9 +5922,9 @@ function buildDefaultSampleBatchCsv(){
   const pPrint2 = fmtT(new Date(p2.getTime() + 6*3600*1000));
   return [
     'order_id,parent_label,plan,grade,sem,pub,subj,scope,diff,ruby,custom_words,custom_units,paid_status,amount,sheets,packType,remit_last5,contact,reconcile_note,created_at,batch_week,print_status,print_count,printed_at',
-    `A01,王媽媽#8821,綜合套組,1,上,康軒,國語,全冊總複習,混合難度,是,,,已付款,100,20,懶人包,88210,0912-345-678,查帳OK,${t1},${curWk},未列印,0,`,
-    `A02,林爸爸#3094,評量測驗卷,2,上,南一,數學,期中複習,標準評量,是,,,已付款,100,20,懶人包,30945,0922-111-222,台新核帳OK,${t2},${curWk},未列印,0,`,
-    `A03,陳小姐#6512,筆畫寫字帖,3,上,翰林,國語,全冊總複習,標準評量,是,,,待核帳,100,20,懶人包,65129,0933-888-999,待確認入帳,${t3},${curWk},未列印,0,`,
+    `A01,王媽媽#8821,綜合套組,1,上,康軒,國語,全冊總複習,混合難度,是,,,已付款,100,20,綜合包,88210,0912-345-678,查帳OK,${t1},${curWk},未列印,0,`,
+    `A02,林爸爸#3094,評量測驗卷,2,上,南一,數學,期中複習,標準評量,是,,,已付款,100,20,綜合包,30945,0922-111-222,台新核帳OK,${t2},${curWk},未列印,0,`,
+    `A03,陳小姐#6512,筆畫寫字帖,3,上,翰林,國語,全冊總複習,標準評量,是,,,待核帳,100,20,綜合包,65129,0933-888-999,待確認入帳,${t3},${curWk},未列印,0,`,
     `A04,張媽媽#1178,評量測驗卷,4,上,康軒,自然科學,自選單元,素養挑戰,否,,月亮的圓缺變化,已付款,25,5,客製包,11782,0955-666-777,上週郵局查帳OK,${p1Str},${prevWk},已經列印,1,${pPrint1}`,
     `A05,黃先生#9405,評量測驗卷,6,上,南一,社會,期末複習,基礎熟練,否,,台灣的自然資源與物產,已付款,75,15,客製包,94051,0966-000-111,上週國泰查帳OK,${p2Str},${prevWk},已經列印,1,${pPrint2}`
   ].join('\n');
@@ -6008,7 +6018,7 @@ function normalizeOrderRow(raw, idx){
   const sheets = rawSheets ? Math.max(1, +rawSheets) : (rawAmt ? Math.max(1, Math.round(+rawAmt / 5)) : (plan==='both'?20:(custom_units||custom_words?1:20)));
   const defaultAmt = sheets * 5;
   const amount = rawAmt || String(defaultAmt);
-  const packType = String(raw.packType || raw.packtype || raw['方案模式'] || (sheets >= 20 && !custom_units && !custom_words ? '懶人包' : '客製包')).trim();
+  const packType = String(raw.packType || raw.packtype || raw['方案模式'] || (sheets >= 20 && !custom_units && !custom_words ? '綜合包' : '客製包')).trim();
   const remit_last5 = String(raw.remit_last5 || raw['後五碼'] || raw['匯款後五碼'] || '').trim();
   const contact = String(raw.contact || raw['聯絡電話'] || '').trim();
   const reconcile_note = String(raw.reconcile_note || raw['對帳備註'] || '').trim();
@@ -6596,7 +6606,7 @@ function renderBatchTable(orders){
       <div style="margin-top:3px"><span class="week-pill">${esc(o.batch_week||curWeek)}</span></div>
     </td>
     <td>
-      <div><b>${esc(shortPlan)}</b> <span class="ord-pack-tag">${esc(o.packType||'懶人包')}</span>・<b>${o.sheets||20} 張</b></div>
+      <div><b>${esc(shortPlan)}</b> <span class="ord-pack-tag">${esc(o.packType||'綜合包')}</span>・<b>${o.sheets||20} 張</b></div>
       <div style="font-size:.8rem;color:#1e293b;margin-top:2px">${o.grade?`${o.grade}年級${o.sem}`:'-'}・${esc(o.pubName)}・<b>${esc(o.subj)}</b>｜${esc(o.scopeName)}（${esc(o.diffName)}/${o.ruby?'注音':'無注音'}）</div>
       ${o.custom_units?`<div style="font-size:.75rem;color:#475569">範圍：${esc(o.custom_units)}</div>`:''}
       ${o.custom_words?`<div style="font-size:.75rem;color:#475569">生字：${esc(o.custom_words.slice(0,16))}</div>`:''}
@@ -6805,7 +6815,7 @@ function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
       </div>
       <div class="cover-grid">
         <div><b>年級／科目：</b><span>${order.plan==='preschool'?`${esc(order.grade)}｜${esc(order.subj)}`:`國小 ${esc(order.grade)} 年級 ${esc(order.sem)}｜${esc(order.subj)}（${esc(order.pubName)}）`}</span></div>
-        <div><b>訂購方案：</b><span>${esc(order.planName)}（${esc(order.packType||'懶人包')}）</span></div>
+        <div><b>訂購方案：</b><span>${esc(order.planName)}（${esc(order.packType||'綜合包')}）</span></div>
         <div><b>教材張數：</b><span>共 ${order.sheets||20} 張內容（印製 ${stats.contentPages-1} 頁＋本取貨聯）</span></div>
         <div><b>領取時程：</b><span><b>${esc(sched.deliveryStr)}</b>（請於週五中午 12:00 以後至週日晚上 21:00 以前憑編號領取）</span></div>
       </div>
@@ -6996,7 +7006,7 @@ function buildBatchAnswerPagesA4(records, order, wmText){
   return out;
 }
 
-// 依單筆訂單設定產生測驗卷 DOM 頁面陣列（支援 1 份自訂單張、及 10/20 張完全不重複懶人包）
+// 依單筆訂單設定產生測驗卷 DOM 頁面陣列（支援 1 份自訂單張、及 10/20 張完全不重複綜合包）
 function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
   const prevRuby = $('exRuby').checked;
   const prevTwo = $('exTwoPage').checked;
@@ -7056,14 +7066,14 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
 
   for(let s=0; s<examSheetsTarget; s++){
     const profIdx = order.sampleLimit && order.previewSheetIdx != null ? +order.previewSheetIdx : s;
-    const isPreviewLazy = !!order.sampleLimit && order.packType==='懶人包';
-    const prof = (examSheetsTarget > 1 || order.packType==='懶人包')
+    const isPreviewLazy = !!order.sampleLimit && order.packType==='綜合包';
+    const prof = (examSheetsTarget > 1 || order.packType==='綜合包')
       ? LAZY_EXAM_PROFILES[profIdx % LAZY_EXAM_PROFILES.length]
       : { name:'客製專屬評量卷', diff:order.diff||'mid', nMc:isZh?7:7, nTf:6, nFill:5, nMatch:1, nCalc:3, nWord:2 };
 
     const sheetIdxArr = pickSheetUnits(profIdx);
     const sheetUnits = sheetIdxArr.map(i=>allU[i]?.name).filter(Boolean);
-    const effDiff = (order.packType==='懶人包' || order.diff==='mix') ? prof.diff : (order.diff||prof.diff);
+    const effDiff = (order.packType==='綜合包' || order.diff==='mix') ? prof.diff : (order.diff||prof.diff);
     const wantSingleExamAns = (examSheetsTarget === 1 && !!withAns && !order.sampleLimit);
 
     const cfg = {
@@ -7079,7 +7089,7 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
     if(typeof autoBalanceExamToTarget==='function'){
       renderExam(true);
       // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面皆 90%~100% 飽滿無空白
-      autoBalanceExamToTarget(2, isZh?60:64, cfg, false);
+      autoBalanceExamToTarget(2, isZh?80:70, cfg, false);
     } else {
       renderExam(false);
     }
@@ -7321,6 +7331,10 @@ async function generateBatchAll(overrideOrders=null){
     });
     examRes.pages.forEach((p,idx)=>{
       const isAns = withAns && examRes.ansPages>0 && idx >= examRes.qPages;
+      if(!isAns && (examRes.qPages||0) >= 2 && idx < examRes.qPages){
+        p.dataset.exOrder = String(ord.order_id);
+        p.dataset.exSheet = String(Math.floor(idx/2));
+      }
       orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】${ord.subj}評量測驗卷 ${isAns?`解答頁 ${idx-examRes.qPages+1}`:`第 ${idx+1} 頁`}`, el:p});
     });
     // 若此筆訂單（含多筆訂單或解答結尾）為奇數頁，末尾自動補 1 張空白背面頁維持雙數張對印
@@ -7333,6 +7347,7 @@ async function generateBatchAll(overrideOrders=null){
       const pgA = orderPages[k];
       const pgB = orderPages[k+1] || null;
       const sheetIdx = Math.floor(grandTotalPages / 2);
+      if(pgB && pgB.el.classList.contains('batch-land-holder')) pgB.el.classList.add('batch-land-back');
       const p1 = grandTotalPages + 1;
       const p2 = grandTotalPages + (pgB ? 2 : 1);
       const pgRangeLbl = pgB ? `第 ${p1}-${p2} 頁` : `第 ${p1} 頁`;
@@ -7346,7 +7361,9 @@ async function generateBatchAll(overrideOrders=null){
       const cap = document.createElement('div');
       cap.className = 'pcap batch-pcap';
       cap.innerHTML = `<span class="batch-pcap-lbl">【第 ${sheetIdx+1} 張｜${pgRangeLbl}】${esc(pgA.label)}</span>`
-        + `<button type="button" class="btn btn-mini pri batch-print-one-pg" data-sheet="${sheetIdx}">🖨️ 僅列印此張（${p1}${pgB?'-'+p2:''}頁）</button>`;
+        + `<button type="button" class="btn btn-mini pri batch-print-one-pg" data-sheet="${sheetIdx}">🖨️ 僅列印此張（${p1}${pgB?'-'+p2:''}頁）</button>`
+        + ((pgB && pgA.el.dataset.exSheet !== undefined && pgA.el.dataset.exOrder === pgB.el.dataset.exOrder && pgA.el.dataset.exSheet === pgB.el.dataset.exSheet)
+          ? `<button type="button" class="btn btn-mini batch-regen-one" data-order="${esc(pgA.el.dataset.exOrder)}" data-exsheet="${pgA.el.dataset.exSheet}">🔄 重新生成此份（2頁）</button>` : '');
       sheet.appendChild(cap);
       sheet.appendChild(pgA.el);
       if(pgB) sheet.appendChild(pgB.el);
@@ -7362,6 +7379,23 @@ async function generateBatchAll(overrideOrders=null){
   sheet.querySelectorAll('.batch-print-one-pg').forEach(b=>{
     b.onclick=()=>printSingleBatchPage(+b.dataset.sheet);
   });
+  sheet.querySelectorAll('.batch-regen-one').forEach(b=>{
+    b.onclick=()=>regenBatchExamSheet(b.dataset.order, +b.dataset.exsheet, b);
+  });
+  if(allSheetPairs.length){
+    const jb = document.createElement('div');
+    jb.className = 'batch-jump-bar noprint';
+    jb.innerHTML = `<b style="color:#7a3b00">📑 跳到</b><select class="batch-jump-sel">${allSheetPairs.map(it=>`<option value="${it.sheetIdx}">第 ${it.sheetIdx+1} 張（第${it.p1}${it.p2>it.p1?'-'+it.p2:''}頁）${esc(String(it.label).replace(/^【/,'').replace(/】.*$/,''))}</option>`).join('')}</select>`
+      + `<button type="button" class="btn btn-mini batch-jump-top">⏫ 第一頁</button>`
+      + `<span class="duplex-tip">國語橫式＝書本式翻面；其餘直式＝長邊翻頁。列印時維持預設「雙面・長邊翻頁」即可，系統已自動補償方向。</span>`;
+    sheet.insertBefore(jb, sheet.firstChild);
+    const jumpTo = (n)=>{
+      const t = sheet.querySelector(`.a4[data-batch-sheet="${n}"]`);
+      if(t && t.scrollIntoView) t.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+    jb.querySelector('.batch-jump-sel').onchange = (e)=>jumpTo(+e.target.value);
+    jb.querySelector('.batch-jump-top').onclick = ()=>{ jb.querySelector('.batch-jump-sel').value = allSheetPairs[0].sheetIdx; jumpTo(allSheetPairs[0].sheetIdx); };
+  }
   if($('batchSinglePgBar')){
     const bar = $('batchSinglePgBar');
     if(allSheetPairs.length){
@@ -7389,6 +7423,40 @@ async function generateBatchAll(overrideOrders=null){
 
   $('batchMsg').style.color='#1f9d55';
   $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印共 ${Math.ceil(grandTotalPages/2)} 張整數紙；每兩頁 1-2、3-4 綁定），可整批印製或針對單張補印！`;
+}
+
+function regenBatchExamSheet(orderId, exSheet, btn){
+  const sheet = $('batchSheet');
+  if(!sheet) return;
+  const els = [...sheet.querySelectorAll('.a4')].filter(e=>e.dataset.exOrder===String(orderId) && e.dataset.exSheet===String(exSheet));
+  const ord = curBatchOrders.find(o=>String(o.order_id)===String(orderId));
+  if(els.length < 2 || !ord) return;
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ 重新生成中…'; }
+  setTimeout(()=>{
+    try{
+      const baseWm = (($('wmText')?$('wmText').value:'')||'向日葵國小伴學誌・專屬訂製請勿轉售').trim();
+      const wm = $('batchOrderWm').checked ? `${baseWm}（${ord.parent_label}・#${ord.order_id}）` : baseWm;
+      const res = buildExamPagesForOrder({ ...ord, sampleLimit: 1, previewSheetIdx: exSheet }, false, wm);
+      const np = res.pages.slice(0,2);
+      if(np.length < 2) throw new Error('產生頁數不足');
+      np.forEach((n,i)=>{
+        const old = els[i];
+        Object.assign(n.dataset, old.dataset);
+        if(old.classList.contains('batch-land-back') && n.classList.contains('batch-land-holder')) n.classList.add('batch-land-back');
+        n.querySelectorAll('.ex-sub').forEach(el=>{ el.textContent = el.textContent.replace(/樣本第 (\d+) 張/, '第 $1 份'); });
+        n.querySelectorAll('.cap').forEach(el=>{ el.textContent = el.textContent.replace(/樣本第 (\d+) 張/, '第 $1 份'); });
+        old.replaceWith(n);
+      });
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = '✅ 已重新生成（再按可重跑）';
+        btn.title = '若此單含解答頁，解答頁仍為原題，請以重新「產生批次」取得對應解答';
+      }
+    }catch(err){
+      if(btn){ btn.disabled = false; btn.textContent = '⚠️ 失敗，點此重試'; }
+      console.error(err);
+    }
+  }, 30);
 }
 
 function printSingleBatchPage(sheetIdx){
