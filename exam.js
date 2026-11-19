@@ -4797,8 +4797,8 @@ function renderExam(measureOnly=false){
     // 國語科：改採真實國小考卷「上下雙排直書」欄流（由大至小嘗試字級，讓 2 頁剛好填滿無半欄留白）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
     const mainX=useZy?14:21;
-    const zhCandFs=($('exTwoPage')&&$('exTwoPage').checked)?[13.8, 13.0, 12.2]:[13.2];
-    let zhFs=zhCandFs[0], zhPages=[], zhPageFills=[], maxW=900;
+    const zhCandFs=($('exTwoPage')&&$('exTwoPage').checked)?[13.8, 13.0, 12.2, 11.4]:[13.2, 12.4, 11.6];
+    let zhFs=zhCandFs[0], zhPages=[], zhPageFills=[], maxW=860;
     for(const _candFs of zhCandFs){
       zhFs=_candFs;
       const tierMaxH = 342;
@@ -4890,9 +4890,11 @@ function renderExam(measureOnly=false){
       });
       let extraCols=0;
       if(kind==='calc'||kind==='word'){
-        const qb=document.createElement('div');qb.className='qbox '+kind;
+        const isWide = kind==='word' && /造句|仿寫|短文|改寫|心得|為什麼|請寫出|舉例|說明|理由/.test(q.q||'');
+        const qb=document.createElement('div');
+        qb.className='qbox '+kind+(isWide?' wide':'');
         wrap.appendChild(qb);
-        extraCols=kind==='word'?2:1.3;
+        extraCols = isWide ? 3.5 : (kind==='word' ? 2.5 : 1.7);
       }
       return {el:wrap, colCount:qCols.length+extraCols};
     };
@@ -4920,8 +4922,8 @@ function renderExam(measureOnly=false){
     hdM.innerHTML=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
       <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
     mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
-    maxW=mw.clientWidth-26;
-    const hdW=hdM.getBoundingClientRect().width+16;
+    maxW=mw.clientWidth-46;
+    const hdW=hdM.getBoundingClientRect().width+18;
 
     flat.forEach(b=>{
       if(b.type==='sec'){
@@ -4980,17 +4982,18 @@ function renderExam(measureOnly=false){
       const buildTierEl=(items, usedW, isFirstTop)=>{
         const tierEl=document.createElement('div');
         tierEl.className='ex-zh-tier '+(isFirstTop?'top':'bot');
-        const spareW=Math.max(0,(maxW-16)-usedW);
+        const spareW=Math.max(0,(maxW-14)-usedW);
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
         if(spareW>16 && items.length>=2){
-          const qGap=Math.min(40, 3+(spareW*0.58)/qCount);
-          const colGap=Math.min(34, 4+(spareW*0.44)/itemCnt);
+          const qGap=Math.min(54, 3+(spareW*0.60)/qCount);
+          const colGap=Math.min(44, 4+(spareW*0.46)/itemCnt);
           tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
           tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
-          if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>35){
+          if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>45){
             tierEl.style.setProperty('--zh-box-calc','3.6em');
-            tierEl.style.setProperty('--zh-box-word','5.2em');
+            tierEl.style.setProperty('--zh-box-word','5.4em');
+            tierEl.style.setProperty('--zh-box-word-wide','7.2em');
           }
         }
         if(isFirstTop){
@@ -5014,6 +5017,32 @@ function renderExam(measureOnly=false){
       outer.appendChild(topEl);
       outer.appendChild(botEl);
       pg.appendChild(outer);
+      // 嚴格防吃邊／防消失校準：實測水平與垂直不溢位，若緊貼邊緣則自動微縮間距與字級
+      {
+        const fitHost=document.createElement('div');
+        fitHost.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;z-index:-1';
+        fitHost.appendChild(pg);
+        document.body.appendChild(fitHost);
+        let curZFs=zhFs;
+        for(let step=0; step<8; step++){
+          const overW = topEl.scrollWidth > topEl.clientWidth || botEl.scrollWidth > botEl.clientWidth;
+          const overH = [...topEl.querySelectorAll('.ex-zh-col'), ...botEl.querySelectorAll('.ex-zh-col')].some(c => c.scrollHeight > c.clientHeight + 4);
+          if(!overW && !overH) break;
+          if(overW){
+            [topEl, botEl].forEach(t=>{
+              const cg = parseFloat(t.style.getPropertyValue('--zh-col-gap')||'4');
+              const qg = parseFloat(t.style.getPropertyValue('--zh-q-gap')||'4');
+              t.style.setProperty('--zh-col-gap', Math.max(2, cg * 0.6).toFixed(1)+'px');
+              t.style.setProperty('--zh-q-gap', Math.max(2, qg * 0.6).toFixed(1)+'px');
+            });
+          }
+          if(step >= 2 || overH){
+            curZFs = +(Math.max(10.2, curZFs - 0.5)).toFixed(1);
+            outer.style.setProperty('--ex-fs', curZFs+'px');
+          }
+        }
+        document.body.removeChild(fitHost);
+      }
       if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
       const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
       pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　第 ${p+1} / ${totZ} 頁`}));
@@ -5171,12 +5200,12 @@ function renderExam(measureOnly=false){
         document.body.appendChild(fitHost);
         const colEls=[...inner.querySelectorAll('.ex-col-l,.ex-col-r,.ex-col-1')];
         let curFs=chosenD.fs, curLh=baseSt.lh, curGap=baseSt.gap, curCalc=baseSt.calcH, curWord=baseSt.wordH;
-        for(let step=0; step<12 && inner.scrollHeight>1094; step++){
+        for(let step=0; step<18 && inner.scrollHeight>1055; step++){
           curGap=Math.max(2, curGap-4);
-          curLh=Math.max(1.18, +(curLh-0.08).toFixed(2));
+          curLh=Math.max(1.16, +(curLh-0.07).toFixed(2));
           curCalc=Math.max(16, curCalc-6);
-          curWord=Math.max(24, curWord-8);
-          if(step>=3) curFs=Math.max(10.6, +(curFs-0.4).toFixed(1));
+          curWord=Math.max(22, curWord-8);
+          if(step>=2) curFs=Math.max(9.8, +(curFs-0.4).toFixed(1));
           [inner, ...colEls].forEach(el=>{
             el.style.setProperty('--ex-fs', curFs+'px');
             el.style.setProperty('--ex-lh', curLh);
@@ -5466,8 +5495,9 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 3px;flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
-.ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:2.1em;height:92%;margin:0 2px;flex:none}
-.ex-zh-q .qbox.word{width:3.2em}
+.ex-zh-q .qbox{border:1.2px dashed #94a3b8;border-radius:5px;width:var(--zh-box-calc,3.0em);height:94%;margin:0 3px;flex:none}
+.ex-zh-q .qbox.word{width:var(--zh-box-word,4.4em)}
+.ex-zh-q .qbox.word.wide{width:var(--zh-box-word-wide,6.2em)}
 .tcy{text-combine-upright:all;-webkit-text-combine:horizontal;display:inline-block;min-width:1em;text-align:center;line-height:1;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
 .v-arrow{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1.1em;text-align:center;line-height:1;font-family:"Noto Sans TC",sans-serif;vertical-align:middle}
 .qend-glue{white-space:nowrap;display:inline}
@@ -7225,18 +7255,25 @@ async function generateBatchAll(overrideOrders=null){
       examRes = buildExamPagesForOrder(ord, withAns, wmText);
     }
 
-    const contentPages = (withCover?1:0) + strokeRes.pages.length + examRes.pages.length;
-    const needBlank = duplexPad && (contentPages % 2 === 1) && (i < selectedOrders.length - 1);
-    const totalPages = contentPages + (needBlank?1:0);
-    const stats = {
-      withCover, strokePages: strokeRes.pages.length, strokeChars: strokeRes.charCount,
-      examPages: examRes.pages.length, examQPages: examRes.qPages, examAnsPages: examRes.ansPages,
-      contentPages, paddedBlank: needBlank, totalPages
+    const makeDuplexBlank = (hintTxt) => {
+      const blank = document.createElement('div');
+      blank.className = 'a4';
+      blank.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+      blank.innerHTML += `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:13px">${esc(hintTxt)}</div>`;
+      return blank;
     };
 
     const orderPages = [];
     if(withCover){
-      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】A4 取貨封面頁`, el: buildCoverPageA4(ord, i, selectedOrders.length, stats, wmText)});
+      const covPagesCount = 2 + strokeRes.pages.length + examRes.pages.length;
+      const statsTmp = {
+        withCover, strokePages: strokeRes.pages.length, strokeChars: strokeRes.charCount,
+        examPages: examRes.pages.length, examQPages: examRes.qPages, examAnsPages: examRes.ansPages,
+        contentPages: covPagesCount, paddedBlank: (covPagesCount % 2 === 1), totalPages: covPagesCount + (covPagesCount % 2 === 1 ? 1 : 0)
+      };
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】A4 取貨封面頁`, el: buildCoverPageA4(ord, i, selectedOrders.length, statsTmp, wmText)});
+      // 訂單首頁第 2 頁預設空白頁，雙面列印時確保直接接續下一張才開始印考卷／寫字帖
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】取貨封面空白背面（雙面防串頁）`, el: makeDuplexBlank('（訂單封面背面預設空白頁 — 下一張第 3 頁起開始印製教材）')});
     }
     strokeRes.pages.forEach((p,idx)=>{
       const sKind = ord.plan==='preschool' ? '幼兒園運筆寫字帖' : '筆畫練習寫字帖';
@@ -7246,51 +7283,63 @@ async function generateBatchAll(overrideOrders=null){
       const isAns = withAns && examRes.ansPages>0 && idx >= examRes.qPages;
       orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】${ord.subj}評量測驗卷 ${isAns?`解答頁 ${idx-examRes.qPages+1}`:`第 ${idx+1} 頁`}`, el:p});
     });
-    if(needBlank){
-      const blank = document.createElement('div');
-      blank.className = 'a4';
-      blank.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-      blank.innerHTML += `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:13px">（雙面列印防串頁空白背面 — 下一張為下一筆訂單取貨封面）</div>`;
-      orderPages.push({label:`【訂單 ${ord.order_id}】雙面列印防串頁空白背面`, el:blank});
+    // 若此筆訂單（含多筆訂單或解答結尾）為奇數頁，末尾自動補 1 張空白背面頁維持雙數張對印
+    if(duplexPad && orderPages.length % 2 === 1){
+      orderPages.push({label:`【訂單 ${ord.order_id}】雙面列印結尾空白背面`, el: makeDuplexBlank('（雙面列印防串頁空白背面 — 確保整數張雙面列印不印錯）')});
     }
 
-    const singlePgItems = [];
-    orderPages.forEach(item=>{
-      const pgIdx = grandTotalPages;
-      item.el.dataset.batchPg = String(pgIdx);
+    const sheetPairs = [];
+    for(let k=0; k<orderPages.length; k+=2){
+      const pgA = orderPages[k];
+      const pgB = orderPages[k+1] || null;
+      const sheetIdx = Math.floor(grandTotalPages / 2);
+      const p1 = grandTotalPages + 1;
+      const p2 = grandTotalPages + (pgB ? 2 : 1);
+      const pgRangeLbl = pgB ? `第 ${p1}-${p2} 頁` : `第 ${p1} 頁`;
+      pgA.el.dataset.batchPg = String(grandTotalPages);
+      pgA.el.dataset.batchSheet = String(sheetIdx);
+      if(pgB){
+        pgB.el.dataset.batchPg = String(grandTotalPages + 1);
+        pgB.el.dataset.batchSheet = String(sheetIdx);
+      }
+      // 每兩頁（1 張正反面）綁定出現一次「🖨️ 僅列印此張（1-2頁）」按鈕
       const cap = document.createElement('div');
       cap.className = 'pcap batch-pcap';
-      cap.innerHTML = `<span class="batch-pcap-lbl">【第 ${pgIdx+1} 頁】${esc(item.label)}</span>`
-        + `<button type="button" class="btn btn-mini pri batch-print-one-pg" data-pg="${pgIdx}">🖨️ 僅列印此頁</button>`;
+      cap.innerHTML = `<span class="batch-pcap-lbl">【第 ${sheetIdx+1} 張｜${pgRangeLbl}】${esc(pgA.label)}</span>`
+        + `<button type="button" class="btn btn-mini pri batch-print-one-pg" data-sheet="${sheetIdx}">🖨️ 僅列印此張（${p1}${pgB?'-'+p2:''}頁）</button>`;
       sheet.appendChild(cap);
-      sheet.appendChild(item.el);
-      singlePgItems.push({ pgIdx, label: item.label, el: item.el });
-      grandTotalPages++;
-    });
+      sheet.appendChild(pgA.el);
+      if(pgB) sheet.appendChild(pgB.el);
+      sheetPairs.push({ sheetIdx, p1, p2: pgB ? p2 : p1, label: pgA.label });
+      grandTotalPages += pgB ? 2 : 1;
+    }
     if(!window._batchSinglePgMeta) window._batchSinglePgMeta = [];
     if(i===0) window._batchSinglePgMeta = [];
-    window._batchSinglePgMeta.push(...singlePgItems);
+    window._batchSinglePgMeta.push(...sheetPairs);
   }
 
-  const allSingleItems = window._batchSinglePgMeta || [];
+  const allSheetPairs = window._batchSinglePgMeta || [];
   sheet.querySelectorAll('.batch-print-one-pg').forEach(b=>{
-    b.onclick=()=>printSingleBatchPage(+b.dataset.pg);
+    b.onclick=()=>printSingleBatchPage(+b.dataset.sheet);
   });
   if($('batchSinglePgBar')){
     const bar = $('batchSinglePgBar');
-    if(allSingleItems.length){
+    if(allSheetPairs.length){
       bar.style.display='flex';
-      bar.innerHTML = `<b style="font-size:.84rem;color:#7a3b00;margin-right:4px">📄 針對單一頁補印（共 ${allSingleItems.length} 頁）：</b>`
-        + allSingleItems.map(it=>`<span class="batch-pg-pill"><a href="#" class="batch-pg-jump" data-pg="${it.pgIdx}" style="color:#7a3b00;text-decoration:none;font-weight:700">第${it.pgIdx+1}頁</a> <button type="button" class="btn btn-mini pri batch-bar-print-btn" data-pg="${it.pgIdx}" title="${esc(it.label)}">🖨️</button></span>`).join('');
+      bar.innerHTML = `<b style="font-size:.84rem;color:#7a3b00;margin-right:4px">📄 雙面綁定補印（共 ${allSheetPairs.length} 張／${grandTotalPages} 頁）：</b>`
+        + allSheetPairs.map(it=>{
+          const rTxt = it.p2 > it.p1 ? `第${it.p1}-${it.p2}頁` : `第${it.p1}頁`;
+          return `<span class="batch-pg-pill"><a href="#" class="batch-pg-jump" data-sheet="${it.sheetIdx}" style="color:#7a3b00;text-decoration:none;font-weight:700">${rTxt}</a> <button type="button" class="btn btn-mini pri batch-bar-print-btn" data-sheet="${it.sheetIdx}" title="${esc(it.label)}">🖨️</button></span>`;
+        }).join('');
       bar.querySelectorAll('.batch-pg-jump').forEach(a=>{
         a.onclick=(e)=>{
           e.preventDefault();
-          const target = sheet.querySelector(`.a4[data-batch-pg="${a.dataset.pg}"]`);
+          const target = sheet.querySelector(`.a4[data-batch-sheet="${a.dataset.sheet}"]`);
           if(target && typeof target.scrollIntoView === 'function') target.scrollIntoView({behavior:'smooth',block:'start'});
         };
       });
       bar.querySelectorAll('.batch-bar-print-btn').forEach(b=>{
-        b.onclick=()=>printSingleBatchPage(+b.dataset.pg);
+        b.onclick=()=>printSingleBatchPage(+b.dataset.sheet);
       });
     } else {
       bar.style.display='none';
@@ -7299,26 +7348,32 @@ async function generateBatchAll(overrideOrders=null){
   }
 
   $('batchMsg').style.color='#1f9d55';
-  $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印約 ${Math.ceil(grandTotalPages/2)} 張紙），可按「🖨️ 列印勾選的訂單」或針對單一頁按「🖨️ 僅列印此頁」！`;
+  $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印共 ${Math.ceil(grandTotalPages/2)} 張整數紙；每兩頁 1-2、3-4 綁定），可整批印製或針對單張補印！`;
 }
 
-function printSingleBatchPage(pgIdx){
+function printSingleBatchPage(sheetIdx){
   const sheet = $('batchSheet');
   if(!sheet) return;
-  const target = sheet.querySelector(`.a4[data-batch-pg="${pgIdx}"]`);
-  if(!target) return;
-  sheet.querySelectorAll('.a4.is-print-target').forEach(el=>el.classList.remove('is-print-target'));
-  target.classList.add('is-print-target');
+  const targets = [...sheet.querySelectorAll(`.a4[data-batch-sheet="${sheetIdx}"]`)];
+  if(!targets.length) return;
+  sheet.querySelectorAll('.a4.is-print-target,.a4.is-print-target-last').forEach(el=>{
+    el.classList.remove('is-print-target','is-print-target-last');
+  });
+  targets.forEach((el, idx)=>{
+    el.classList.add('is-print-target');
+    if(idx === targets.length - 1) el.classList.add('is-print-target-last');
+  });
   document.body.classList.add('print-only-single-page');
   let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
   st.textContent='@media print{@page{size:A4 portrait;margin:0}}';
+  const p1 = sheetIdx * 2 + 1, p2 = p1 + targets.length - 1;
   if($('batchMsg')){
     $('batchMsg').style.color='#1f9d55';
-    $('batchMsg').textContent=`🖨️ 已鎖定單頁列印「第 ${pgIdx+1} 頁」，只會印出該頁 A4（其餘頁面已自動隱藏）！`;
+    $('batchMsg').textContent=`🖨️ 已鎖定雙面補印「第 ${sheetIdx+1} 張（第 ${p1}${p2>p1?'-'+p2:''} 頁）」，只會印出該張正反面（其餘頁面已自動隱藏）！`;
   }
   const cleanup = ()=>{
     document.body.classList.remove('print-only-single-page');
-    target.classList.remove('is-print-target');
+    targets.forEach(el=>el.classList.remove('is-print-target','is-print-target-last'));
   };
   if(typeof window.addEventListener === 'function'){
     window.addEventListener('afterprint', cleanup, { once: true });

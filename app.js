@@ -248,6 +248,14 @@ function buildLayout(opts={}){
       }
     });
 
+    const fillTrailingEmptyCols=(items, usedCols, colCount, rowCount)=>{
+      for(let c=usedCols; c<colCount; c++){
+        for(let r=0; r<rowCount; r++){
+          items.push({ch:'',col:c,row:r,span:1,o:{k:0,zy,ghost:false}});
+        }
+      }
+    };
+
     let curPageCols=[];
     const flushPage=()=>{
       if(!curPageCols.length)return;
@@ -255,6 +263,7 @@ function buildLayout(opts={}){
       curPageCols.forEach((colObj,cIdx)=>{
         colObj.list.forEach((it,rIdx)=>items.push({ch:colObj.ch,col:cIdx,row:rIdx,...it}));
       });
+      fillTrailingEmptyCols(items, curPageCols.length, cols, R);
       pages.push({R,cw,chh,sq,cols,cwMax,img:Math.min(300,Math.round(sq*3)),items});
       curPageCols=[];
     };
@@ -325,8 +334,22 @@ function buildLayout(opts={}){
         const rest=Math.max(0,RB-1-sp);
         for(let b=0;b<rest;b++)items.push({ch,col:c,row:1+sp+b,span:1,o:{k:0,zy,ghost:b<tn}});
       });
+      // 自動補滿右側空白練習欄位，不留白紙
+      for(let c=slice.length;c<cols;c++){
+        for(let r=0;r<RB;r++)items.push({ch:'',col:c,row:r,span:1,o:{k:0,zy,ghost:false}});
+      }
       pages.push({R:RB,cw:cwB,chh:chhB,sq:sqB,cols,cwMax,img:Math.min(300,Math.round(sqB*3)),items});
     }
+    // 模式二僅 1 頁時亦補齊第 2 頁全頁空白練習格（維持正反 2 頁且全格滿版）
+    if(!opts.noReviewPad && pages.length===1){
+      const p0=pages[0], blankItems=[];
+      for(let c=0;c<p0.cols;c++){
+        for(let r=0;r<p0.R;r++)blankItems.push({ch:'',col:c,row:r,span:1,o:{k:0,zy:p0.items[0]?.o?.zy||0,ghost:false}});
+      }
+      pages.push({...p0, items:blankItems});
+    }
+    rawPageCount = pages.length;
+    if(rawPageCount > 2) exceeded2 = true;
   }
   return {mode,zy,cols,cwMax,pages,exceedsTwoPages:exceeded2,rawPageCount:rawPageCount||pages.length};
 }

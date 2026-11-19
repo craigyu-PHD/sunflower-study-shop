@@ -168,12 +168,12 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:var(--zh-box-calc,2.2em);height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:var(--zh-box-word,3.2em)}
-.preschool-a4 .pre-a4-hd{position:absolute;left:24px;right:24px;top:16px;height:62px;border-bottom:2px solid #f59e0b;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:7px;gap:12px}
+.preschool-a4 .pre-a4-hd{position:absolute;left:24px;right:24px;top:14px;height:64px;border-bottom:2px solid #f59e0b;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
 .preschool-a4 .pre-a4-title{min-width:0;flex:1}
 .preschool-a4 .pre-a4-title b{display:block;font-size:1.05rem;color:#7a3b00;line-height:1.25}
 .preschool-a4 .pre-a4-title span{display:block;font-size:.75rem;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.preschool-a4 .pre-a4-info{display:flex;align-items:center;gap:12px;font-size:.86rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
-.preschool-a4 .pre-name-box{display:inline-block;width:168px;height:30px;border:1.8px solid #d97706;border-radius:7px;background:#fffdf7;vertical-align:middle;margin-left:3px}
+.preschool-a4 .pre-a4-info{display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
+.preschool-a4 .pre-name-box{display:inline-block;width:232px;height:36px;border:2px solid #d97706;border-radius:8px;background:#fffdf7;vertical-align:middle;margin-left:3px}
 .tcy{text-combine-upright:all;-webkit-text-combine:horizontal;display:inline-block;min-width:1em;text-align:center;line-height:1;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
 .v-arrow{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1.1em;text-align:center;line-height:1;font-family:"Noto Sans TC",sans-serif;vertical-align:middle}
 .qend-glue{white-space:nowrap;display:inline}
@@ -421,7 +421,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .batch-pg-pill{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #fed7aa;border-radius:7px;padding:3px 7px;font-size:.8rem;color:#7a3b00}
 @media print{
   body.print-only-single-page #batchSheet .a4:not(.is-print-target){display:none!important}
-  body.print-only-single-page #batchSheet .a4.is-print-target{break-after:auto!important;page-break-after:auto!important}
+  body.print-only-single-page #batchSheet .a4.is-print-target-last{break-after:auto!important;page-break-after:auto!important}
 }
 #batchTableWrap,#stCartTableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 #batchTableWrap table,#stCartTableWrap table{min-width:680px}
