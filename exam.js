@@ -200,8 +200,9 @@ function zhFormat(html){
   return String(html).split(/(<[^>]+>)/g).map(tok=>
     tok.startsWith('<') ? tok : tok
       .replace(/……/g,'…')
-      .replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>VPUNC_MAP[m]||m)
-      .replace(/(\d+\.|\d+)/g,'<span class="tcy">$1</span>')
+      .replace(/[「」『』（）()【】〔〕《》〈〉…—]/g,m=>VPUNC_MAP[m]||m)
+      .replace(/[→↓]/g,'<span class="v-arrow">↓</span>')
+      .replace(/(\d+)\.|\d+/g,(m,dDot)=>dDot?`<span class="tcy">${dDot}</span>．`:`<span class="tcy">${m}</span>`)
   ).join('');
 }
 
@@ -236,10 +237,12 @@ function rubyHtml(str){
   const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
   // 先將作答括號統一為標準加寬隱藏式空格盒（適合小學生較大字跡）
   const norm=String(str).replace(/[（(][\s　]*[）)]/g,'@@BLANK@@');
-  const parts=norm.split(/(@@BLANK@@|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?|[A-Za-z0-9]+(?:[./:+\-×÷=><％%][A-Za-z0-9]+)*)/g);
+  const parts=norm.split(/(@@BLANK@@|→|[A-Za-z](?:[ ]*_+[ ]*[A-Za-z_]*)+|[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?|[A-Za-z0-9]+(?:[./:+\-×÷=><％%][A-Za-z0-9]+)*)/g);
   return parts.map(part=>{
     if(!part)return '';
     if(part==='@@BLANK@@')return `<span class="h-blank">（　　　）</span>`;
+    if(part==='→')return `<span class="q-arrow">→</span>`;
+    if(/^[A-Za-z](?:[ ]*_+[ ]*[A-Za-z_]*)+$/.test(part))return `<span class="eng-clue">${esc(part)}</span>`;
     if(/^[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?$/.test(part))return hCellZy(part);
     if(useZy && /^[A-Za-z0-9]/.test(part)) return `<span class="h-num">${esc(part)}</span>`;
     if(!useZy)return esc(part).replace(/\n/g,'<br>');
@@ -315,6 +318,8 @@ function gCellPunc(p,mainX=14){
     inner=`<circle cx="${mainX}" cy="4.8" r="1.35" fill="#111"/><circle cx="${mainX}" cy="11" r="1.35" fill="#111"/><circle cx="${mainX}" cy="17.2" r="1.35" fill="#111"/>`;
   }else if(p==='—'){
     inner=`<line x1="${mainX}" y1="2.5" x2="${mainX}" y2="19.5" stroke="#111" stroke-width="1.7" stroke-linecap="round"/>`;
+  }else if(p==='→'||p==='↓'){
+    inner=`<line x1="${mainX}" y1="3.2" x2="${mainX}" y2="17.8" stroke="#111" stroke-width="1.8" stroke-linecap="round"/><polyline points="${mainX-3.8},14 ${mainX},18.2 ${mainX+3.8},14" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
   }else{
     inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="#111">${esc(vp)}</text>`;
   }
@@ -4362,13 +4367,15 @@ function generateExamQuestions(cfg){
 
     const sortByDiffPref = (arr, targetD) => {
       if(!arr.length) return [];
-      const exact=[], sameUndef=[], other=[];
-      arr.forEach(r=>{
-        if(r.diff===targetD) exact.push(r);
-        else if(!r.diff) sameUndef.push(r);
-        else other.push(r);
+      const order = targetD==='easy' ? ['easy', undefined, 'mid', 'hard']
+                  : targetD==='hard' ? ['hard', 'mid', undefined, 'easy']
+                  : ['mid', undefined, 'easy', 'hard'];
+      const buckets = new Map(order.map(k => [k, []]));
+      arr.forEach(r => {
+        const k = buckets.has(r.diff) ? r.diff : undefined;
+        buckets.get(k).push(r);
       });
-      return [...shuffle(exact), ...shuffle(sameUndef), ...shuffle(other)];
+      return order.flatMap(k => shuffle(buckets.get(k)));
     };
 
     if(subj==='數學'){
@@ -4729,7 +4736,7 @@ function renderExam(measureOnly=false){
   const {meta, sections}=curExam;
   const {D}=chooseBestLayout(curExam);
   const twoCol=meta.layout==='2col';
-  const diffName={easy:'基礎熟練(鼎甲風)',mid:'標準評量(良品風)',hard:'素養挑戰(奇鼎風)',mix:'混合難度(三強混合)'}[meta.diff];
+  const diffName={easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度（由淺入深）'}[meta.diff]||'標準評量';
   const pubName=CURR_META.pubs[meta.pub]||meta.pub;
   const unitsText=meta.units.length?meta.units.join('、'):'全冊綜合複習';
   const isZh=meta.subject==='國語';
@@ -4748,7 +4755,13 @@ function renderExam(measureOnly=false){
     const brk=zhMode?'︵　　︶':'(　　)';
     const noRaw=zhMode?`<span class="tcy">${b.num}.</span>`:`${b.num}.`;
     const noText=(kind==='mc'||kind==='tf')?`${noRaw} ${brk}`:noRaw;
-    const rawQ = normSubNums(String(q.q || '').trimEnd());
+    const rawFullQ = normSubNums(String(q.q || '').trimEnd());
+    // 英語科：若英文題尾附有中文翻譯（...），抽離成獨立下行提示，避免句點或右引號孤立掉行
+    const engHintM = (meta.subject === '英語')
+      ? rawFullQ.match(/^([\s\S]*?[A-Za-z0-9."'?!）)])\s*[（(]([^()（）]*[\u4e00-\u9fff][^()（）]*)[）)]\s*$/)
+      : null;
+    const rawQ = engHintM ? engHintM[1].trimEnd() : rawFullQ;
+    const engZhHint = engHintM ? engHintM[2].trim() : '';
     const ptsTag = `<span class="qpts">（${q.pts}分）</span>`;
     // 防止括弧與配分標籤（5分）單獨掉落換行：將最後一詞（含括弧＋句尾標點）與配分緊密黏合
     const glueTailMatch = rawQ.match(/^(.*?)((?:[^\s\n])?[（(][\s　]*[）)][？。！：.,!?]?|[^\s\n]{1,2}[？。！：.,!?]?)$/);
@@ -4765,9 +4778,10 @@ function renderExam(measureOnly=false){
     // 同時將題幹中間的作答括弧與前後1字緊黏，避免括弧在句末孤立斷行
     qHtml = qHtml.replace(/([^>])(<span class="h-blank">[^<]+<\/span>)([？。！：，、；]?)/g, '$1<span class="qblank-glue">$2$3</span>');
     let body=`<div class="qt">${qHtml}</div>`;
+    if(engZhHint) body+=`<div class="qt-zh-hint">（${esc(engZhHint)}）</div>`;
     if(q.svg) body+=`<div class="ex-svg">${q.svg}</div>`;
     if(kind==='mc'){
-      body+=`<div class="qopts">${q.opts.map((o,i)=>`<span>${optLabels[i]} ${rubyHtml(o)}</span>`).join('')}</div>`;
+      body+=`<div class="qopts">${q.opts.map((o,i)=>`<span class="qopt"><span class="opt-lbl">${optLabels[i]}</span><span class="opt-txt">${rubyHtml(o)}</span></span>`).join('')}</div>`;
     }else if(kind==='match'){
       const rows=q.pairs.map((p,i)=>`<div><b>(${i+1})</b> <span class="h-blank">（　　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
       body+=`<div class="ex-match">${rows}</div>`;
@@ -4904,7 +4918,7 @@ function renderExam(measureOnly=false){
     const zhGrade=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
     const hdM=document.createElement('div');hdM.className='ex-zh-hd';
     hdM.innerHTML=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
-      <div class="ex-zh-info"><span>班級：（）年（）班</span><span>座號：（）</span><span>姓名：（）</span><span>得分：（）</span></div>`);
+      <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
     mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
     maxW=mw.clientWidth-26;
     const hdW=hdM.getBoundingClientRect().width+16;
@@ -4983,7 +4997,7 @@ function renderExam(measureOnly=false){
           const zhGradeTop=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
           const hd=document.createElement('div');hd.className='ex-zh-hd';
           hd.innerHTML=zhFormat(`<div><h3>國小${zhGradeTop}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
-            <div class="ex-zh-info"><span>班級：（）年（）班</span><span>座號：（）</span><span>姓名：（）</span><span>得分：（）</span></div>`);
+            <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
           tierEl.appendChild(hd);
         }
         items.forEach(b=>{
@@ -5215,8 +5229,8 @@ function renderExam(measureOnly=false){
           else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`(${j+1})→${L[q.right.indexOf(p[1])]}`).join('、');}
           ans=String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2)');
           const col=document.createElement('div');
-          col.style.cssText='writing-mode:vertical-rl;text-orientation:upright;height:100%;margin:0 4px;line-height:1.55;font-size:13.5px;flex:none';
-          col.innerHTML=zhFormat(`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span style="color:#555;font-size:0.9em">（${esc(q.exp)}）</span>`:''}`);
+          col.style.cssText='writing-mode:vertical-rl;text-orientation:upright;height:100%;margin:0 5px;line-height:1.68;font-size:13.5px;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif;flex:none;letter-spacing:.02em';
+          col.innerHTML=zhFormat(`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span style="color:#555;font-size:0.92em">（${esc(q.exp)}）</span>`:''}`);
           ansBlocks.push(col);
         });
       });
@@ -5424,8 +5438,14 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-q .qno{font-weight:700;white-space:nowrap;padding-right:2px}
 .ex-q .qbody{min-width:0}
 .ex-q .qt{word-break:break-word}
+.ex-q .qt-zh-hint{margin-top:2px;font-size:.9em;color:#475569;padding-left:.2em;line-height:1.38}
 .ex-q .qpts{color:#555;font-size:.84em;margin-left:3px;white-space:nowrap}
-.ex-q .qopts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:3px;font-size:.94em}
+.ex-q .qopts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;font-size:.94em}
+.ex-q .qopt{display:inline-flex;align-items:baseline;gap:4px;max-width:100%}
+.ex-q .opt-lbl{flex:none;white-space:nowrap}
+.ex-q .opt-txt{min-width:0}
+.q-arrow{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;margin:0 .16em;text-align:center;vertical-align:middle;line-height:1}
+.eng-clue{white-space:nowrap;display:inline-block;letter-spacing:.04em}
 .ex-q .qbox{border:1px dashed #aaa;border-radius:5px;margin-top:4px}
 .ex-q .qbox.calc{height:var(--ex-box-calc,28px)}
 .ex-q .qbox.word{height:var(--ex-box-word,40px)}
@@ -5448,7 +5468,8 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:2.1em;height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:3.2em}
-.tcy{text-combine-upright:all;-webkit-text-combine:horizontal;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
+.tcy{text-combine-upright:all;-webkit-text-combine:horizontal;display:inline-block;min-width:1em;text-align:center;line-height:1;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
+.v-arrow{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1.1em;text-align:center;line-height:1;font-family:"Noto Sans TC",sans-serif;vertical-align:middle}
 .qend-glue{white-space:nowrap;display:inline}
 .qblank-glue{white-space:nowrap;display:inline}
 
@@ -6728,14 +6749,14 @@ function wrapLandscapePageForBatch(landPg){
 }
 
 const LAZY_EXAM_PROFILES = [
-  { name:'鼎甲風・基礎觀念＋雙選穩固卷', diff:'easy', nMc:11, nTf:9,  nFill:6, nMatch:0, nCalc:0, nWord:0 },
-  { name:'良品風・五題型均衡評量卷',     diff:'mid',  nMc:8,  nTf:6,  nFill:5, nMatch:1, nCalc:4, nWord:0 },
-  { name:'良品風・填空實作＋圖文配對卷', diff:'mid',  nMc:6,  nTf:0,  nFill:8, nMatch:1, nCalc:4, nWord:3 },
-  { name:'鼎甲風・觀念是非＋基礎應用卷', diff:'easy', nMc:0,  nTf:10, nFill:7, nMatch:0, nCalc:4, nWord:3 },
-  { name:'良品風・精選選擇＋實戰加強卷', diff:'mid',  nMc:11, nTf:0,  nFill:7, nMatch:0, nCalc:5, nWord:0 },
-  { name:'奇鼎風・閱讀素養＋圖表挑戰卷', diff:'hard', nMc:8,  nTf:6,  nFill:0, nMatch:1, nCalc:3, nWord:4 },
-  { name:'奇鼎風・高分易錯診斷特訓卷', diff:'hard', nMc:9,  nTf:7,  nFill:6, nMatch:0, nCalc:4, nWord:0 },
-  { name:'三強混合・期中期末魔王總複習', diff:'mix',  nMc:7,  nTf:6,  nFill:5, nMatch:1, nCalc:4, nWord:3 }
+  { name:'基礎觀念＋雙選穩固卷', diff:'easy', nMc:11, nTf:9,  nFill:6, nMatch:0, nCalc:0, nWord:0 },
+  { name:'五題型均衡評量卷',     diff:'mid',  nMc:8,  nTf:6,  nFill:5, nMatch:1, nCalc:4, nWord:0 },
+  { name:'填空實作＋圖文配對卷', diff:'mid',  nMc:6,  nTf:0,  nFill:8, nMatch:1, nCalc:4, nWord:3 },
+  { name:'觀念是非＋基礎應用卷', diff:'easy', nMc:0,  nTf:10, nFill:7, nMatch:0, nCalc:4, nWord:3 },
+  { name:'精選選擇＋實戰加強卷', diff:'mid',  nMc:11, nTf:0,  nFill:7, nMatch:0, nCalc:5, nWord:0 },
+  { name:'閱讀素養＋圖表挑戰卷', diff:'hard', nMc:8,  nTf:6,  nFill:0, nMatch:1, nCalc:3, nWord:4 },
+  { name:'高分易錯診斷特訓卷', diff:'hard', nMc:9,  nTf:7,  nFill:6, nMatch:0, nCalc:4, nWord:0 },
+  { name:'期中期末進階總複習', diff:'mix',  nMc:7,  nTf:6,  nFill:5, nMatch:1, nCalc:4, nWord:3 }
 ];
 window.LAZY_EXAM_PROFILES = LAZY_EXAM_PROFILES;
 window.normalizeTemplateSig = normalizeTemplateSig;
@@ -6941,7 +6962,7 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
       renderExam(false);
     }
     const rawPages = [...box.querySelectorAll('.a4')];
-    const diffZh = {easy:'基礎熟練(鼎甲風)',mid:'標準評量(良品風)',hard:'素養挑戰(奇鼎風)',mix:'混合難度(三強混合)'}[effDiff] || '標準評量(良品風)';
+    const diffZh = {easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度（由淺入深）'}[effDiff] || '標準評量';
     const unitsLabel = sheetUnits.length ? sheetUnits.join('、') : '全冊綜合';
 
     const qCountThisExam = (curExam && curExam._lastPageCount) ? curExam._lastPageCount : Math.min(2, rawPages.length);

@@ -135,8 +135,14 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-q .qno{font-weight:700;white-space:nowrap;padding-right:2px}
 .ex-q .qbody{min-width:0}
 .ex-q .qt{word-break:break-word}
+.ex-q .qt-zh-hint{margin-top:2px;font-size:.92em;color:#444;line-height:1.38}
 .ex-q .qpts{color:#555;font-size:.84em;margin-left:3px;white-space:nowrap}
 .ex-q .qopts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:3px;font-size:.94em}
+.ex-q .qopt{display:inline-flex;align-items:baseline;gap:4px;max-width:100%}
+.ex-q .opt-lbl{flex:none;white-space:nowrap;font-weight:600}
+.ex-q .opt-txt{min-width:0;word-break:break-word}
+.q-arrow{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;margin:0 .16em;text-align:center;vertical-align:middle;line-height:1}
+.eng-clue{white-space:nowrap;display:inline-block;letter-spacing:.04em}
 .ex-q .qbox{border:1px dashed #aaa;border-radius:5px;margin-top:4px}
 .ex-q .qbox.calc{height:var(--ex-box-calc,28px)}
 .ex-q .qbox.word{height:var(--ex-box-word,40px)}
@@ -168,7 +174,8 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .preschool-a4 .pre-a4-title span{display:block;font-size:.75rem;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .preschool-a4 .pre-a4-info{display:flex;align-items:center;gap:12px;font-size:.86rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
 .preschool-a4 .pre-name-box{display:inline-block;width:168px;height:30px;border:1.8px solid #d97706;border-radius:7px;background:#fffdf7;vertical-align:middle;margin-left:3px}
-.tcy{text-combine-upright:all;-webkit-text-combine:horizontal;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
+.tcy{text-combine-upright:all;-webkit-text-combine:horizontal;display:inline-block;min-width:1em;text-align:center;line-height:1;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
+.v-arrow{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1.1em;text-align:center;line-height:1;font-family:"Noto Sans TC",sans-serif;vertical-align:middle}
 .qend-glue{white-space:nowrap;display:inline}
 .qblank-glue{white-space:nowrap;display:inline}
 

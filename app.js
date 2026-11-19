@@ -197,21 +197,22 @@ function buildLayout(){
   const cols=Math.max(7, Math.min(8, rawCols));
   const cwMax=Math.floor(CONTENT_W/cols);
   const pSqMax=Math.floor(zy?cwMax/1.3:cwMax);
-  // 統一全版固定列數 R，確保不論筆畫多寡皆由最頂端排至最底端，高度一致不留白
-  const R=Math.max(8, Math.ceil(CONTENT_H/pSqMax));
+  // 統一全版固定列數 R（兼顧寬度與高度滿版：例如 8 欄採 16 列保持 cw=79px 貼近右界不留寬邊）
+  const R=Math.max(8, Math.round(CONTENT_H/pSqMax));
   const sq=Math.min(Math.floor(CONTENT_H/R), pSqMax);
   const cw=Math.round(sq*(zy?1.3:1));
   const chh=Math.round(sq);
   const splitLimit=($('xSplitLimit') && +$('xSplitLimit').value) || 12;
   const nbReq=Math.max(5,+$('xBlank').value||5);
   const wantTrace=$('xTrace').checked;
+  const traceQuota=wantTrace?Math.max(1,+$('xATraceN')?.value||1):0;
   const pages=[];
 
   const padColumnToR=(colArr, traceStart=true)=>{
-    let firstBlank=true;
+    let traced=0;
     while(colArr.length<R){
-      colArr.push({span:1,o:{k:0,zy,ghost:wantTrace&&traceStart&&firstBlank}});
-      firstBlank=false;
+      colArr.push({span:1,o:{k:0,zy,ghost:traceStart && traced<traceQuota}});
+      traced++;
     }
     return colArr;
   };
@@ -256,11 +257,8 @@ function buildLayout(){
       curPageCols=[];
     };
 
+    // 依課序與筆畫順序連續填滿每頁全部 7/8 欄（高筆畫跨欄亦順接續排，絕不在頁尾右側遺留空白欄）
     charGroups.forEach(grp=>{
-      const needCols=grp.colLists.length;
-      if(curPageCols.length+needCols>cols && curPageCols.length>0){
-        flushPage();
-      }
       grp.colLists.forEach(list=>{
         if(curPageCols.length>=cols) flushPage();
         curPageCols.push({ch:grp.ch, list});
@@ -536,12 +534,12 @@ async function exportXlsx(){
 }
 const colName=n=>String.fromCharCode(64+n);
 // ---------- 事件 ----------
-const KEYS=['xZy','xRef','xNum','xGhost','xTrace'], VALS=['xSize','xCols','xBlank','xSplitLimit','xTraceN'];
+const KEYS=['xZy','xRef','xNum','xGhost','xTrace'], VALS=['xSize','xCols','xBlank','xSplitLimit','xATraceN','xTraceN'];
 $('btnGen').onclick=generate;
 $('btnPrint').onclick=async()=>{if(!curChars.length&&!await generate())return;window.print();};
 $('btnXlsx').onclick=()=>exportXlsx().catch(e=>{$('msg').textContent='匯出失敗：'+e.message;});
 $('xSize').onchange=()=>{$('xCols').value=$('xSize').value==='low'?'7':'8';curChars.length&&render();};
-['xCols','xZy','xRef','xNum','xGhost','xTrace','xBlank','xSplitLimit','xTraceN'].forEach(i=>{if($(i))$(i).onchange=()=>curChars.length&&render();});
+['xCols','xZy','xRef','xNum','xGhost','xTrace','xBlank','xSplitLimit','xATraceN','xTraceN'].forEach(i=>{if($(i))$(i).onchange=()=>curChars.length&&render();});
 window.buildStrokeLayoutForChars=function(charsArr){
   const prev=curChars.slice();
   curChars=Array.isArray(charsArr)?charsArr:[...String(charsArr||'')];

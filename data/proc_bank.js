@@ -841,6 +841,41 @@ window.PROC_BANK = {
   );
   PB.zh.high.typos.push(
     ['面對接踵而至的挑戰，他依然沉著冷靜地找出解決之道。','面對接腫而至的挑戰，他依然沉著冷靜地找出解決之道。','腫','踵','接腫','接踵','「接踵而至」的踵指腳後跟（足部），形容人或事接連不斷。'],
-    ['經過科學家鍥而不捨的研究，這項技術終於突破瓶頸。','經過科學家契而不捨的研究，這項技術終於突破瓶頸。','契','鍥','契而不捨','鍥而不捨','「鍥而不捨」意為不停雕刻，故為金字旁的「鍥」。']
+    ['經過科學家鍥而不捨的研究，這項技術終於突破瓶頸。','經過科學家契而不捨的研究，這項技術終於突破瓶頸。','契','鍥','契而不捨','鍥而不捨','「鍥而不捨」意為不停雕刻，故為金字旁的「鍥」。'],
+    ['博物館展出的古代青銅器作工精細，令人嘆為觀止。','博物館展出的古代青銅器作工精細，令人漢為觀止。','漢','嘆','漢為觀止','嘆為觀止','讚嘆聲音來自口部，「嘆為觀止」用口部的「嘆」。'],
+    ['他做事總是按部就班，從不草率敷衍了事。','他做事總是按步就班，從不草率敷衍了事。','步','部','按步就班','按部就班','「部」指門類次序，照著編排次序依序進行寫作「按部就班」。']
+  );
+
+  // ===== 難度區隔強化補充：生活情境／自然實驗變因／英語日常對話／社會素養思辨 =====
+  [
+    [1, {diff:'easy',q:'"Good (　), class!" （早安，各位同學！）',a:'morning',opts:['morning','apple','pen','two']}, {diff:'mid',q:'"Open (　) book, please." （請打開你的書本。）',a:'your',opts:['your','you','he','am']}],
+    [2, {diff:'easy',q:'"Is this a bird?" "Yes, (　) is." （是的，它是。）',a:'it',opts:['it','they','you','am']}, {diff:'hard',q:'"How old is your brother?" "He is (　) years old." （他今年八歲。）',a:'eight',opts:['eight','fine','red','tall']}],
+    [3, {diff:'easy',q:'"What color is the banana?" "It is (　)." （它是黃色的。）',a:'yellow',opts:['yellow','Monday','ten','happy']}, {diff:'hard',q:'"Who is (　)?" "She is my English teacher." （她是我的英文老師。）',a:'she',opts:['she','he','it','my']}],
+    [4, {diff:'easy',q:'"It is (　) today. Let\'s fly a kite." （今天天氣晴朗，我們去放風箏吧。）',a:'sunny',opts:['sunny','rainy','thirty','juice']}, {diff:'hard',q:'"What (　) is it?" "It is nine thirty." （現在幾點了？九點半。）',a:'time',opts:['time','day','name','food']}],
+    [5, {diff:'easy',q:'"What is your favorite (　)?" "Science!" （你最喜歡哪一個科目？）',a:'subject',opts:['subject','jacket','bread','river']}, {diff:'hard',q:'"Does Amy have a headache?" "Yes, she (　) take a rest." （是的，她應該休息一下。）',a:'should',opts:['should','is','do','was']}],
+    [6, {diff:'easy',q:'"Have a (　) weekend!" （祝你週末愉快！）',a:'nice',opts:['nice','yesterday','cleanly','more']}, {diff:'hard',q:'"If we reuse shopping bags, we will make (　) trash." （重複使用購物袋就能減少垃圾。）',a:'less',opts:['less','fewer','many','tallest']}]
+  ].forEach(([g, s1, s2])=>{ PB.eng.sentences[g].push(s1, s2); });
+
+  PB.life.facts.push(
+    {diff:'easy',q:'下雨天撐傘走路時，雨傘高度不要遮住視線，才看得到前方來車。',ok:1},
+    {diff:'easy',q:'借別人的文具使用完畢後，應該立刻輕輕放回並說謝謝。',ok:1},
+    {diff:'hard',q:'做「影子長短觀察」實驗時，只要記錄影子的長度就好，太陽在天空的高低和方向不用看。',ok:0,exp:'影子的長短與方向都和太陽的方位及仰角高度有直接關係。'},
+    {diff:'hard',q:'發現社區水溝蓋堵塞積水時，應該聯繫里長或環保單位協助清理，避免滋生病媒蚊。',ok:1}
+  );
+  PB.sci.mid.facts.push(
+    {diff:'hard',q:'做「影響溶解快慢」的對照實驗時，如果一邊改水溫、另一邊又改攪拌次數，就無法公平比較出單一因素的影響。',ok:1},
+    {diff:'hard',q:'把同體積但材質不同的兩塊積木放進同一盆水裡，一定都會沉到水底。',ok:0,exp:'物體沉浮與材質密度有關，例如木塊常浮在水面而鐵塊會沉下。'}
+  );
+  PB.sci.high.facts.push(
+    {diff:'hard',q:'設計「哪一種紙張吸水最快」實驗時，為了公平比較，兩張紙條的寬度、厚度與浸入水中的深度都必須保持一致。',ok:1},
+    {diff:'easy',q:'地球自轉一圈大約是一天（24小時），造成了晝夜交替的現象。',ok:1}
+  );
+  PB.soc.mid.facts.push(
+    {diff:'hard',q:'社區舉辦公共設施討論會時，不同年齡層的居民提出需求並透過理性投票凝聚共識，這正是民主參與的表現。',ok:1},
+    {diff:'easy',q:'居住在同一個社區的鄰居互相問好、保持樓梯間暢通，能讓生活環境更安全友善。',ok:1}
+  );
+  PB.soc.high.facts.push(
+    {diff:'hard',q:'面對氣候變遷與乾旱危機，除了開源興建水庫之外，推動再生水回收與節水習慣的「節流」措施同樣重要。',ok:1},
+    {diff:'mid',q:'保存古蹟與地方老街時，結合導覽解說與文化創新，能讓歷史故事持續傳承給下一代。',ok:1}
   );
 })();

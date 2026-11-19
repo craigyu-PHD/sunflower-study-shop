@@ -153,7 +153,7 @@ function getStoreScopeName(sc){
   return {mid:'期中複習卷', final:'期末複習卷', all:'全冊總複習', unit:'自選單元'}[sc] || '期中複習卷';
 }
 function getStoreDiffName(d){
-  return {easy:'基礎熟練（鼎甲風）', mid:'標準評量（良品風）', hard:'素養挑戰（奇鼎風）', mix:'混合難度（由淺入深）'}[d] || '標準評量（良品風）';
+  return {easy:'基礎熟練', mid:'標準評量', hard:'素養挑戰', mix:'混合難度（由淺入深）'}[d] || '標準評量';
 }
 
 function fillStoreSubjects(){

@@ -339,9 +339,9 @@
               <label>評量科目 <select id="stExamSubj"></select></label>
               <label>難度設定
                 <select id="stExamDiff">
-                  <option value="easy">基礎熟練（鼎甲風）</option>
-                  <option value="mid" selected>標準評量（良品風）</option>
-                  <option value="hard">素養挑戰（奇鼎風）</option>
+                  <option value="easy">基礎熟練</option>
+                  <option value="mid" selected>標準評量</option>
+                  <option value="hard">素養挑戰</option>
                   <option value="mix">混合難度（由淺入深）</option>
                 </select>
               </label>
@@ -567,7 +567,8 @@
     <label class="chk"><input type="checkbox" id="xGhost" checked> 步驟格顯示未寫筆畫（淺灰）</label>
     <label>結尾完整書寫格數 <input type="number" id="xBlank" value="5" min="5" max="10"></label>
     <label title="超過此筆畫數自動拆為兩欄並排，避免多筆畫字壓縮同頁其他字格">折兩欄上限 <input type="number" id="xSplitLimit" value="12" min="8" max="24"> 畫</label>
-    <label class="chk"><input type="checkbox" id="xTrace"> 結尾首格淺灰描字</label>
+    <label class="chk"><input type="checkbox" id="xTrace"> 結尾淺灰描字</label>
+    <label>描字格數 <input type="number" id="xATraceN" value="1" min="1" max="10" title="勾選結尾淺灰描字時顯示之描紅格數"></label>
   </div>
   <div class="row" id="xBopts" style="display:none">
     <label>淺灰描紅格數 <input type="number" id="xTraceN" value="2" min="0" max="4"></label>
@@ -612,7 +613,7 @@
 <section class="card noprint">
   <h2><span class="step">2</span> 客製化題型、難度與版面控制</h2>
   <div class="row">
-    <label>難度 <select id="exDiff"><option value="easy">基礎熟練（鼎甲風）</option><option value="mid" selected>標準評量（良品風）</option><option value="hard">素養挑戰（奇鼎風）</option><option value="mix">混合難度（由淺入深）</option></select></label>
+    <label>難度 <select id="exDiff"><option value="easy">基礎熟練</option><option value="mid" selected>標準評量</option><option value="hard">素養挑戰</option><option value="mix">混合難度（由淺入深）</option></select></label>
     <label>版面 <select id="exLayout"><option value="1col">單欄（字大好寫）</option><option value="2col" selected>雙欄（緊湊省紙）</option></select></label>
     <label class="chk"><input type="checkbox" id="exTwoPage" checked> 兩頁一張（正反雙面）</label>
     <label class="chk"><input type="checkbox" id="exAns" checked> 附解答頁</label>
