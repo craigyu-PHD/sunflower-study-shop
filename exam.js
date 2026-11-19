@@ -4451,9 +4451,9 @@ function generateExamQuestions(cfg){
             if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true)){item=cand;break;}
           }
         }
-        // 最終保底（僅限勾選單元本身，仍硬性拒絕同張 SVG 圖形題型重複！）
+        // 最終保底（優先嘗試不撞版型簽名 + 僅限勾選單元本身，仍硬性拒絕同張 SVG 圖形題型重複！）
         if(!item){
-          for(let tr=0;tr<60;tr++){
+          for(let tr=0;tr<120;tr++){
             const uPick=uIdxs[(i+tr)%uIdxs.length];
             const cand=tr%2===0
               ? genMathUnitSynth(g,cfg.sem,uPick,['easy','mid','hard'][tr%3],kindKey,i*7+tr+randSeed+53)
@@ -4461,7 +4461,7 @@ function generateExamQuestions(cfg){
             if(!cand || !isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs)) continue;
             const svgA = inferSvgArchetype(cand.svg);
             if(svgA && examArchetypesUsed.has('arch_' + svgA)) continue;
-            if(!isGlobalDup(cand,false)){item=cand;break;}
+            if(!isGlobalDup(cand, tr < 90)){item=cand;break;}
           }
         }
         if(item){
@@ -6124,6 +6124,8 @@ async function readOrdersFromIndexedDB(){
   });
 }
 
+const DEFAULT_CLOUD_GAS_URL = 'https://script.google.com/macros/s/AKfycbygUe5Y8ZbjERVcM6OVIZG_u91Bmp634I7EzekqXxR9B1PrJ-hv67hpsQD9dlQEuIc/exec';
+
 function getAdminCloudBackupCreds(){
   let url = '', token = '';
   try{
@@ -6131,8 +6133,40 @@ function getAdminCloudBackupCreds(){
     token = (sessionStorage.getItem('kids_admin_session_token') || '').trim();
   }catch(_){}
   if(!url && $('gasUrlInput')) url = ($('gasUrlInput').value || '').trim();
+  if(!url) url = (window.DEFAULT_GAS_WEBAPP_URL || DEFAULT_CLOUD_GAS_URL).trim();
   return { url, token };
 }
+
+window.autoConnectCloudOnLogin = async function(username, password){
+  const { url } = getAdminCloudBackupCreds();
+  if(!url || typeof fetch !== 'function') return { ok:false };
+  try{
+    localStorage.setItem('kids_gas_webapp_url', url);
+    if($('gasUrlInput')) $('gasUrlInput').value = url;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'adminLogin', username: String(username||'admin').trim(), password: String(password||'').trim() })
+    });
+    const data = await resp.json();
+    if(data && data.ok && data.sessionToken){
+      try{ sessionStorage.setItem('kids_admin_session_token', data.sessionToken); }catch(_){}
+      refreshBackupStatusUI();
+      if(curBatchOrders && curBatchOrders.length){
+        backupOrdersToGoogleCloud(curBatchOrders, true);
+      }
+      return data;
+    }
+  }catch(_){}
+  return { ok:false };
+};
+
+window.triggerInstantCloudBackup = function(){
+  const { url, token } = getAdminCloudBackupCreds();
+  if(url && token && token !== 'local-dev-session' && token !== 'local-hash-session'){
+    backupOrdersToGoogleCloud(curBatchOrders, true);
+  }
+};
 
 async function backupOrdersToGoogleCloud(orders, silent=false){
   const { url, token } = getAdminCloudBackupCreds();
@@ -6238,11 +6272,11 @@ function refreshBackupStatusUI(){
         : `☁️ Google 雲端備份已連線（訂單變動時自動同步至 Drive 資料夾與試算表）`;
       cldEl.style.color = '#14532d';
     }else{
-      cldEl.textContent = `雲端備份：尚未連接 Google 雲端試算表（可點右側「⚙️ 設定／連線 Google 雲端」快速設定；目前由本機 IndexedDB＋JSON 保護）`;
+      cldEl.textContent = `雲端備份：已載入預設試算表端點（重新登入管理員後台即自動連線；目前由本機 IndexedDB＋JSON 保護）`;
       cldEl.style.color = '#9a3412';
     }
     if($('btnToggleCloudSetup')){
-      $('btnToggleCloudSetup').textContent = isConnected ? '✅ Google 雲端已連線（設定）' : '⚙️ 設定／連線 Google 雲端';
+      $('btnToggleCloudSetup').textContent = isConnected ? '✅ 雲端已連線（設定）' : '⚙️ 雲端與密碼設定';
       $('btnToggleCloudSetup').style.background = isConnected ? '#e7f8ee' : '#fff7ed';
       $('btnToggleCloudSetup').style.borderColor = isConnected ? '#22c55e' : '#fb923c';
       $('btnToggleCloudSetup').style.color = isConnected ? '#136529' : '#9a3412';
@@ -6269,10 +6303,10 @@ function exportOrdersJsonBackup(){
 
 function scheduleCloudAutoBackup(){
   if(typeof clearTimeout==='function') clearTimeout(_cloudBackupTimer);
-  if(typeof setTimeout!=='function') return;
+  if(typeof setTimeout!=='function' || typeof fetch!=='function') return;
   _cloudBackupTimer = setTimeout(()=>{
     const { url, token } = getAdminCloudBackupCreds();
-    if(url && token && token !== 'local-dev-session'){
+    if(url && token && token !== 'local-dev-session' && token !== 'local-hash-session'){
       backupOrdersToGoogleCloud(curBatchOrders, true);
     }
   }, 1500);
@@ -6517,7 +6551,8 @@ function renderBatchTable(orders){
     <td style="text-align:center">
       <div class="ord-actions">
         ${o.valid?`<span class="badge-ok">✅ 合法</span>`:`<span class="badge-err">❌ 有誤</span><div style="font-size:.7rem;color:#a71d2a">${esc(o.errors.join('；'))}</div>`}
-        <button type="button" class="btn-mini reprint ord-reprint-btn" data-idx="${i}" ${!o.valid?'disabled':''} title="發現印錯或需補印時，點此立即重生成此單考卷並記錄列印次數">🔁 重複列印</button>
+        <button type="button" class="btn-mini pagepick ord-page-pick-btn" data-idx="${i}" ${!o.valid?'disabled':''} title="列出此訂單所有頁面，可單獨檢視並只列印其中出錯的某一頁">📄 單頁補印</button>
+        <button type="button" class="btn-mini reprint ord-reprint-btn" data-idx="${i}" ${!o.valid?'disabled':''} title="發現整份需重印時，點此重生成整份並記錄列印次數">🔁 整筆重印</button>
         <button type="button" class="btn-mini del ord-del-btn" data-idx="${i}" title="刪除此筆訂單（刪除後不復活）">🗑️ 刪除</button>
       </div>
     </td>
@@ -6605,7 +6640,25 @@ function renderBatchTable(orders){
     };
   });
 
-  // 綁定「單筆重複列印」事件（人工發現印錯時可立即單筆補印）
+  // 綁定「單筆整份重印」與「指定單頁補印」事件
+  wrap.querySelectorAll('.ord-page-pick-btn').forEach(btn=>{
+    btn.onclick=async()=>{
+      const idx=+btn.dataset.idx;
+      const ord=curBatchOrders[idx];
+      if(!ord || !ord.valid) return;
+      await generateBatchAll([ord]);
+      const pgCnt = $('batchSheet') ? $('batchSheet').querySelectorAll('.a4').length : 0;
+      if($('batchMsg')){
+        $('batchMsg').style.color='#1f9d55';
+        $('batchMsg').textContent=`📄 已展開【${ord.order_id} ${ord.parent_label}】共 ${pgCnt} 頁，請點下方「單頁快速列印」頁籤或捲動至該頁標題右側按「🖨️ 僅列印此頁」！`;
+      }
+      const targetBar = $('batchSinglePgBar') || $('batchSheet');
+      if(targetBar && typeof targetBar.scrollIntoView === 'function'){
+        targetBar.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      }
+    };
+  });
+
   wrap.querySelectorAll('.ord-reprint-btn').forEach(btn=>{
     btn.onclick=async()=>{
       const idx=+btn.dataset.idx;
@@ -7144,18 +7197,77 @@ async function generateBatchAll(overrideOrders=null){
       orderPages.push({label:`【訂單 ${ord.order_id}】雙面列印防串頁空白背面`, el:blank});
     }
 
+    const singlePgItems = [];
     orderPages.forEach(item=>{
+      const pgIdx = grandTotalPages;
+      item.el.dataset.batchPg = String(pgIdx);
       const cap = document.createElement('div');
-      cap.className = 'pcap';
-      cap.textContent = item.label;
+      cap.className = 'pcap batch-pcap';
+      cap.innerHTML = `<span class="batch-pcap-lbl">【第 ${pgIdx+1} 頁】${esc(item.label)}</span>`
+        + `<button type="button" class="btn btn-mini pri batch-print-one-pg" data-pg="${pgIdx}">🖨️ 僅列印此頁</button>`;
       sheet.appendChild(cap);
       sheet.appendChild(item.el);
+      singlePgItems.push({ pgIdx, label: item.label, el: item.el });
       grandTotalPages++;
     });
+    if(!window._batchSinglePgMeta) window._batchSinglePgMeta = [];
+    if(i===0) window._batchSinglePgMeta = [];
+    window._batchSinglePgMeta.push(...singlePgItems);
+  }
+
+  const allSingleItems = window._batchSinglePgMeta || [];
+  sheet.querySelectorAll('.batch-print-one-pg').forEach(b=>{
+    b.onclick=()=>printSingleBatchPage(+b.dataset.pg);
+  });
+  if($('batchSinglePgBar')){
+    const bar = $('batchSinglePgBar');
+    if(allSingleItems.length){
+      bar.style.display='flex';
+      bar.innerHTML = `<b style="font-size:.84rem;color:#7a3b00;margin-right:4px">📄 針對單一頁補印（共 ${allSingleItems.length} 頁）：</b>`
+        + allSingleItems.map(it=>`<span class="batch-pg-pill"><a href="#" class="batch-pg-jump" data-pg="${it.pgIdx}" style="color:#7a3b00;text-decoration:none;font-weight:700">第${it.pgIdx+1}頁</a> <button type="button" class="btn btn-mini pri batch-bar-print-btn" data-pg="${it.pgIdx}" title="${esc(it.label)}">🖨️</button></span>`).join('');
+      bar.querySelectorAll('.batch-pg-jump').forEach(a=>{
+        a.onclick=(e)=>{
+          e.preventDefault();
+          const target = sheet.querySelector(`.a4[data-batch-pg="${a.dataset.pg}"]`);
+          if(target && typeof target.scrollIntoView === 'function') target.scrollIntoView({behavior:'smooth',block:'start'});
+        };
+      });
+      bar.querySelectorAll('.batch-bar-print-btn').forEach(b=>{
+        b.onclick=()=>printSingleBatchPage(+b.dataset.pg);
+      });
+    } else {
+      bar.style.display='none';
+      bar.innerHTML='';
+    }
   }
 
   $('batchMsg').style.color='#1f9d55';
-  $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印約 ${Math.ceil(grandTotalPages/2)} 張紙），按「🖨️ 列印勾選的訂單」即可直接印出裝袋（列印時系統將自動標記為「已經列印」）！`;
+  $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印約 ${Math.ceil(grandTotalPages/2)} 張紙），可按「🖨️ 列印勾選的訂單」或針對單一頁按「🖨️ 僅列印此頁」！`;
+}
+
+function printSingleBatchPage(pgIdx){
+  const sheet = $('batchSheet');
+  if(!sheet) return;
+  const target = sheet.querySelector(`.a4[data-batch-pg="${pgIdx}"]`);
+  if(!target) return;
+  sheet.querySelectorAll('.a4.is-print-target').forEach(el=>el.classList.remove('is-print-target'));
+  target.classList.add('is-print-target');
+  document.body.classList.add('print-only-single-page');
+  let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
+  st.textContent='@media print{@page{size:A4 portrait;margin:0}}';
+  if($('batchMsg')){
+    $('batchMsg').style.color='#1f9d55';
+    $('batchMsg').textContent=`🖨️ 已鎖定單頁列印「第 ${pgIdx+1} 頁」，只會印出該頁 A4（其餘頁面已自動隱藏）！`;
+  }
+  const cleanup = ()=>{
+    document.body.classList.remove('print-only-single-page');
+    target.classList.remove('is-print-target');
+  };
+  if(typeof window.addEventListener === 'function'){
+    window.addEventListener('afterprint', cleanup, { once: true });
+  }
+  setTimeout(cleanup, 1500);
+  window.print();
 }
 
 function downloadBatchTemplate(){
@@ -7302,7 +7414,7 @@ function initExamUI(){
       const p=$('cloudSetupPanel'); if(!p) return;
       p.style.display = p.style.display==='none' ? '' : 'none';
       if(p.style.display==='' && $('gasUrlInput') && !$('gasUrlInput').value.trim()){
-        try{ $('gasUrlInput').value = localStorage.getItem('kids_gas_webapp_url') || ''; }catch(_){}
+        try{ $('gasUrlInput').value = localStorage.getItem('kids_gas_webapp_url') || DEFAULT_CLOUD_GAS_URL; }catch(_){ $('gasUrlInput').value = DEFAULT_CLOUD_GAS_URL; }
       }
     };
   }
@@ -7336,7 +7448,7 @@ function initExamUI(){
         if(data && data.ok && data.sessionToken){
           sessionStorage.setItem('kids_admin_session_token', data.sessionToken);
           refreshBackupStatusUI();
-          setMsg('✅ 連線並驗證授權成功！現在按「☁️ 立即備份至 Google 雲端」或「🧪 立即測試備份」即可同步至 Google 雲端硬碟與試算表。', '#136529');
+          setMsg('✅ 連線並驗證授權成功！現在按「☁️ 立即備份」即可同步至 Google 雲端硬碟與試算表。', '#136529');
           if($('gasConnAdminPass')) $('gasConnAdminPass').value = '';
         } else {
           setMsg(`❌ 驗證失敗：${(data&&data.error)||'請確認帳號密碼與 Web App 權限（誰可以存取：所有人）'}`, '#c0392b');

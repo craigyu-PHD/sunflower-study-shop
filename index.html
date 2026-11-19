@@ -476,9 +476,47 @@
       <input type="password" id="admPass" placeholder="請輸入管理員密碼">
     </div>
     <div id="admAuthMsg" class="msg"></div>
-    <div class="row" style="justify-content:flex-end;margin-top:10px">
-      <button type="button" id="btnAdmLocalUnlock" class="btn" style="display:none">💻 本機離線模式解鎖</button>
-      <button type="button" id="btnAdmLoginSubmit" class="btn pri big">🔓 驗證並進入後台</button>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px">
+      <button type="button" class="btn btn-mini btn-open-chgpass" style="background:#f8fafc;border:1px solid #cbd5e1;color:#334155">🔑 修改帳號／密碼設定</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" id="btnAdmLocalUnlock" class="btn" style="display:none">💻 本機離線模式解鎖</button>
+        <button type="button" id="btnAdmLoginSubmit" class="btn pri big">🔓 驗證並進入後台</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 修改管理員＆雲端密碼彈窗 (#changePassModal) ==================== -->
+<div id="changePassModal" class="modal-backdrop noprint" style="display:none">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #f0dec0;padding-bottom:8px;margin-bottom:12px">
+      <h3 style="margin:0;color:#7a3b00">🔑 修改管理員與雲端後台密碼</h3>
+      <button type="button" id="btnCloseChgPassModal" class="btn" style="padding:3px 10px">✕</button>
+    </div>
+    <p class="hint" style="margin-top:0;margin-bottom:10px">在此可直接更改網站後台登入密碼（僅儲存單向雜湊於本機瀏覽器）；若已連線 Google 雲端試算表，也會同步更新雲端 Apps Script 密碼。</p>
+    <div class="form-row">
+      <label>👤 管理員帳號：</label>
+      <input type="text" id="chgAdmUser" value="admin" placeholder="預設 admin">
+    </div>
+    <div class="form-row">
+      <label>🔒 目前密碼：</label>
+      <input type="password" id="chgOldPass" placeholder="請輸入目前的管理員／雲端密碼">
+    </div>
+    <div class="form-row">
+      <label>🆕 新密碼（至少 4 碼）：</label>
+      <input type="password" id="chgNewPass" placeholder="請輸入新密碼">
+    </div>
+    <div class="form-row">
+      <label>✅ 確認新密碼：</label>
+      <input type="password" id="chgNewPass2" placeholder="請再次輸入新密碼">
+    </div>
+    <div id="chgPassMsg" class="msg"></div>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <a href="https://script.google.com/home" target="_blank" rel="noopener" class="btn btn-mini" style="text-decoration:none;background:#eef4ff;border:1px solid #93c5fd;color:#1e40af">🔗 前往 Apps Script 指令碼屬性</a>
+        <button type="button" id="btnChgPassReset" class="btn btn-mini" style="background:#f8fafc;border:1px solid #cbd5e1;color:#475569">🔄 還原預設</button>
+      </div>
+      <button type="button" id="btnChgPassSubmit" class="btn ok big">💾 儲存新密碼</button>
     </div>
   </div>
 </div>
@@ -704,51 +742,56 @@
   <div id="batchBackupBar" class="backup-box">
     <div class="backup-status">
       <div><b>🛡️ 雙層訂單自動備份：</b><span id="backupLocalStatus">本機 IndexedDB 自動鏡像就緒</span></div>
-      <div style="font-size:.78rem;color:#166534" id="backupCloudStatus">雲端備份：尚未連接 Google 雲端試算表（可點右側「⚙️ 設定／連線 Google 雲端」綁定或使用 JSON 還原）</div>
+      <div style="font-size:.78rem;color:#166534" id="backupCloudStatus">雲端備份：已載入預設雲端試算表端點（登入後台自動同步，或於右側進行設定）</div>
     </div>
     <div class="backup-actions">
-      <button type="button" class="btn btn-mini" style="background:#fff7ed;border:1px solid #fb923c;color:#9a3412" id="btnToggleCloudSetup">⚙️ 設定／連線 Google 雲端</button>
-      <button type="button" class="btn btn-mini" style="background:#dcfce7;border:1px solid #22c55e;color:#14532d" id="btnCloudBackupNow">☁️ 立即備份至 Google 雲端</button>
-      <button type="button" class="btn btn-mini" style="background:#e0f2fe;border:1px solid #38bdf8;color:#075985" id="btnCloudRestoreNow">📥 從 Google 雲端救回訂單</button>
+      <button type="button" class="btn btn-mini" style="background:#dcfce7;border:1px solid #22c55e;color:#14532d" id="btnCloudBackupNow">☁️ 立即備份</button>
+      <button type="button" class="btn btn-mini" style="background:#e0f2fe;border:1px solid #38bdf8;color:#075985" id="btnCloudRestoreNow">📥 從雲端救回訂單</button>
       <button type="button" class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155" id="btnExportJsonBackup">💾 匯出 JSON 備份檔</button>
       <label class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155;cursor:pointer;margin:0">📂 匯入 JSON 還原<input type="file" id="importJsonBackupFile" accept=".json" style="display:none"></label>
+      <button type="button" class="btn btn-mini" style="background:#fff7ed;border:1px solid #fb923c;color:#9a3412" id="btnToggleCloudSetup">⚙️ 雲端與密碼設定</button>
     </div>
   </div>
-  <!-- Google 雲端試算表／Drive 連線精靈（絕不寫死私人網址或密碼於網頁源碼中） -->
+  <!-- Google 雲端試算表／Drive 連線精靈（已預設部署端點；絕不寫死明文密碼於網頁源碼中） -->
   <div id="cloudSetupPanel" class="cloud-wizard-card" style="display:none">
     <div class="cloud-wizard-hd">
-      <b>☁️ Google 雲端試算表 ＆ Drive 自動備份連線設定精靈</b>
+      <b>⚙️ Google 雲端試算表自動備份與後台密碼設定</b>
       <button type="button" id="btnCloseCloudSetup" class="btn btn-mini">✕ 收合</button>
     </div>
     <div class="gas-sync-box" style="margin-bottom:6px">
       <div class="gas-row">
         <div class="gas-field gas-url">
-          <span class="gas-lbl">🔗 Apps Script 網頁應用程式網址：</span>
-          <input type="url" id="gasUrlInput" placeholder="請貼上部署後產生的 https://script.google.com/macros/s/.../exec 網址">
+          <span class="gas-lbl">🔗 預設 Apps Script 網頁應用程式網址（已自動帶入，可依需要修改）：</span>
+          <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
         </div>
       </div>
-      <div class="gas-row">
-        <div class="gas-field">
-          <span class="gas-lbl">👤 雲端後台帳號：</span>
-          <input type="text" id="gasConnAdminUser" value="admin" placeholder="預設 admin">
-        </div>
-        <div class="gas-field">
-          <span class="gas-lbl">🔑 雲端後台密碼：</span>
-          <input type="password" id="gasConnAdminPass" placeholder="輸入 setupAll() 設定的管理員密碼">
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button type="button" id="btnConnectGoogleCloud" class="btn ok">🔗 連線並驗證授權</button>
-          <button type="button" id="btnCloudTestBackup" class="btn pri">🧪 立即測試備份</button>
-          <button type="button" id="btnDisconnectGoogleCloud" class="btn">🔌 中斷連線</button>
+      <div class="gas-row" style="justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button type="button" id="btnCloudTestBackup" class="btn ok">☁️ 立即備份</button>
+          <button type="button" class="btn btn-open-chgpass" style="background:#eef4ff;border:1px solid #93c5fd;color:#1e40af">🔑 修改密碼設定</button>
+          <a href="https://script.google.com/home" target="_blank" rel="noopener" class="btn" style="text-decoration:none;background:#f8fafc;border:1px solid #cbd5e1;color:#334155">↗️ Apps Script 指令碼設定</a>
         </div>
       </div>
-      <div id="cloudWizardMsg" class="msg" style="margin-top:2px"></div>
+      <details style="margin-top:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px">
+        <summary style="cursor:pointer;font-size:.82rem;font-weight:700;color:#475569">🔧 進階選項：手動帳密連線 ／ 儲存網址 ／ 中斷連線</summary>
+        <div class="gas-row" style="margin-top:6px">
+          <div class="gas-field">
+            <span class="gas-lbl">👤 雲端後台帳號：</span>
+            <input type="text" id="gasConnAdminUser" value="admin" placeholder="預設 admin">
+          </div>
+          <div class="gas-field">
+            <span class="gas-lbl">🔑 雲端後台密碼：</span>
+            <input type="password" id="gasConnAdminPass" placeholder="輸入雲端管理員密碼">
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" id="btnConnectGoogleCloud" class="btn pri btn-mini">💾 套用並連線雲端</button>
+            <button type="button" id="btnDisconnectGoogleCloud" class="btn btn-mini">🔌 清除設定／中斷連線</button>
+          </div>
+        </div>
+      </details>
+      <div id="cloudWizardMsg" class="msg" style="margin-top:4px"></div>
     </div>
-    <ol class="sync-steps" style="font-size:.82rem;color:#334155;margin-bottom:0">
-      <li>打開您的 Google 訂單試算表 → 點上方選單 <b>「擴充功能 → Apps Script」</b> → 將本專案內附的 <code>google_sheet_automation.gs</code> 全部貼上並儲存（不需公開放在網頁上）。</li>
-      <li>在上方函式下拉選單選 <code>setupAll</code> 點 <b>「▶ 執行」</b> 完成雲端權限授權（預設密碼為 ScriptProperties 內的 <code>ADMIN_PASS</code>，可自行於「專案設定 → 指令碼屬性」修改）。</li>
-      <li>點右上角 <b>「部署 → 新增部署作業 → 網頁應用程式」</b>（執行身分選「我」，誰可以存取選<b>「所有人」</b>），複製產生之 <code>.../exec</code> 網址貼回上方欄位並按<b>「🔗 連線並驗證授權」</b>，日後所有訂單就會自動雙層備份進試算表「系統訂單備份紀錄」與您的 Google 雲端硬碟資料夾！</li>
-    </ol>
+    <p class="hint" style="margin:0;color:#475569">💡 系統已內建您的專屬雲端備份端點：只要登入網站管理員後台即自動同步登入 Google 雲端，每次家長完成下單或後台對帳／列印異動亦會自動雙層備份至試算表「系統訂單備份紀錄」與 Google 雲端硬碟。</p>
   </div>
   <div id="batchTableWrap" style="width:100%;margin-top:8px"></div>
 
@@ -774,6 +817,7 @@
     <button id="btnBatchPrint" class="btn ok big" type="button">🖨️ 列印勾選的訂單（直接裝袋）</button>
   </div>
   <div id="batchMsg" class="msg"></div>
+  <div id="batchSinglePgBar" class="batch-pg-bar noprint" style="display:none"></div>
   <p class="hint">💡 每筆訂單最前頁為「A4 雙聯裁切單」：上半聯外貼包裝袋（隱藏地點與金額保護隱私），沿虛線撕開後，下半聯供揀貨裝袋與留存對帳！</p>
 </section>
 

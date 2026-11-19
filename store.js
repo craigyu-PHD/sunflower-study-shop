@@ -1069,6 +1069,29 @@ async function submitStoreOrder(){
   if(typeof window.receiveFrontendOrders === 'function'){
     window.receiveFrontendOrders(orderRows);
   }
+  // 2. 訂單完成即同步寫入 Google 試算表並觸發雲端備份（背景執行不阻塞家長送單畫面）
+  if(typeof fetch === 'function'){
+    try{
+      let cloudUrl = window.DEFAULT_GAS_WEBAPP_URL || '';
+      try{ cloudUrl = (localStorage.getItem('kids_gas_webapp_url') || cloudUrl || '').trim(); }catch(_){}
+      if(cloudUrl){
+        fetch(cloudUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'submitOrder',
+            parent_label,
+            contact,
+            remit_last5,
+            items: orderRows
+          })
+        }).catch(()=>{});
+      }
+    }catch(_){}
+  }
+  if(typeof window.triggerInstantCloudBackup === 'function'){
+    window.triggerInstantCloudBackup();
+  }
   const succ = $('stSuccessCard');
   if(succ){
     succ.style.display = 'block';
@@ -1093,6 +1116,10 @@ async function submitStoreOrder(){
   storeCart = [];
   renderStoreCart();
 }
+
+// 預設雲端 Apps Script 端點（僅公開 Web App API 端點，密碼絕不寫入前端源碼）
+const DEFAULT_GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbygUe5Y8ZbjERVcM6OVIZG_u91Bmp634I7EzekqXxR9B1PrJ-hv67hpsQD9dlQEuIc/exec';
+window.DEFAULT_GAS_WEBAPP_URL = DEFAULT_GAS_WEBAPP_URL;
 
 // ---------- 5. 初始化綁定 ----------
 function initStore(){
@@ -1129,6 +1156,21 @@ function initStore(){
     $('btnAdmLocalUnlock').onclick = () => unlockAdminBackend('local-dev-session');
   }
   if($('btnAdmLoginSubmit')){
+    const fnv1a = str => {
+      let h1 = 0x811c9dc5, h2 = 0x01000193;
+      for(let i = 0; i < str.length; i++){
+        const c = str.charCodeAt(i);
+        h1 ^= c; h1 = Math.imul(h1, 0x01000193) >>> 0;
+        h2 ^= (c + i); h2 = Math.imul(h2, 0x85ebca6b) >>> 0;
+      }
+      return h1.toString(16).padStart(8,'0') + h2.toString(16).padStart(8,'0');
+    };
+    window.fnv1aAdminHash = fnv1a;
+    const getExpectedHash = () => {
+      try{ return localStorage.getItem('kids_admin_custom_hash') || '0f84d63ae0e8f002'; }
+      catch(_){ return '0f84d63ae0e8f002'; }
+    };
+
     $('btnAdmLoginSubmit').onclick = async () => {
       const username = ($('admUser').value || '').trim();
       const password = ($('admPass').value || '').trim();
@@ -1136,22 +1178,130 @@ function initStore(){
         $('admAuthMsg').textContent = '請輸入管理員密碼！';
         return;
       }
-      // 單向雜湊校驗管理員憑證（支援 file:// 與 https://，前端不存放明文密碼）
-      const fnv1a = str => {
-        let h1 = 0x811c9dc5, h2 = 0x01000193;
-        for(let i = 0; i < str.length; i++){
-          const c = str.charCodeAt(i);
-          h1 ^= c; h1 = Math.imul(h1, 0x01000193) >>> 0;
-          h2 ^= (c + i); h2 = Math.imul(h2, 0x85ebca6b) >>> 0;
-        }
-        return h1.toString(16).padStart(8,'0') + h2.toString(16).padStart(8,'0');
-      };
-      if(fnv1a(username + ':' + password) === '0f84d63ae0e8f002'){
+      // 1. 先比對本機單向雜湊；若符合則解鎖後台，並同時以該組帳密自動登入雲端 Apps Script（無須二次輸入）
+      if(fnv1a(username + ':' + password) === getExpectedHash()){
         unlockAdminBackend('local-hash-session');
-      } else {
-        $('admAuthMsg').style.color = '#c0392b';
-        $('admAuthMsg').textContent = '❌ 管理員帳號或密碼錯誤！';
+        if(typeof window.autoConnectCloudOnLogin === 'function'){
+          window.autoConnectCloudOnLogin(username, password);
+        }
+        return;
       }
+      // 2. 若曾在其他裝置透過 Google Apps Script 修改密碼，嘗試向雲端驗證
+      let cloudUrl = DEFAULT_GAS_WEBAPP_URL;
+      try{ cloudUrl = (localStorage.getItem('kids_gas_webapp_url') || DEFAULT_GAS_WEBAPP_URL).trim(); }catch(_){}
+      if(cloudUrl && typeof fetch === 'function'){
+        $('admAuthMsg').style.color = '#b45309';
+        $('admAuthMsg').textContent = '⏳ 正在向 Google 雲端核對密碼...';
+        try{
+          const resp = await fetch(cloudUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'adminLogin', username, password })
+          });
+          const data = await resp.json();
+          if(data && data.ok && data.sessionToken){
+            try{ localStorage.setItem('kids_admin_custom_hash', fnv1a(username + ':' + password)); }catch(_){}
+            unlockAdminBackend(data.sessionToken);
+            if(typeof window.refreshBackupStatusUI === 'function') window.refreshBackupStatusUI();
+            return;
+          }
+        }catch(_){}
+      }
+      $('admAuthMsg').style.color = '#c0392b';
+      $('admAuthMsg').textContent = '❌ 管理員帳號或密碼錯誤！';
+    };
+  }
+
+  // 修改管理員與雲端後台密碼彈窗（同步本機雜湊與 Google Apps Script 指令碼屬性）
+  const closeChgPassModal = () => {
+    if($('changePassModal')) $('changePassModal').style.display = 'none';
+  };
+  document.querySelectorAll('.btn-open-chgpass').forEach(btn => {
+    btn.onclick = () => {
+      if($('changePassModal')){
+        if($('chgAdmUser')) $('chgAdmUser').value = ($('admUser')?.value || 'admin').trim() || 'admin';
+        ['chgOldPass','chgNewPass','chgNewPass2'].forEach(id => { if($(id)) $(id).value = ''; });
+        if($('chgPassMsg')) $('chgPassMsg').textContent = '';
+        $('changePassModal').style.display = 'flex';
+      }
+    };
+  });
+  if($('btnCloseChgPassModal')) $('btnCloseChgPassModal').onclick = closeChgPassModal;
+  if($('btnChgPassReset')){
+    $('btnChgPassReset').onclick = () => {
+      try{ localStorage.removeItem('kids_admin_custom_hash'); }catch(_){}
+      if($('chgPassMsg')){
+        $('chgPassMsg').style.color = '#136529';
+        $('chgPassMsg').textContent = '🔄 已還原本機預設登入驗證（若曾修改 Google 雲端密碼，請點左側連結確認指令碼屬性）。';
+      }
+    };
+  }
+  if($('btnChgPassSubmit')){
+    $('btnChgPassSubmit').onclick = async () => {
+      const u = ($('chgAdmUser')?.value || 'admin').trim() || 'admin';
+      const oldP = ($('chgOldPass')?.value || '').trim();
+      const newP = ($('chgNewPass')?.value || '').trim();
+      const newP2 = ($('chgNewPass2')?.value || '').trim();
+      const msgEl = $('chgPassMsg');
+      const setMsg = (txt, col) => { if(msgEl){ msgEl.style.color = col; msgEl.textContent = txt; } };
+      if(!oldP){ setMsg('⚠️ 請輸入目前密碼！', '#c0392b'); return; }
+      if(newP.length < 4){ setMsg('⚠️ 新密碼長度至少需 4 碼！', '#c0392b'); return; }
+      if(newP !== newP2){ setMsg('⚠️ 兩次輸入的新密碼不一致！', '#c0392b'); return; }
+
+      const fnv1a = window.fnv1aAdminHash;
+      let curExpected = '0f84d63ae0e8f002';
+      try{ curExpected = localStorage.getItem('kids_admin_custom_hash') || '0f84d63ae0e8f002'; }catch(_){}
+      const localMatch = fnv1a && (fnv1a(u + ':' + oldP) === curExpected);
+
+      let cloudUrl = DEFAULT_GAS_WEBAPP_URL;
+      try{ cloudUrl = (localStorage.getItem('kids_gas_webapp_url') || DEFAULT_GAS_WEBAPP_URL).trim(); }catch(_){}
+      let cloudUpdated = false, cloudErr = '';
+      if(cloudUrl && typeof fetch === 'function'){
+        setMsg('⏳ 正在同步更新本機與 Google 雲端密碼...', '#b45309');
+        try{
+          const tok = (()=>{ try{ return sessionStorage.getItem('kids_admin_session_token')||''; }catch(_){ return ''; } })();
+          const resp = await fetch(cloudUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'changeAdminPassword',
+              token: (tok && tok !== 'local-hash-session' && tok !== 'local-dev-session') ? tok : '',
+              oldUsername: u, oldPassword: oldP,
+              newUsername: u, newPassword: newP
+            })
+          });
+          const data = await resp.json();
+          if(data && data.ok){
+            cloudUpdated = true;
+            if(data.sessionToken){
+              try{ sessionStorage.setItem('kids_admin_session_token', data.sessionToken); }catch(_){}
+            }
+          } else if(!localMatch) {
+            setMsg(`❌ 原密碼驗證失敗：${(data&&data.error)||'請確認目前密碼是否正確'}`, '#c0392b');
+            return;
+          } else {
+            cloudErr = (data && data.error) || '雲端認證需先連線';
+          }
+        }catch(err){
+          if(!localMatch){ setMsg(`❌ 驗證失敗：${err.message}`, '#c0392b'); return; }
+          cloudErr = err.message;
+        }
+      } else if(!localMatch){
+        setMsg('❌ 目前密碼不正確！', '#c0392b');
+        return;
+      }
+
+      if(fnv1a){
+        try{ localStorage.setItem('kids_admin_custom_hash', fnv1a(u + ':' + newP)); }catch(_){}
+      }
+      if($('admPass')) $('admPass').value = '';
+      setMsg(
+        cloudUpdated
+          ? '✅ 已成功修改並同步更新網站後台與 Google 雲端密碼！'
+          : `✅ 網站後台密碼已修改完成（雲端同步提示：${cloudErr || '將於下次雲端登入同步'}）`,
+        '#136529'
+      );
+      if(typeof window.refreshBackupStatusUI === 'function') window.refreshBackupStatusUI();
     };
   }
 
