@@ -468,6 +468,15 @@ function scheduleStorePreview(){
   if(previewTimer) clearTimeout(previewTimer);
   previewTimer = setTimeout(updateStorePreview, 80);
 }
+if(typeof window !== 'undefined'){
+  let _stResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if($('viewStore') && $('viewStore').style.display !== 'none'){
+      clearTimeout(_stResizeTimer);
+      _stResizeTimer = setTimeout(scheduleStorePreview, 150);
+    }
+  });
+}
 
 let _lastCustomStrokeKey = '';
 let _customStrokeMinSheets = 1;

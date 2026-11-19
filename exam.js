@@ -7234,26 +7234,65 @@ async function generateBatchAll(overrideOrders=null){
   st.textContent='@media print{@page{size:A4 portrait;margin:0}}';
 
   let grandTotalPages = 0;
+  const batchContentCache = new Map();
+  const clonePagesWithWm = (pages, targetWm) => pages.map(pg => {
+    const c = pg.cloneNode(true);
+    if(window.createWatermarkLayer){
+      c.querySelectorAll('.wm-layer').forEach(oldWm => {
+        const w = +oldWm.dataset.wmW || 794, h = +oldWm.dataset.wmH || 1122;
+        oldWm.replaceWith(window.createWatermarkLayer(w, h, targetWm));
+      });
+    }
+    return c;
+  });
+
   for(let i=0;i<selectedOrders.length;i++){
     const ord = selectedOrders[i];
+    if(selectedOrders.length > 1){
+      $('batchMsg').style.color = '#7a3b00';
+      $('batchMsg').textContent = `⏳ 正在產製第 ${i+1} / ${selectedOrders.length} 筆訂單（${ord.parent_label}）...`;
+    }
     const wmText = orderWm ? `${baseWm}（${ord.parent_label}・#${ord.order_id}）` : baseWm;
+    const specKey = JSON.stringify({
+      plan: ord.plan, g: ord.grade, sem: ord.sem, pub: ord.pub, subj: ord.subj,
+      sc: ord.scope, diff: ord.diff, ruby: ord.ruby, ly: ord.layout,
+      cols: ord.cols, sm: ord.strokeMode, sh: ord.sheets,
+      cw: ord.custom_words, cu: ord.custom_units,
+      pl: ord.preLevel, pt: ord.preTopic, pi: ord.preIllust, withAns
+    });
+
     let strokeRes = {pages:[], charCount:0};
     let examRes = {pages:[], qPages:0, ansPages:0};
-
-    if(ord.plan==='preschool' && window.PRESCHOOL_BANK){
-      const lvlGuess = ord.preLevel || (/大班/.test(ord.grade)?'large':(/中班/.test(ord.grade)?'mid':'small'));
-      const topGuess = ord.preTopic || (/注音/.test(ord.subj)?'zy':(/數字/.test(ord.subj)?'num':(/ABC/i.test(ord.subj)?'abc':'all')));
-      const preRes = window.PRESCHOOL_BANK.buildPages({
-        level: lvlGuess, topic: topGuess, sheets: +ord.sheets || 10, illust: ord.preIllust !== false, wmText
-      });
-      strokeRes = { pages: preRes.pages || [], charCount: preRes.itemCount || 0 };
-    }else if(ord.plan==='stroke' || ord.plan==='both'){
-      if(window.buildStrokePagesForOrder){
-        strokeRes = await window.buildStrokePagesForOrder(ord, wmText);
+    const cached = batchContentCache.get(specKey);
+    if(cached){
+      strokeRes = { pages: clonePagesWithWm(cached.strokePages, wmText), charCount: cached.charCount };
+      examRes = { pages: clonePagesWithWm(cached.examPages, wmText), qPages: cached.qPages, ansPages: cached.ansPages };
+    }else{
+      if(ord.plan==='preschool' && window.PRESCHOOL_BANK){
+        const lvlGuess = ord.preLevel || (/大班/.test(ord.grade)?'large':(/中班/.test(ord.grade)?'mid':'small'));
+        const topGuess = ord.preTopic || (/注音/.test(ord.subj)?'zy':(/數字/.test(ord.subj)?'num':(/ABC/i.test(ord.subj)?'abc':'all')));
+        const preRes = window.PRESCHOOL_BANK.buildPages({
+          level: lvlGuess, topic: topGuess, sheets: +ord.sheets || 10, illust: ord.preIllust !== false, wmText
+        });
+        strokeRes = { pages: preRes.pages || [], charCount: preRes.itemCount || 0 };
+      }else if(ord.plan==='stroke' || ord.plan==='both'){
+        if(window.buildStrokePagesForOrder){
+          strokeRes = await window.buildStrokePagesForOrder(ord, wmText);
+        }
       }
+      if(ord.plan==='exam' || ord.plan==='both'){
+        examRes = buildExamPagesForOrder(ord, withAns, wmText);
+      }
+      batchContentCache.set(specKey, {
+        strokePages: strokeRes.pages.map(p => p.cloneNode(true)),
+        charCount: strokeRes.charCount,
+        examPages: examRes.pages.map(p => p.cloneNode(true)),
+        qPages: examRes.qPages,
+        ansPages: examRes.ansPages
+      });
     }
-    if(ord.plan==='exam' || ord.plan==='both'){
-      examRes = buildExamPagesForOrder(ord, withAns, wmText);
+    if(selectedOrders.length > 1 && i < selectedOrders.length - 1){
+      await new Promise(r => requestAnimationFrame(r));
     }
 
     const makeDuplexBlank = (hintTxt) => {
