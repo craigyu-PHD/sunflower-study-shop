@@ -5893,23 +5893,34 @@ function normalizeOrderRow(raw, idx){
   const order_id = String(raw.order_id || raw['取貨編號'] || raw['訂單編號'] || `A${String(idx+1).padStart(2,'0')}`).trim();
   const parent_label = String(raw.parent_label || raw['家長稱呼'] || raw['家長'] || '').trim();
   const planRaw = String(raw.plan || raw['方案'] || '綜合套組').trim();
+  const isPreschool = /preschool|幼兒|小班|中班|大班/i.test(planRaw + ' ' + String(raw.packType||'') + ' ' + String(raw.grade||'') + ' ' + String(raw.pub||''));
   let plan = 'both', planName = '綜合套組（寫字帖＋測驗卷）';
-  if(/寫字|筆畫|筆順|生字|stroke/i.test(planRaw) && !/綜合|套組|雙享|both|\+|＋/i.test(planRaw)){
+  if(isPreschool){
+    plan='preschool'; planName='幼兒園運筆寫字帖';
+  }else if(/寫字|筆畫|筆順|生字|stroke/i.test(planRaw) && !/綜合|套組|雙享|both|\+|＋/i.test(planRaw)){
     plan='stroke'; planName='筆畫練習寫字帖';
   }else if(/測驗|評量|考卷|exam/i.test(planRaw) && !/綜合|套組|雙享|both|\+|＋/i.test(planRaw)){
     plan='exam'; planName='國小評量測驗卷';
   }
 
-  const gMatch = String(raw.grade || raw['年級'] || '').match(/[1-6]/);
-  const grade = gMatch ? gMatch[0] : '';
-  const semRaw = String(raw.sem || raw['學期'] || '上').trim();
-  const sem = /下|2/.test(semRaw) ? '下' : '上';
+  const preLevel = raw.preLevel || (/大班/.test(String(raw.grade||raw.diff||''))?'large':(/中班/.test(String(raw.grade||raw.diff||''))?'mid':'small'));
+  const preTopic = raw.preTopic || (/注音/.test(String(raw.subj||raw.scope||''))?'zy':(/數字/.test(String(raw.subj||raw.scope||''))?'num':(/ABC/i.test(String(raw.subj||raw.scope||''))?'abc':'all')));
+  const preIllust = raw.preIllust !== undefined ? !!raw.preIllust : true;
 
-  const pubRaw = String(raw.pub || raw['版本'] || 'std').trim();
-  let pub = 'std', pubName = '108課綱通用';
-  if(/南一|^n$/i.test(pubRaw)){pub='n';pubName='南一版';}
-  else if(/康軒|^k$/i.test(pubRaw)){pub='k';pubName='康軒版';}
-  else if(/翰林|^h$/i.test(pubRaw)){pub='h';pubName='翰林版';}
+  const gMatch = String(raw.grade || raw['年級'] || '').match(/[1-6]/);
+  const grade = isPreschool
+    ? (String(raw.grade||'').trim() || `幼兒園${preLevel==='large'?'大班':(preLevel==='mid'?'中班':'小班')}`)
+    : (gMatch ? gMatch[0] : '');
+  const semRaw = String(raw.sem || raw['學期'] || '上').trim();
+  const sem = isPreschool ? (semRaw || '適齡先修') : (/下|2/.test(semRaw) ? '下' : '上');
+
+  const pubRaw = String(raw.pub || raw['版本'] || (isPreschool?'pre':'std')).trim();
+  let pub = isPreschool?'pre':'std', pubName = isPreschool?'台灣幼教適齡課綱':'108課綱通用';
+  if(!isPreschool){
+    if(/南一|^n$/i.test(pubRaw)){pub='n';pubName='南一版';}
+    else if(/康軒|^k$/i.test(pubRaw)){pub='k';pubName='康軒版';}
+    else if(/翰林|^h$/i.test(pubRaw)){pub='h';pubName='翰林版';}
+  }
 
   let subj = String(raw.subj || raw['科目'] || '國語').trim();
   if(subj==='自然') subj='自然科學';
@@ -5981,7 +5992,9 @@ function normalizeOrderRow(raw, idx){
   // 參數合法性檢核
   const errors = [];
   if(!parent_label) errors.push('缺少家長稱呼');
-  if(!grade || +grade<1 || +grade>6) errors.push('年級須為 1～6');
+  if(plan === 'preschool'){
+    if(!grade) errors.push('請指定幼兒園班別');
+  }else if(!grade || +grade<1 || +grade>6) errors.push('年級須為 1～6');
   else {
     const validSubs = (window.CURR_META && CURR_META.subjectsByGrade[grade]) || ['國語','數學','生活','自然科學','社會','英語'];
     if(plan!=='stroke' && !validSubs.includes(subj)){
@@ -5993,6 +6006,7 @@ function normalizeOrderRow(raw, idx){
 
   return {
     order_id, parent_label, contact, remit_last5, plan, planName, packType, sheets, grade, sem, pub, pubName,
+    preLevel, preTopic, preIllust,
     subj, scope, scopeName, diff, diffName, ruby, custom_words, custom_units,
     strokeMode, cols, layout, rowNumber, created_at, created_ts, batch_week,
     isPrinted, print_count, printed_at, print_status, isCompleted,
@@ -7094,7 +7108,8 @@ async function generateBatchAll(overrideOrders=null){
       orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】A4 取貨封面頁`, el: buildCoverPageA4(ord, i, selectedOrders.length, stats, wmText)});
     }
     strokeRes.pages.forEach((p,idx)=>{
-      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】筆畫練習寫字帖 第 ${idx+1}/${strokeRes.pages.length} 頁`, el:p});
+      const sKind = ord.plan==='preschool' ? '幼兒園運筆寫字帖' : '筆畫練習寫字帖';
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】${sKind} 第 ${idx+1}/${strokeRes.pages.length} 頁`, el:p});
     });
     examRes.pages.forEach((p,idx)=>{
       const isAns = withAns && examRes.ansPages>0 && idx >= examRes.qPages;

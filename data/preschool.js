@@ -101,17 +101,201 @@
     }
   };
 
-  function getPreschoolStartHint(sym, kind){
-    // 常見首筆起點相對座標（0~1 比例），幫助幼兒園孩子抓準「由上往下／由左往右」起筆點
-    if(kind === 'num'){
-      const first = String(sym)[0];
-      const m = {'1':[0.50,0.22],'2':[0.32,0.28],'3':[0.33,0.25],'4':[0.58,0.22],'5':[0.35,0.22],'6':[0.58,0.22],'7':[0.28,0.24],'8':[0.50,0.22],'9':[0.52,0.24],'0':[0.50,0.22]};
-      return m[first] || [0.40, 0.25];
+  // 台灣幼兒園筆順與方向引導向量路徑庫（1、2、3 筆順編號＋箭頭方向；適用 0~9、37 個注音符號 ㄅ~ㄩ、英文字母 A~Z / a~z）
+  const STROKE_PATHS = {
+    // 阿拉伯數字 0~9
+    '0': [[[0.50,0.20],[0.26,0.50],[0.50,0.82],[0.74,0.50],[0.50,0.24]]],
+    '1': [[[0.50,0.20],[0.50,0.82]]],
+    '2': [[[0.28,0.34],[0.52,0.20],[0.72,0.36],[0.28,0.80],[0.76,0.80]]],
+    '3': [[[0.30,0.26],[0.68,0.28],[0.48,0.48],[0.70,0.68],[0.30,0.78]]],
+    '4': [[[0.56,0.20],[0.24,0.62],[0.78,0.62]], [[0.60,0.20],[0.60,0.84]]],
+    '5': [[[0.34,0.22],[0.32,0.48],[0.68,0.50],[0.66,0.74],[0.30,0.78]], [[0.34,0.22],[0.72,0.22]]],
+    '6': [[[0.62,0.20],[0.30,0.50],[0.34,0.80],[0.68,0.76],[0.66,0.52],[0.36,0.52]]],
+    '7': [[[0.24,0.22],[0.76,0.22],[0.42,0.82]]],
+    '8': [[[0.50,0.48],[0.30,0.34],[0.50,0.20],[0.70,0.34],[0.30,0.68],[0.50,0.82],[0.70,0.68],[0.52,0.50]]],
+    '9': [[[0.68,0.38],[0.48,0.20],[0.30,0.36],[0.48,0.54],[0.68,0.38],[0.62,0.82]]],
+
+    // 注音符號（依教育部標準筆順：ㄅ~ㄩ 共 37 個）
+    'ㄅ': [[[0.28,0.32],[0.70,0.32],[0.64,0.80],[0.48,0.74]]],
+    'ㄆ': [[[0.44,0.18],[0.40,0.46]], [[0.24,0.48],[0.74,0.48],[0.42,0.82]]],
+    'ㄇ': [[[0.26,0.28],[0.26,0.80]], [[0.26,0.28],[0.74,0.28],[0.74,0.80]]],
+    'ㄈ': [[[0.26,0.26],[0.76,0.26]], [[0.28,0.26],[0.28,0.76],[0.76,0.76]]],
+    'ㄉ': [[[0.44,0.18],[0.24,0.52]], [[0.34,0.36],[0.72,0.36],[0.56,0.82],[0.44,0.76]]],
+    'ㄊ': [[[0.30,0.26],[0.70,0.26]], [[0.24,0.48],[0.76,0.48]], [[0.48,0.26],[0.48,0.76],[0.74,0.76]]],
+    'ㄋ': [[[0.28,0.24],[0.70,0.24],[0.32,0.48],[0.72,0.48],[0.58,0.82]]],
+    'ㄌ': [[[0.26,0.36],[0.74,0.36],[0.60,0.82],[0.48,0.75]], [[0.50,0.18],[0.26,0.80]]],
+    'ㄍ': [[[0.56,0.20],[0.30,0.50],[0.64,0.80]]],
+    'ㄎ': [[[0.24,0.26],[0.76,0.26]], [[0.46,0.26],[0.36,0.50],[0.72,0.50],[0.58,0.82]]],
+    'ㄏ': [[[0.26,0.28],[0.74,0.28],[0.30,0.80]]],
+    'ㄐ': [[[0.34,0.24],[0.34,0.72],[0.58,0.58]], [[0.66,0.20],[0.66,0.84]]],
+    'ㄑ': [[[0.62,0.20],[0.32,0.50],[0.64,0.80]]],
+    'ㄒ': [[[0.22,0.26],[0.78,0.26]], [[0.50,0.26],[0.50,0.82]]],
+    'ㄓ': [[[0.28,0.36],[0.28,0.62],[0.72,0.62]], [[0.72,0.34],[0.72,0.66]], [[0.50,0.18],[0.50,0.84]]],
+    'ㄔ': [[[0.64,0.20],[0.28,0.42]], [[0.66,0.42],[0.24,0.68]], [[0.50,0.52],[0.50,0.84]]],
+    'ㄕ': [[[0.30,0.22],[0.70,0.22],[0.70,0.44]], [[0.30,0.44],[0.70,0.44]], [[0.30,0.22],[0.24,0.80]]],
+    'ㄖ': [[[0.30,0.22],[0.30,0.80]], [[0.30,0.22],[0.70,0.22],[0.70,0.80]], [[0.30,0.50],[0.70,0.50]], [[0.30,0.78],[0.70,0.78]]],
+    'ㄗ': [[[0.30,0.26],[0.72,0.26],[0.70,0.66]], [[0.32,0.26],[0.32,0.84]]],
+    'ㄘ': [[[0.26,0.32],[0.74,0.32]], [[0.46,0.18],[0.34,0.52],[0.72,0.52],[0.60,0.82]]],
+    'ㄙ': [[[0.52,0.20],[0.26,0.74],[0.70,0.66]], [[0.62,0.54],[0.76,0.80]]],
+    'ㄚ': [[[0.30,0.28],[0.40,0.48]], [[0.70,0.28],[0.60,0.48]], [[0.50,0.20],[0.50,0.84]]],
+    'ㄛ': [[[0.28,0.28],[0.64,0.28]], [[0.46,0.28],[0.34,0.48],[0.74,0.48],[0.58,0.82]]],
+    'ㄜ': [[[0.28,0.34],[0.66,0.24],[0.44,0.50]], [[0.38,0.42],[0.38,0.76],[0.74,0.76]]],
+    'ㄝ': [[[0.24,0.42],[0.76,0.36],[0.68,0.58]], [[0.50,0.20],[0.50,0.66]], [[0.32,0.28],[0.32,0.76],[0.74,0.76]]],
+    'ㄞ': [[[0.26,0.24],[0.74,0.24]], [[0.32,0.46],[0.68,0.46],[0.62,0.82]], [[0.50,0.24],[0.24,0.82]]],
+    'ㄟ': [[[0.22,0.54],[0.46,0.28],[0.78,0.74]]],
+    'ㄠ': [[[0.46,0.18],[0.28,0.44],[0.50,0.44]], [[0.60,0.34],[0.30,0.72],[0.70,0.66]], [[0.64,0.56],[0.78,0.80]]],
+    'ㄡ': [[[0.28,0.26],[0.72,0.26],[0.26,0.80]], [[0.34,0.38],[0.76,0.80]]],
+    'ㄢ': [[[0.28,0.26],[0.72,0.26]], [[0.42,0.26],[0.32,0.50],[0.74,0.48],[0.62,0.82]]],
+    'ㄣ': [[[0.42,0.20],[0.30,0.76],[0.76,0.64]]],
+    'ㄤ': [[[0.24,0.34],[0.76,0.34]], [[0.48,0.18],[0.24,0.80]], [[0.50,0.44],[0.50,0.78],[0.78,0.78]]],
+    'ㄥ': [[[0.48,0.20],[0.28,0.74],[0.74,0.74]]],
+    'ㄦ': [[[0.36,0.22],[0.26,0.80]], [[0.58,0.22],[0.58,0.78],[0.80,0.78]]],
+    'ㄧ': [[[0.20,0.50],[0.80,0.50]]],
+    'ㄨ': [[[0.68,0.24],[0.28,0.80]], [[0.30,0.26],[0.72,0.80]]],
+    'ㄩ': [[[0.26,0.28],[0.26,0.74],[0.74,0.74]], [[0.74,0.26],[0.74,0.80]]],
+
+    // 英文字母大寫 A~Z
+    'A': [[[0.50,0.18],[0.22,0.82]], [[0.50,0.18],[0.78,0.82]], [[0.32,0.56],[0.68,0.56]]],
+    'B': [[[0.30,0.20],[0.30,0.82]], [[0.30,0.20],[0.68,0.32],[0.30,0.50]], [[0.30,0.50],[0.72,0.66],[0.30,0.82]]],
+    'C': [[[0.72,0.30],[0.46,0.20],[0.24,0.50],[0.46,0.82],[0.72,0.72]]],
+    'D': [[[0.30,0.20],[0.30,0.82]], [[0.30,0.20],[0.74,0.50],[0.30,0.82]]],
+    'E': [[[0.30,0.20],[0.30,0.82]], [[0.30,0.20],[0.72,0.20]], [[0.30,0.50],[0.66,0.50]], [[0.30,0.82],[0.74,0.82]]],
+    'F': [[[0.30,0.20],[0.30,0.82]], [[0.30,0.20],[0.74,0.20]], [[0.30,0.52],[0.66,0.52]]],
+    'G': [[[0.72,0.30],[0.46,0.20],[0.24,0.50],[0.48,0.82],[0.74,0.68],[0.74,0.52]], [[0.54,0.52],[0.78,0.52]]],
+    'H': [[[0.28,0.20],[0.28,0.82]], [[0.72,0.20],[0.72,0.82]], [[0.28,0.50],[0.72,0.50]]],
+    'I': [[[0.34,0.20],[0.66,0.20]], [[0.50,0.20],[0.50,0.82]], [[0.34,0.82],[0.66,0.82]]],
+    'J': [[[0.32,0.20],[0.72,0.20]], [[0.58,0.20],[0.58,0.74],[0.32,0.78]]],
+    'K': [[[0.30,0.20],[0.30,0.82]], [[0.72,0.20],[0.32,0.52]], [[0.38,0.48],[0.74,0.82]]],
+    'L': [[[0.30,0.20],[0.30,0.82],[0.72,0.82]]],
+    'M': [[[0.24,0.82],[0.24,0.20]], [[0.24,0.20],[0.50,0.72]], [[0.76,0.20],[0.50,0.72]], [[0.76,0.20],[0.76,0.82]]],
+    'N': [[[0.28,0.82],[0.28,0.20]], [[0.28,0.20],[0.72,0.82]], [[0.72,0.20],[0.72,0.82]]],
+    'O': [[[0.50,0.20],[0.24,0.50],[0.50,0.82],[0.76,0.50],[0.50,0.22]]],
+    'P': [[[0.32,0.20],[0.32,0.82]], [[0.32,0.20],[0.72,0.34],[0.32,0.54]]],
+    'Q': [[[0.50,0.20],[0.24,0.50],[0.50,0.82],[0.76,0.50],[0.50,0.22]], [[0.56,0.62],[0.80,0.84]]],
+    'R': [[[0.30,0.20],[0.30,0.82]], [[0.30,0.20],[0.70,0.34],[0.30,0.52]], [[0.44,0.52],[0.74,0.82]]],
+    'S': [[[0.70,0.30],[0.48,0.20],[0.30,0.36],[0.70,0.62],[0.48,0.82],[0.28,0.72]]],
+    'T': [[[0.22,0.20],[0.78,0.20]], [[0.50,0.20],[0.50,0.82]]],
+    'U': [[[0.28,0.20],[0.28,0.66],[0.50,0.82],[0.72,0.66],[0.72,0.20]]],
+    'V': [[[0.24,0.20],[0.50,0.82]], [[0.76,0.20],[0.50,0.82]]],
+    'W': [[[0.18,0.20],[0.34,0.82]], [[0.34,0.82],[0.50,0.32]], [[0.50,0.32],[0.66,0.82]], [[0.66,0.82],[0.82,0.20]]],
+    'X': [[[0.26,0.20],[0.74,0.82]], [[0.74,0.20],[0.26,0.82]]],
+    'Y': [[[0.24,0.20],[0.50,0.52]], [[0.76,0.20],[0.50,0.52]], [[0.50,0.52],[0.50,0.84]]],
+    'Z': [[[0.24,0.22],[0.76,0.22],[0.24,0.80],[0.76,0.80]]],
+
+    // 英文字母小寫 a~z（與四線格對齊之小寫比例）
+    'a': [[[0.66,0.48],[0.46,0.38],[0.28,0.58],[0.46,0.78],[0.66,0.62]], [[0.66,0.40],[0.66,0.78]]],
+    'b': [[[0.32,0.18],[0.32,0.80]], [[0.32,0.50],[0.68,0.56],[0.32,0.78]]],
+    'c': [[[0.68,0.46],[0.48,0.38],[0.28,0.58],[0.48,0.78],[0.68,0.70]]],
+    'd': [[[0.66,0.48],[0.30,0.58],[0.66,0.76]], [[0.66,0.18],[0.66,0.80]]],
+    'e': [[[0.30,0.56],[0.68,0.56],[0.50,0.38],[0.28,0.58],[0.50,0.78],[0.68,0.70]]],
+    'f': [[[0.66,0.22],[0.48,0.22],[0.46,0.80]], [[0.32,0.44],[0.66,0.44]]],
+    'g': [[[0.64,0.44],[0.32,0.56],[0.64,0.72]], [[0.64,0.40],[0.64,0.84],[0.38,0.88]]],
+    'h': [[[0.32,0.18],[0.32,0.80]], [[0.32,0.50],[0.54,0.38],[0.68,0.56],[0.68,0.80]]],
+    'i': [[[0.50,0.42],[0.50,0.78]], [[0.50,0.22],[0.50,0.28]]],
+    'j': [[[0.56,0.42],[0.56,0.84],[0.34,0.86]], [[0.56,0.22],[0.56,0.28]]],
+    'k': [[[0.32,0.18],[0.32,0.80]], [[0.66,0.40],[0.34,0.60]], [[0.42,0.56],[0.68,0.80]]],
+    'l': [[[0.50,0.18],[0.50,0.80]]],
+    'm': [[[0.22,0.42],[0.22,0.78]], [[0.22,0.48],[0.48,0.44],[0.48,0.78]], [[0.48,0.48],[0.76,0.44],[0.76,0.78]]],
+    'n': [[[0.32,0.42],[0.32,0.78]], [[0.32,0.48],[0.68,0.46],[0.68,0.78]]],
+    'o': [[[0.50,0.38],[0.28,0.58],[0.50,0.78],[0.72,0.58],[0.50,0.40]]],
+    'p': [[[0.32,0.40],[0.32,0.88]], [[0.32,0.46],[0.68,0.54],[0.32,0.74]]],
+    'q': [[[0.66,0.46],[0.32,0.58],[0.66,0.74]], [[0.66,0.40],[0.66,0.88]]],
+    'r': [[[0.36,0.42],[0.36,0.78]], [[0.36,0.50],[0.68,0.42]]],
+    's': [[[0.66,0.46],[0.46,0.38],[0.34,0.50],[0.66,0.66],[0.46,0.78],[0.30,0.72]]],
+    't': [[[0.48,0.22],[0.48,0.74],[0.66,0.76]], [[0.32,0.42],[0.66,0.42]]],
+    'u': [[[0.32,0.40],[0.32,0.74],[0.64,0.72]], [[0.66,0.40],[0.66,0.78]]],
+    'v': [[[0.28,0.40],[0.50,0.78]], [[0.72,0.40],[0.50,0.78]]],
+    'w': [[[0.20,0.40],[0.34,0.78]], [[0.34,0.78],[0.50,0.44]], [[0.50,0.44],[0.66,0.78]], [[0.66,0.78],[0.80,0.40]]],
+    'x': [[[0.30,0.40],[0.70,0.78]], [[0.70,0.40],[0.30,0.78]]],
+    'y': [[[0.30,0.40],[0.50,0.74]], [[0.70,0.40],[0.36,0.88]]],
+    'z': [[[0.30,0.40],[0.70,0.40],[0.30,0.78],[0.70,0.78]]]
+  };
+
+  function getStrokesForSym(sym){
+    const s = String(sym || '');
+    if(STROKE_PATHS[s]) return STROKE_PATHS[s].map(pts => ({pts, rx:0, rw:1}));
+    const chars = [...s];
+    if(chars.length >= 2){
+      const out = [];
+      const w = 1 / chars.length;
+      chars.forEach((ch, idx) => {
+        const list = STROKE_PATHS[ch] || [];
+        list.forEach(pts => out.push({pts, rx: idx * w, rw: w}));
+      });
+      return out;
     }
-    if(kind === 'abc'){
-      return [0.36, 0.26];
-    }
-    return [0.34, 0.26];
+    return [];
+  }
+
+  function drawStrokeOrderOverlay(g, sym, boxX, boxY, boxW, boxH, compact=false){
+    const strokes = getStrokesForSym(sym);
+    if(!strokes.length) return;
+    const palette = ['#2563eb', '#e67e22', '#16a34a', '#9333ea'];
+    const placedBadges = [];
+    const r = Math.max(compact ? 4.8 : 5.5, Math.min(compact ? 6.6 : 7.8, boxW * 0.068));
+
+    strokes.forEach((st, idx) => {
+      const col = palette[idx % palette.length];
+      const mapPt = ([nx, ny]) => [
+        boxX + (st.rx + nx * st.rw) * boxW,
+        boxY + ny * boxH
+      ];
+      const mapped = st.pts.map(mapPt);
+      if(mapped.length < 2) return;
+
+      // 繪製淺色方向虛線路徑＋終端箭頭
+      g.save();
+      g.strokeStyle = col;
+      g.globalAlpha = compact ? 0.62 : 0.78;
+      g.lineWidth = compact ? 1.25 : 1.55;
+      g.setLineDash([2.8, 2.2]);
+      g.beginPath();
+      g.moveTo(mapped[0][0], mapped[0][1]);
+      for(let i = 1; i < mapped.length; i++) g.lineTo(mapped[i][0], mapped[i][1]);
+      g.stroke();
+      g.setLineDash([]);
+
+      // 箭頭三角形（位於最後線段末點方向）
+      const pEnd = mapped[mapped.length - 1];
+      const pPrev = mapped[mapped.length - 2];
+      const ang = Math.atan2(pEnd[1] - pPrev[1], pEnd[0] - pPrev[0]);
+      const aLen = compact ? 5.2 : 6.4;
+      g.fillStyle = col;
+      g.beginPath();
+      g.moveTo(pEnd[0] + Math.cos(ang)*2, pEnd[1] + Math.sin(ang)*2);
+      g.lineTo(pEnd[0] - aLen * Math.cos(ang - 0.55), pEnd[1] - aLen * Math.sin(ang - 0.55));
+      g.lineTo(pEnd[0] - aLen * Math.cos(ang + 0.55), pEnd[1] - aLen * Math.sin(ang + 0.55));
+      g.closePath();
+      g.fill();
+
+      // 筆順數字圓點 1, 2, 3（若起筆太近自動微調閃避，清楚不重疊）
+      let bx0 = mapped[0][0] - r * 0.8;
+      let by0 = mapped[0][1] - r * 0.8;
+      bx0 = Math.max(boxX + r + 1.5, Math.min(boxX + boxW - r - 1.5, bx0));
+      by0 = Math.max(boxY + r + 1.5, Math.min(boxY + boxH - r - 1.5, by0));
+      for(const [px, py] of placedBadges){
+        if(Math.hypot(bx0 - px, by0 - py) < r * 2.15){
+          bx0 = Math.min(boxX + boxW - r - 1.5, px + r * 2.2);
+        }
+      }
+      placedBadges.push([bx0, by0]);
+
+      g.globalAlpha = 0.94;
+      g.fillStyle = col;
+      g.beginPath();
+      g.arc(bx0, by0, r, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = '#fff';
+      g.lineWidth = 1.2;
+      g.stroke();
+
+      g.fillStyle = '#fff';
+      g.font = `800 ${Math.round(r * 1.32)}px "Noto Sans TC",sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(String(idx + 1), bx0, by0 + 0.5);
+      g.restore();
+    });
   }
 
   function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId){
@@ -125,46 +309,66 @@
     g.fillStyle = '#fff';
     g.fillRect(0, 0, cw, chh);
 
-    const pad = 4;
+    const pad = levelId === 'large' ? 2.5 : 3;
     const bx = pad, by = pad, bw = cw - pad*2, bh = chh - pad*2;
 
     if(rowIdx === 0){
-      // 頂格：可愛小插圖徽章區 ＋ 示範大字（置頂不留白）
+      // 頂格：放大可愛插圖徽章區 ＋ 清晰呼吸間距 ＋ 示範大字（附筆順 123 箭頭引導）
       g.fillStyle = item.kind === 'zy' ? '#fff7ed' : (item.kind === 'num' ? '#f0fdf4' : '#eff6ff');
       g.fillRect(bx, by, bw, bh);
       g.strokeStyle = item.kind === 'zy' ? '#fb923c' : (item.kind === 'num' ? '#4ade80' : '#60a5fa');
       g.lineWidth = 1.8;
       g.strokeRect(bx, by, bw, bh);
 
-      // 右上角可愛小插圖 + 詞語小提示（可切換顯示）
+      const topH = showIllust ? Math.round(bh * 0.43) : 0;
       if(showIllust){
-        const topH = Math.round(bh * 0.34);
-        g.fillStyle = 'rgba(255,255,255,0.88)';
+        g.fillStyle = 'rgba(255,255,255,0.92)';
         g.fillRect(bx+2, by+2, bw-4, topH);
 
-        const iconFs = Math.max(15, Math.min(26, Math.round(bh * 0.22)));
+        // 可愛圓形圖片底座＋大幅放大 Emoji 插圖
+        const circleR = Math.max(12, Math.round(topH * 0.42));
+        const iconCx = bx + 6 + circleR;
+        const iconCy = by + 2 + topH * 0.50;
+        g.save();
+        g.fillStyle = item.kind === 'zy' ? '#ffedd5' : (item.kind === 'num' ? '#dcfce7' : '#dbeafe');
+        g.beginPath();
+        g.arc(iconCx, iconCy, circleR, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+
+        const iconFs = Math.max(20, Math.round(topH * 0.68));
         g.font = `${iconFs}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
         g.textBaseline = 'middle';
-        g.textAlign = 'left';
-        g.fillText(item.icon || '🌟', bx + 7, by + topH * 0.54);
+        g.textAlign = 'center';
+        g.fillText(item.icon || '🌟', iconCx, iconCy + 1);
 
+        // 右側語詞小膠囊／點數提示，與大圖保留清楚間距
         g.fillStyle = '#5a2d00';
-        const hintFs = Math.max(10, Math.min(13.5, Math.round(bw * 0.115)));
+        const hintFs = Math.max(10.5, Math.min(14, Math.round(bw * 0.125)));
         g.font = `700 ${hintFs}px "Noto Sans TC","PingFang TC",sans-serif`;
         g.textAlign = 'right';
         if(item.kind === 'num' && item.dots > 0 && item.dots <= 5){
-          g.fillText('●'.repeat(item.dots), bx + bw - 7, by + topH * 0.54);
+          g.fillText('●'.repeat(item.dots), bx + bw - 6, by + 2 + topH * 0.52);
         } else {
-          g.fillText(item.hint || '', bx + bw - 7, by + topH * 0.54);
+          g.fillText(item.hint || '', bx + bw - 6, by + 2 + topH * 0.52);
         }
+
+        // 圖文之間柔和分隔線
+        g.strokeStyle = item.kind === 'zy' ? '#fed7aa' : (item.kind === 'num' ? '#bbf7d0' : '#bfdbfe');
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(bx + 4, by + 2 + topH);
+        g.lineTo(bx + bw - 4, by + 2 + topH);
+        g.stroke();
       }
 
-      // 下方範字大字體
+      // 下方示範大字（保留圖字間明確呼吸距離 gapPx）
       const sym = String(item.sym);
-      const modelTop = showIllust ? by + Math.round(bh * 0.36) : by + 4;
-      const modelH = by + bh - modelTop - 4;
+      const gapPx = showIllust ? Math.max(6, Math.round(bh * 0.045)) : 4;
+      const modelTop = showIllust ? (by + 2 + topH + gapPx) : (by + 4);
+      const modelH = Math.max(24, by + bh - modelTop - 4);
       const len = sym.length;
-      const baseFs = len >= 3 ? modelH * 0.48 : (len === 2 ? modelH * 0.62 : modelH * 0.78);
+      const baseFs = len >= 3 ? modelH * 0.50 : (len === 2 ? modelH * 0.64 : modelH * 0.80);
       const fontFam = item.kind === 'abc'
         ? '"Arial Rounded MT Bold","Comic Sans MS","PingFang TC",sans-serif'
         : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
@@ -172,14 +376,15 @@
       g.fillStyle = '#1e293b';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.fillText(sym, bx + bw / 2, modelTop + modelH * 0.53);
+      g.fillText(sym, bx + bw / 2, modelTop + modelH * 0.52);
 
-      // 小起筆紅點提示
-      const [rx, ry] = getPreschoolStartHint(sym, item.kind);
-      g.fillStyle = '#ef4444';
-      g.beginPath();
-      g.arc(bx + bw * rx * 0.85, modelTop + modelH * ry * 0.85, 3.2, 0, Math.PI * 2);
-      g.fill();
+      // 統一採用「1、2、3 筆順編號＋虛線方向箭頭」引導（無紅點點），依實際字體量測寬度對齊
+      const tw = g.measureText(sym).width;
+      const guideBoxH = Math.min(modelH, baseFs * 1.28);
+      const guideBoxY = modelTop + (modelH - guideBoxH) / 2;
+      const guideBoxW = Math.min(bw - 8, Math.max(tw * 1.35, guideBoxH * (len>=2?1.2:0.9)));
+      const guideBoxX = bx + (bw - guideBoxW) / 2;
+      drawStrokeOrderOverlay(g, sym, guideBoxX, guideBoxY, guideBoxW, guideBoxH, true);
       return cv;
     }
 
@@ -211,7 +416,7 @@
       g.setLineDash([]);
     }
 
-    // 漸層描紅引導：前段較深描紅 → 中段淺灰描紅 → 最末格極淺提示（置頂到底不留空白）
+    // 漸層描紅引導：前 2～3 格（第 0 範字＋第 1、2 描紅格）均含「1、2、3 筆順＋箭頭」，後段漸淺至獨立格
     const sym = String(item.sym);
     const len = sym.length;
     const isLastBlank = (rowIdx === totalRows - 1 && totalRows >= 7);
@@ -224,16 +429,16 @@
     g.textBaseline = 'middle';
 
     if(!isLastBlank){
-      const isGuide = rowIdx === 1;
-      const strokeColor = isGuide ? '#94a3b8' : (rowIdx <= Math.ceil(totalRows * 0.55) ? '#cbd5e1' : '#e2e8f0');
+      const isGuide = rowIdx <= 2;
+      const strokeColor = rowIdx === 1 ? '#94a3b8' : (rowIdx === 2 ? '#a8b8cc' : (rowIdx <= Math.ceil(totalRows * 0.55) ? '#cbd5e1' : '#e2e8f0'));
       if(isGuide || levelId === 'small'){
-        // 虛線描紅框（小班與首練習格加強輪廓描繪感）
+        // 虛線描紅框（小班與前兩格強化輪廓描繪感）
         g.save();
         g.strokeStyle = strokeColor;
         g.lineWidth = levelId === 'small' ? 1.8 : 1.3;
         g.setLineDash([3, 2.5]);
         g.strokeText(sym, bx + bw/2, by + bh * 0.53);
-        g.fillStyle = isGuide ? 'rgba(148,163,184,0.22)' : 'rgba(203,213,225,0.16)';
+        g.fillStyle = rowIdx === 1 ? 'rgba(148,163,184,0.22)' : 'rgba(203,213,225,0.16)';
         g.fillText(sym, bx + bw/2, by + bh * 0.53);
         g.restore();
       } else {
@@ -241,12 +446,14 @@
         g.fillText(sym, bx + bw/2, by + bh * 0.53);
       }
 
-      if(rowIdx === 1){
-        const [rx, ry] = getPreschoolStartHint(sym, item.kind);
-        g.fillStyle = '#f97316';
-        g.beginPath();
-        g.arc(bx + bw * rx, by + bh * ry, 2.8, 0, Math.PI * 2);
-        g.fill();
+      // 前面 2 格練習格（rowIdx === 1, 2）加上依實測字寬對齊之筆順 123 編號與方向箭頭引導
+      if(rowIdx === 1 || rowIdx === 2){
+        const tw = g.measureText(sym).width;
+        const gH = Math.min(bh - 6, baseFs * 1.32);
+        const gY = (by + bh * 0.51) - gH / 2;
+        const gW = Math.min(bw - 6, Math.max(tw * 1.36, gH * 0.72));
+        const gX = bx + (bw - gW) / 2;
+        drawStrokeOrderOverlay(g, sym, gX, gY, gW, gH, rowIdx === 2);
       }
     } else {
       // 最底獨立練習格留有極淡小角提示字，讓孩子仍不迷路
@@ -303,9 +510,9 @@
       if(!pageIndices.length) pageIndices = [0];
     }
 
-    const A4W = 794, MARGIN = 26, HEADER_H = 74;
+    const A4W = 794, MARGIN = 24, HEADER_H = 82;
     const CONTENT_W = A4W - MARGIN * 2;
-    const CONTENT_H = 1122 - MARGIN - HEADER_H - 34; // 保留底部版權列 34px
+    const CONTENT_H = 1122 - 20 - HEADER_H - 34; // 保留頂部標題框與底部版權列 34px
     const cwMax = Math.floor(CONTENT_W / cols);
     const chh = Math.floor(CONTENT_H / rows);
 
@@ -318,18 +525,18 @@
       hd.className = 'pre-a4-hd';
       hd.innerHTML = `
         <div class="pre-a4-title">
-          <b>🐣 向日葵幼兒園運筆寫字帖｜${lvl.name}</b>
-          <span>${lvl.stageTitle} ・ ${topicLabel}</span>
+          <b>🐣 向日葵幼兒園寫字帖｜${lvl.name}</b>
+          <span>${lvl.stageTitle}・${topicLabel}</span>
         </div>
         <div class="pre-a4-info">
-          <span>寶貝姓名：________</span>
-          <span>日期：___月___日</span>
-          <span>表現貼紙：⭐🌟</span>
+          <span>寶貝姓名：<span class="pre-name-box"></span></span>
+          <span>日期：　 月　 日</span>
+          <span>⭐🌟</span>
         </div>`;
       pg.appendChild(hd);
 
       const leftOff = Math.round((A4W - cols * cwMax) / 2);
-      const topOff = HEADER_H + 6;
+      const topOff = HEADER_H + 4;
       const slice = expanded.slice(pIdx * cols, (pIdx + 1) * cols);
 
       slice.forEach((item, c) => {
