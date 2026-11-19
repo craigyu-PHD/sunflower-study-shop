@@ -7226,6 +7226,7 @@ async function generateBatchAll(overrideOrders=null){
   if(!selectedOrders.length){
     $('batchMsg').style.color='#c0392b';
     $('batchMsg').textContent='⚠️ 目前沒有勾選任何欲列印的訂單！請先在上方表格左欄勾選「🖨️ 印製」（或點擊「☑️ 僅勾選已入帳(未印)」）。';
+    if($('batchProgress')) $('batchProgress').style.display='none';
     return;
   }
   lastBatchPrintedOrderIndices = selectedOrders
@@ -7245,6 +7246,12 @@ async function generateBatchAll(overrideOrders=null){
 
   let grandTotalPages = 0;
   const batchContentCache = new Map();
+  // 顯示產製進度條
+  if($('batchProgress')){
+    $('batchProgress').style.display='flex';
+    $('batchProgressText').textContent='開始生成教材…';
+    $('batchProgressFill').style.width='0%';
+  }
   const clonePagesWithWm = (pages, targetWm) => pages.map(pg => {
     const c = pg.cloneNode(true);
     if(window.createWatermarkLayer){
@@ -7261,6 +7268,12 @@ async function generateBatchAll(overrideOrders=null){
     if(selectedOrders.length > 1){
       $('batchMsg').style.color = '#7a3b00';
       $('batchMsg').textContent = `⏳ 正在產製第 ${i+1} / ${selectedOrders.length} 筆訂單（${ord.parent_label}）...`;
+    }
+    if($('batchProgress')){
+      $('batchProgressText').textContent = selectedOrders.length > 1
+        ? `產製中 ${i+1} / ${selectedOrders.length} 筆（${ord.parent_label}）`
+        : '產製中（單筆訂單）…';
+      $('batchProgressFill').style.width = `${((i + 0.5) / selectedOrders.length * 100).toFixed(1)}%`;
     }
     const wmText = orderWm ? `${baseWm}（${ord.parent_label}・#${ord.order_id}）` : baseWm;
     const specKey = JSON.stringify({
@@ -7423,6 +7436,11 @@ async function generateBatchAll(overrideOrders=null){
 
   $('batchMsg').style.color='#1f9d55';
   $('batchMsg').textContent=`🎉 已依勾選生成 ${selectedOrders.length} 筆家長訂單，總計 ${grandTotalPages} 頁 A4（雙面列印共 ${Math.ceil(grandTotalPages/2)} 張整數紙；每兩頁 1-2、3-4 綁定），可整批印製或針對單張補印！`;
+  if($('batchProgress')){
+    $('batchProgress').style.display='none';
+    $('batchProgressText').textContent='完成';
+    $('batchProgressFill').style.width='100%';
+  }
 }
 
 function regenBatchExamSheet(orderId, exSheet, btn){

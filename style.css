@@ -427,7 +427,13 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .batch-pcap .batch-pcap-lbl{font-weight:700;color:#9a3412;font-size:.9rem}
 .batch-pg-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;padding:8px 10px;background:#fffaf2;border:1.5px solid #f0dec0;border-radius:10px}
 .batch-pg-pill{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #fed7aa;border-radius:7px;padding:3px 7px;font-size:.8rem;color:#7a3b00}
+.batch-progress-bar{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:#fffaf2;border:1.5px solid #f0dec0;border-radius:10px}
+.batch-progress-track{flex:1;height:10px;background:#eef0f2;border-radius:5px;overflow:hidden;position:relative}
+.batch-progress-fill{height:100%;background:linear-gradient(90deg,#ff7a1a,#ffb347);width:0%;transition:width .35s ease;border-radius:5px}
+.batch-progress-text{font-weight:700;color:#d85a00;white-space:nowrap;min-width:140px}
 @media print{
+  .batch-progress-bar{display:none!important}
+}
   body.print-only-single-page #batchSheet .a4:not(.is-print-target){display:none!important}
   body.print-only-single-page #batchSheet .a4.is-print-target-last{break-after:auto!important;page-break-after:auto!important}
 }

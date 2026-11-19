@@ -798,6 +798,10 @@
     <button id="btnBatchPrint" class="btn ok big" type="button">🖨️ 列印勾選的訂單（直接裝袋）</button>
   </div>
   <div id="batchMsg" class="msg"></div>
+  <div id="batchProgress" class="batch-progress-bar noprint" style="display:none">
+    <div class="batch-progress-track"><div id="batchProgressFill" class="batch-progress-fill"></div></div>
+    <span id="batchProgressText" class="batch-progress-text">準備中…</span>
+  </div>
   <div id="batchSinglePgBar" class="batch-pg-bar noprint" style="display:none"></div>
   <p class="hint">💡 每筆訂單最前頁為「A4 雙聯裁切單」：上半聯外貼包裝袋（隱藏地點與金額保護隱私），沿虛線撕開後，下半聯供揀貨裝袋與留存對帳！</p>
 </section>
