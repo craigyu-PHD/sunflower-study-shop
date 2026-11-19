@@ -1,7 +1,7 @@
 *{box-sizing:border-box}
 html{font-size:15px}
 body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:#fff8ec;color:#2a2a2a;line-height:1.45}
-.wrap{max-width:1220px;margin:0 auto;padding:0 16px}
+.wrap{max-width:min(1440px,96vw);margin:0 auto;padding:0 16px}
 header{background:linear-gradient(135deg,#ffc83d,#ff7a1a);color:#fff;padding:12px 0;box-shadow:0 2px 8px #ff7a1a44}
 header .wrap{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 header h1{margin:0;font-size:1.45rem}header p{margin:0;font-size:.92rem;opacity:.95}
@@ -423,8 +423,17 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
   body.print-only-single-page #batchSheet .a4:not(.is-print-target){display:none!important}
   body.print-only-single-page #batchSheet .a4.is-print-target{break-after:auto!important;page-break-after:auto!important}
 }
+#batchTableWrap,#stCartTableWrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#batchTableWrap table,#stCartTableWrap table{min-width:680px}
 @media(max-width:720px){
+  .wrap{padding:0 10px}
+  .hd-top{flex-direction:column;align-items:stretch;gap:8px}
+  .nav-tabs{width:100%;gap:6px}
+  .nav-tab{font-size:.88rem;padding:6px 10px;flex:1 1 auto;text-align:center}
+  .btn-admin-entry{width:100%;text-align:center}
+  .batch-pcap{flex-direction:column;align-items:flex-start}
   .batch-filter-bar{flex-direction:column;align-items:stretch}
   .bf-item{width:100%;justify-content:space-between}
   .bf-item select{flex:1;min-width:0}
+  .backup-box{flex-direction:column;align-items:stretch}
 }

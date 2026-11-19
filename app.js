@@ -189,20 +189,20 @@ function charItemsA(ch,zy){
   return list;
 }
 
-function buildLayout(){
+function buildLayout(opts={}){
   const mode=document.querySelector('input[name=xMode]:checked').value;
   const zy=$('xZy').checked?1:0;
   // 每頁最少 7 欄、最多 8 欄彈性調整（低年級預設 7 欄較大格、中高年級可 8 欄較多字）
-  const rawCols=+$('xCols').value||7;
+  const rawCols=opts.cols || +$('xCols').value || 7;
   const cols=Math.max(7, Math.min(8, rawCols));
   const cwMax=Math.floor(CONTENT_W/cols);
   const pSqMax=Math.floor(zy?cwMax/1.3:cwMax);
   // 統一全版固定列數 R（兼顧寬度與高度滿版：例如 8 欄採 16 列保持 cw=79px 貼近右界不留寬邊）
-  const R=Math.max(8, Math.round(CONTENT_H/pSqMax));
+  const R=Math.max(8, Math.round(CONTENT_H/pSqMax) + (opts.extraR||0));
   const sq=Math.min(Math.floor(CONTENT_H/R), pSqMax);
   const cw=Math.round(sq*(zy?1.3:1));
   const chh=Math.round(sq);
-  const splitLimit=($('xSplitLimit') && +$('xSplitLimit').value) || 12;
+  const splitLimit=opts.splitLimit || ($('xSplitLimit') && +$('xSplitLimit').value) || 12;
   const nbReq=Math.max(5,+$('xBlank').value||5);
   const wantTrace=$('xTrace').checked;
   const traceQuota=wantTrace?Math.max(1,+$('xATraceN')?.value||1):0;
@@ -216,6 +216,8 @@ function buildLayout(){
     }
     return colArr;
   };
+
+  let exceeded2 = false, rawPageCount = 0;
 
   if(mode==='A'){
     const charGroups=[];
@@ -257,14 +259,55 @@ function buildLayout(){
       curPageCols=[];
     };
 
-    // 依課序與筆畫順序連續填滿每頁全部 7/8 欄（高筆畫跨欄亦順接續排，絕不在頁尾右側遺留空白欄）
-    charGroups.forEach(grp=>{
-      grp.colLists.forEach(list=>{
-        if(curPageCols.length>=cols) flushPage();
-        curPageCols.push({ch:grp.ch, list});
-      });
-    });
+    // 前瞻補位打包：同一生字的多欄（如「鳳」佔 2 欄）絕不拆開跳頁；若頁尾剩 1 欄，往後替換 1 欄字先補滿該頁右側
+    const remaining = charGroups.slice();
+    while(remaining.length){
+      const space = cols - curPageCols.length;
+      if(space <= 0){ flushPage(); continue; }
+      const head = remaining[0];
+      if(head.colLists.length <= space){
+        remaining.shift();
+        head.colLists.forEach(list => curPageCols.push({ch:head.ch, list}));
+      }else{
+        const fitIdx = remaining.findIndex((g, idx) => idx > 0 && g.colLists.length <= space);
+        if(fitIdx !== -1){
+          const [filler] = remaining.splice(fitIdx, 1);
+          filler.colLists.forEach(list => curPageCols.push({ch:filler.ch, list}));
+        }else{
+          flushPage();
+        }
+      }
+    }
     flushPage();
+
+    rawPageCount = pages.length;
+
+    // 彈性雙數頁調整：若只多出一點點進入第 3 頁，優先自動嘗試彈性放寬（折兩欄上限或 8 欄）壓回正反 2 頁
+    if(!opts.noElastic && rawPageCount === 3){
+      const tryList = [
+        { cols, splitLimit: splitLimit + 4, extraR: 1, noElastic: true },
+        ...(cols < 8 ? [{ cols: 8, splitLimit: splitLimit + 2, noElastic: true }] : [])
+      ];
+      for(const candOpts of tryList){
+        const alt = buildLayout(candOpts);
+        if(alt.pages.length === 2){
+          alt.elasticFit = true;
+          alt.rawPageCount = alt.pages.length;
+          alt.exceedsTwoPages = false;
+          return alt;
+        }
+      }
+    }
+
+    // 僅 1 頁時自動補齊背面熟練複習頁，確保產製永遠為雙數頁（正反面 2 頁）
+    if(!opts.noReviewPad && pages.length === 1 && pages[0].items.length){
+      const backItems = pages[0].items.map(it => {
+        if(it.row === 0 && it.o && it.o.k > 0) return it;
+        return { ...it, o: { k: 0, zy: it.o?.zy||0, ghost: it.row <= Math.max(2, traceQuota) } };
+      });
+      pages.push({ ...pages[0], items: backItems });
+    }
+    if(rawPageCount > 2) exceeded2 = true;
   }else{
     for(let i=0;i<curChars.length;i+=cols){
       const slice=curChars.slice(i,i+cols);
@@ -285,7 +328,7 @@ function buildLayout(){
       pages.push({R:RB,cw:cwB,chh:chhB,sq:sqB,cols,cwMax,img:Math.min(300,Math.round(sqB*3)),items});
     }
   }
-  return {mode,zy,cols,cwMax,pages};
+  return {mode,zy,cols,cwMax,pages,exceedsTwoPages:exceeded2,rawPageCount:rawPageCount||pages.length};
 }
 
 function imgCanvas(it,pg){
@@ -326,6 +369,15 @@ function render(){
   const sheet=$('sheet');sheet.innerHTML='';
   if(!curChars.length)return;
   const L=buildLayout();
+  if($('msg')){
+    if(L.exceedsTwoPages){
+      $('msg').style.color='#c0392b';
+      $('msg').textContent=`⚠️ 超過正反面（2 頁）基本規格：目前生字共需 ${L.rawPageCount} 頁（基本規格以雙數正反面為主，多出頁數恐造成計價與印製困擾），建議減少 1～2 個高筆畫生字、改為 8 欄或提高「折兩欄上限」！`;
+    }else if(L.elasticFit){
+      $('msg').style.color='#1f9d55';
+      $('msg').textContent=`✅ 已自動彈性排版調整為 ${L.pages.length} 頁（正反雙面），確保同字不跨頁且無多出零星單頁！`;
+    }
+  }
   L.pages.forEach((pgData,p)=>{
     const pCols=pgData.cols||L.cols;
     const pCwMax=pgData.cwMax||L.cwMax;
@@ -499,7 +551,7 @@ window.buildStrokePagesForOrder=async function(order, wmTextOverride=''){
   $('xZy').checked=prevZyChk; $('xSize').value=prevSize; $('xCols').value=prevCols;
   const origRadio = document.querySelector(`input[name=xMode][value=${prevMode}]`);
   if(origRadio) origRadio.checked = true;
-  return {pages:domPages, charCount:validBase.length, onePassPages};
+  return {pages:domPages, charCount:validBase.length, onePassPages, exceedsTwoPages: (onePassPages > 2 && targetSheets === 1)};
 };
 // ---------- Excel 匯出（A4 直式）----------
 async function exportXlsx(){

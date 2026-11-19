@@ -6125,17 +6125,31 @@ async function readOrdersFromIndexedDB(){
 }
 
 const DEFAULT_CLOUD_GAS_URL = 'https://script.google.com/macros/s/AKfycbygUe5Y8ZbjERVcM6OVIZG_u91Bmp634I7EzekqXxR9B1PrJ-hv67hpsQD9dlQEuIc/exec';
+let _cloudAutoSyncTimer = null;
 
 function getAdminCloudBackupCreds(){
   let url = '', token = '';
   try{
     url = (localStorage.getItem('kids_gas_webapp_url') || localStorage.getItem('sunflower_gas_url') || '').trim();
-    token = (sessionStorage.getItem('kids_admin_session_token') || '').trim();
+    const ssTok = (sessionStorage.getItem('kids_admin_session_token') || '').trim();
+    const lsTok = (localStorage.getItem('kids_cloud_session_token') || '').trim();
+    token = (ssTok && ssTok !== 'local-dev-session' && ssTok !== 'local-hash-session') ? ssTok : (lsTok || ssTok);
   }catch(_){}
   if(!url && $('gasUrlInput')) url = ($('gasUrlInput').value || '').trim();
   if(!url) url = (window.DEFAULT_GAS_WEBAPP_URL || DEFAULT_CLOUD_GAS_URL).trim();
   return { url, token };
 }
+
+window.startCloudAutoSyncTimer = function(){
+  if(typeof setInterval !== 'function') return;
+  if(_cloudAutoSyncTimer) return;
+  _cloudAutoSyncTimer = setInterval(()=>{
+    const { url, token } = getAdminCloudBackupCreds();
+    if(url && token && token !== 'local-dev-session' && token !== 'local-hash-session'){
+      backupOrdersToGoogleCloud(curBatchOrders, true);
+    }
+  }, 5 * 60 * 1000);
+};
 
 window.autoConnectCloudOnLogin = async function(username, password){
   const { url } = getAdminCloudBackupCreds();
@@ -6150,8 +6164,12 @@ window.autoConnectCloudOnLogin = async function(username, password){
     });
     const data = await resp.json();
     if(data && data.ok && data.sessionToken){
-      try{ sessionStorage.setItem('kids_admin_session_token', data.sessionToken); }catch(_){}
+      try{
+        sessionStorage.setItem('kids_admin_session_token', data.sessionToken);
+        localStorage.setItem('kids_cloud_session_token', data.sessionToken);
+      }catch(_){}
       refreshBackupStatusUI();
+      if(typeof window.startCloudAutoSyncTimer === 'function') window.startCloudAutoSyncTimer();
       if(curBatchOrders && curBatchOrders.length){
         backupOrdersToGoogleCloud(curBatchOrders, true);
       }
@@ -6173,16 +6191,27 @@ async function backupOrdersToGoogleCloud(orders, silent=false){
   if(!url || !token || token === 'local-dev-session' || token === 'local-hash-session'){
     refreshBackupStatusUI();
     if(!silent){
-      if($('cloudSetupPanel')){
-        $('cloudSetupPanel').style.display='';
-        if($('gasUrlInput') && !$('gasUrlInput').value.trim()) $('gasUrlInput').focus();
-      }
+      if($('cloudSetupPanel')) $('cloudSetupPanel').style.display='';
       if($('batchMsg')){
         $('batchMsg').style.color='#b45309';
-        $('batchMsg').textContent='ℹ️ 尚未連線 Google 雲端試算表！請於下方「Google 雲端試算表連線設定精靈」貼上 Apps Script 網址並輸入密碼按「🔗 連線並驗證授權」；目前訂單亦已自動鏡像至本機 IndexedDB！';
+        $('batchMsg').textContent='ℹ️ 尚未取得本瀏覽器的 Google 雲端 30 天授權憑證！請點右上角「🔐 管理員後台」重新輸入一次管理員密碼即可自動直連（無須另填雲端密碼）；本機 IndexedDB 仍已保護中。';
+      }
+      if($('cloudWizardMsg')){
+        $('cloudWizardMsg').style.color='#b45309';
+        $('cloudWizardMsg').textContent='ℹ️ 請先由網站右上角管理員登入一次即可完成自動直連，之後 30 天內重整網頁皆自動連線，無須再次輸入密碼。';
       }
     }
     return { ok:false, reason:'no_cloud_creds' };
+  }
+  if(!silent){
+    if($('batchMsg')){
+      $('batchMsg').style.color='#b45309';
+      $('batchMsg').textContent=`⏳ 正在連線 Google 雲端並上傳備份 ${orders.length} 筆訂單至試算表與雲端硬碟，請稍候...`;
+    }
+    if($('cloudWizardMsg')){
+      $('cloudWizardMsg').style.color='#b45309';
+      $('cloudWizardMsg').textContent='⏳ 正在上傳雲端備份中...';
+    }
   }
   try{
     const resp = await fetch(url, {
@@ -6195,21 +6224,24 @@ async function backupOrdersToGoogleCloud(orders, silent=false){
       const lbl = formatNowMMDDHHmm();
       try{ localStorage.setItem('sunflower_last_cloud_backup_at', lbl); }catch(_){}
       refreshBackupStatusUI();
-      if(!silent && $('batchMsg')){
-        $('batchMsg').style.color='#1f9d55';
-        $('batchMsg').textContent=`☁️ 已成功將 ${data.count||orders.length} 筆訂單自動備份至 Google 雲端硬碟資料夾與試算表「系統訂單備份紀錄」（${lbl}）！`;
+      const okTxt = `☁️ 雲端備份完成！已備份 ${data.count||orders.length} 筆訂單（最新備份時間：${lbl}），已寫入 Google 試算表「系統訂單備份紀錄」與雲端硬碟；下一步可繼續查帳修改，或隨時點「📥 從雲端救回訂單」讀取此版本。`;
+      if(!silent){
+        if($('batchMsg')){ $('batchMsg').style.color='#1f9d55'; $('batchMsg').textContent=okTxt; }
+        if($('cloudWizardMsg')){ $('cloudWizardMsg').style.color='#136529'; $('cloudWizardMsg').textContent=okTxt; }
       }
       return data;
     }
-    if(!silent && $('batchMsg')){
-      $('batchMsg').style.color='#c0392b';
-      $('batchMsg').textContent=`⚠️ 雲端備份回傳錯誤：${(data&&data.error)||'未知錯誤'}`;
+    const errTxt = `⚠️ 雲端備份未成功：${(data&&data.error)||'授權已過期'}。請點擊右上角重新登入一次管理員後台即可自動刷新憑證。`;
+    if(!silent){
+      if($('batchMsg')){ $('batchMsg').style.color='#c0392b'; $('batchMsg').textContent=errTxt; }
+      if($('cloudWizardMsg')){ $('cloudWizardMsg').style.color='#c0392b'; $('cloudWizardMsg').textContent=errTxt; }
     }
     return data || { ok:false };
   }catch(err){
-    if(!silent && $('batchMsg')){
-      $('batchMsg').style.color='#c0392b';
-      $('batchMsg').textContent=`⚠️ 雲端備份連線失敗（本機 IndexedDB 仍已安全備份）：${err.message}`;
+    const failTxt = `⚠️ 雲端備份連線失敗（本機 IndexedDB 仍已安全備份）：${err.message}。請確認網路連線或於「雲端與密碼設定」確認端點網址。`;
+    if(!silent){
+      if($('batchMsg')){ $('batchMsg').style.color='#c0392b'; $('batchMsg').textContent=failTxt; }
+      if($('cloudWizardMsg')){ $('cloudWizardMsg').style.color='#c0392b'; $('cloudWizardMsg').textContent=failTxt; }
     }
     return { ok:false, error: err.message };
   }
@@ -6217,12 +6249,16 @@ async function backupOrdersToGoogleCloud(orders, silent=false){
 
 async function restoreOrdersFromGoogleCloud(){
   const { url, token } = getAdminCloudBackupCreds();
-  if(!url || !token || token === 'local-dev-session'){
+  if(!url || !token || token === 'local-dev-session' || token === 'local-hash-session'){
     if($('batchMsg')){
       $('batchMsg').style.color='#b45309';
-      $('batchMsg').textContent='⚠️ 需先連線 Google Apps Script Web App 網址並使用管理員帳號登入雲端後台，方可從 Google 雲端取回備份；或請使用右側「匯入 JSON 還原」。';
+      $('batchMsg').textContent='ℹ️ 尚未取得本瀏覽器 Google 雲端 30 天授權憑證，無法讀取雲端備份！請先由右上角重新登入一次管理員密碼即可自動直連，或使用右側「📂 匯入 JSON 還原」。';
     }
     return;
+  }
+  if($('batchMsg')){
+    $('batchMsg').style.color='#b45309';
+    $('batchMsg').textContent='⏳ 正在連線 Google 雲端並讀取最新訂單紀錄，請稍候...';
   }
   try{
     const sep = url.includes('?') ? '&' : '?';
@@ -6230,21 +6266,23 @@ async function restoreOrdersFromGoogleCloud(){
     const data = await resp.json();
     if(data && data.ok && Array.isArray(data.orders)){
       curBatchOrders = data.orders.map((o,i)=>normalizeOrderRow(o,i));
+      const lbl = formatNowMMDDHHmm();
+      try{ localStorage.setItem('sunflower_last_cloud_backup_at', lbl); }catch(_){}
       saveOrdersToLocalDB();
       syncCsvBoxFromOrders();
       renderBatchTable(curBatchOrders);
-      if($('batchMsg')){
-        $('batchMsg').style.color='#1f9d55';
-        $('batchMsg').textContent=`📥 已從 Google 雲端（${data.source||'雲端備份'}・${data.savedAt||''}）救回 ${curBatchOrders.length} 筆訂單！`;
-      }
+      refreshBackupStatusUI();
+      const okTxt = `📥 已成功從 Google 雲端（${data.source||'試算表備份'}）救回 ${curBatchOrders.length} 筆訂單（雲端存檔時間：${data.savedAt||lbl}｜最新同步：${lbl}）！下一步：下方清單與對帳備註已同步更新，可直接核帳或列印。`;
+      if($('batchMsg')){ $('batchMsg').style.color='#1f9d55'; $('batchMsg').textContent=okTxt; }
+      if($('cloudWizardMsg')){ $('cloudWizardMsg').style.color='#136529'; $('cloudWizardMsg').textContent=okTxt; }
     }else if($('batchMsg')){
       $('batchMsg').style.color='#c0392b';
-      $('batchMsg').textContent=`⚠️ 無法取得雲端備份：${(data&&data.error)||'尚無備份資料'}`;
+      $('batchMsg').textContent=`⚠️ 無法取得雲端備份：${(data&&data.error)||'雲端目前尚無訂單備份紀錄'}。您可先按「☁️ 立即備份」建立第一份最新備份。`;
     }
   }catch(err){
     if($('batchMsg')){
       $('batchMsg').style.color='#c0392b';
-      $('batchMsg').textContent=`⚠️ 從 Google 雲端救回失敗：${err.message}`;
+      $('batchMsg').textContent=`⚠️ 從 Google 雲端救回失敗：${err.message}。請確認網路或端點設定後再試。`;
     }
   }
 }
@@ -6268,11 +6306,11 @@ function refreshBackupStatusUI(){
     const isConnected = !!(url && token && token !== 'local-dev-session' && token !== 'local-hash-session');
     if(isConnected){
       cldEl.textContent = lastCld
-        ? `☁️ Google 雲端雙重自動備份已啟用（最近雲端同步：${lastCld}）`
-        : `☁️ Google 雲端備份已連線（訂單變動時自動同步至 Drive 資料夾與試算表）`;
+        ? `☁️ Google 雲端雙重自動備份已啟用｜最新備份時間：${lastCld}｜每 5 分鐘與每次異動自動同步中`
+        : `☁️ Google 雲端已直接連線（每 5 分鐘與每次異動自動同步｜尚無同步時間紀錄，可點右側「☁️ 立即備份」）`;
       cldEl.style.color = '#14532d';
     }else{
-      cldEl.textContent = `雲端備份：已載入預設試算表端點（重新登入管理員後台即自動連線；目前由本機 IndexedDB＋JSON 保護）`;
+      cldEl.textContent = `雲端備份：已載入預設試算表端點（登入網站後台一次即自動建立 30 天直連憑證；目前由本機 IndexedDB＋JSON 保護）`;
       cldEl.style.color = '#9a3412';
     }
     if($('btnToggleCloudSetup')){
@@ -7066,8 +7104,27 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
   $('exTwoPage').checked = prevTwo;
 
   const allPages = [...qDomPages, ...ansDomPages];
-  const ansCount = examSheetsTarget > 1 ? ansDomPages.length : singleAnsPageCount;
+  let ansCount = examSheetsTarget > 1 ? ansDomPages.length : singleAnsPageCount;
   const qCount = Math.max(0, allPages.length - ansCount);
+  // 雙數頁（正反面）規範：若單份含解答恰為奇數頁（如 2 頁試卷＋1 頁解答＝3 頁），補 1 頁「錯題訂正與複習筆記」保持 4 頁雙數正反面
+  if(!order.sampleLimit && allPages.length > 0 && allPages.length % 2 === 1){
+    const notePg = document.createElement('div');
+    notePg.className = 'a4';
+    notePg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+    notePg.innerHTML += `<div class="ex-inner" style="padding:18px 26px;display:flex;flex-direction:column;height:1005px;box-sizing:border-box">
+      <div style="border-bottom:2.5px solid #222;padding-bottom:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:baseline">
+        <b style="font-size:1.15rem;color:#7a3b00">✏️ 錯題訂正 ＆ 家長複習筆記頁（${esc(order.subj||'評量')}）</b>
+        <span style="font-size:.82rem;color:#64748b">訂正日期：____ 年 ____ 月 ____ 日｜家長簽章：____________</span>
+      </div>
+      <div style="flex:1;border:1.5px dashed #cbd5e1;border-radius:10px;padding:14px 18px;background:repeating-linear-gradient(to bottom, transparent 0px, transparent 35px, #e2e8f0 36px)">
+        <div style="font-size:.88rem;color:#64748b;background:#fff;display:inline-block;padding:0 6px;margin-bottom:8px">把本次訂正不會的題目寫下來再練習一次，進步最快喔！</div>
+      </div>
+    </div>`;
+    if(window.createWatermarkLayer) notePg.appendChild(window.createWatermarkLayer(794,1122,wmText||''));
+    notePg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌'}　｜　錯題訂正與家長簽名頁`}));
+    allPages.push(notePg);
+    if(ansCount > 0) ansCount++;
+  }
   return { pages: allPages, qPages: qCount, ansPages: ansCount };
 }
 
@@ -7423,38 +7480,25 @@ function initExamUI(){
   }
   if($('btnConnectGoogleCloud')){
     $('btnConnectGoogleCloud').onclick=async()=>{
-      const url = ($('gasUrlInput')?.value || '').trim();
-      const u = ($('gasConnAdminUser')?.value || 'admin').trim();
-      const p = ($('gasConnAdminPass')?.value || '').trim();
+      const url = ($('gasUrlInput')?.value || DEFAULT_CLOUD_GAS_URL).trim();
       const msgEl = $('cloudWizardMsg');
       const setMsg = (txt, col)=>{ if(msgEl){ msgEl.style.color=col; msgEl.textContent=txt; } };
       if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/i.test(url)){
         setMsg('⚠️ 請貼上有效的 Google Apps Script Web App 網址（開頭為 https://script.google.com/macros/s/.../exec）', '#c0392b');
         return;
       }
-      if(!p){
-        setMsg('⚠️ 請輸入您在 setupAll() / ScriptProperties 中設定的後台管理員密碼', '#c0392b');
-        return;
-      }
-      setMsg('⏳ 正在驗證 Google Apps Script 授權，請稍候...', '#b45309');
+      setMsg('⏳ 正在套用網址並直接連線測試 Google 雲端...', '#b45309');
       try{
         localStorage.setItem('kids_gas_webapp_url', url);
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'adminLogin', username: u, password: p })
-        });
-        const data = await resp.json();
-        if(data && data.ok && data.sessionToken){
-          sessionStorage.setItem('kids_admin_session_token', data.sessionToken);
-          refreshBackupStatusUI();
-          setMsg('✅ 連線並驗證授權成功！現在按「☁️ 立即備份」即可同步至 Google 雲端硬碟與試算表。', '#136529');
-          if($('gasConnAdminPass')) $('gasConnAdminPass').value = '';
-        } else {
-          setMsg(`❌ 驗證失敗：${(data&&data.error)||'請確認帳號密碼與 Web App 權限（誰可以存取：所有人）'}`, '#c0392b');
+        if($('gasUrlInput')) $('gasUrlInput').value = url;
+        const res = await backupOrdersToGoogleCloud(curBatchOrders, false);
+        if(res && res.ok){
+          setMsg('✅ 已直接連線並完成最新雲端備份！（往後免輸入密碼，每 5 分鐘自動備份）', '#136529');
+        } else if(res && res.reason === 'no_cloud_creds'){
+          setMsg('ℹ️ 已儲存端點網址！請點右上角重新驗證一次網站管理員密碼即可自動建立 30 天直連憑證（無須另填雲端密碼）。', '#b45309');
         }
       }catch(err){
-        setMsg(`❌ 連線錯誤：${err.message}（請確認 Apps Script 部署權限設為「所有人」且網址正確）`, '#c0392b');
+        setMsg(`❌ 連線失敗：${err.message}（請確認網路與網址設定）`, '#c0392b');
       }
     };
   }
@@ -7463,16 +7507,17 @@ function initExamUI(){
     $('btnDisconnectGoogleCloud').onclick=()=>{
       try{
         localStorage.removeItem('kids_gas_webapp_url');
+        localStorage.removeItem('kids_cloud_session_token');
         localStorage.removeItem('sunflower_last_cloud_backup_at');
         if(sessionStorage.getItem('kids_admin_session_token') !== 'local-dev-session'){
           sessionStorage.setItem('kids_admin_session_token', 'local-hash-session');
         }
       }catch(_){}
-      if($('gasUrlInput')) $('gasUrlInput').value='';
+      if($('gasUrlInput')) $('gasUrlInput').value=DEFAULT_CLOUD_GAS_URL;
       refreshBackupStatusUI();
       if($('cloudWizardMsg')){
         $('cloudWizardMsg').style.color='#b45309';
-        $('cloudWizardMsg').textContent='🔌 已中斷 Google 雲端連線設定（本機 IndexedDB 備份仍持續保護中）。';
+        $('cloudWizardMsg').textContent='🔌 已清除本機自訂端點與雲端憑證並重設為預設網址（本機 IndexedDB 備份仍持續保護中）。';
       }
     };
   }

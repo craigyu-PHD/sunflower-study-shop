@@ -9,7 +9,7 @@
   <div class="wrap hd-top">
     <div>
       <h1>🌻 向日葵國小伴學誌</h1>
-      <p id="hdSubTitle">108課綱對齊・客製化生字練習本 ＆ 評量測驗卷・桃園藝文特區警衛室取貨</p>
+      <p id="hdSubTitle">108課綱對齊・客製化生字練習本 ＆ 評量測驗卷・桃園藝文特區自行取貨</p>
     </div>
     <nav class="nav-tabs" role="tablist">
       <button class="nav-tab active" data-tab="store" type="button">🛒 家長線上訂購</button>
@@ -773,20 +773,13 @@
         </div>
       </div>
       <details style="margin-top:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px">
-        <summary style="cursor:pointer;font-size:.82rem;font-weight:700;color:#475569">🔧 進階選項：手動帳密連線 ／ 儲存網址 ／ 中斷連線</summary>
-        <div class="gas-row" style="margin-top:6px">
-          <div class="gas-field">
-            <span class="gas-lbl">👤 雲端後台帳號：</span>
-            <input type="text" id="gasConnAdminUser" value="admin" placeholder="預設 admin">
+        <summary style="cursor:pointer;font-size:.82rem;font-weight:700;color:#475569">🔧 進階選項：儲存自訂網址 ／ 直接連線 ／ 重設預設端點</summary>
+        <div class="gas-row" style="margin-top:6px;align-items:center">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button type="button" id="btnConnectGoogleCloud" class="btn pri btn-mini">🔗 套用網址並直接連線</button>
+            <button type="button" id="btnDisconnectGoogleCloud" class="btn btn-mini">🔌 清除自訂／重設預設網址</button>
           </div>
-          <div class="gas-field">
-            <span class="gas-lbl">🔑 雲端後台密碼：</span>
-            <input type="password" id="gasConnAdminPass" placeholder="輸入雲端管理員密碼">
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button type="button" id="btnConnectGoogleCloud" class="btn pri btn-mini">💾 套用並連線雲端</button>
-            <button type="button" id="btnDisconnectGoogleCloud" class="btn btn-mini">🔌 清除設定／中斷連線</button>
-          </div>
+          <span style="font-size:.78rem;color:#64748b">（雲端連線已整合網站後台單一登入免重複密碼，每 5 分鐘與每次異動皆自動連線備份）</span>
         </div>
       </details>
       <div id="cloudWizardMsg" class="msg" style="margin-top:4px"></div>

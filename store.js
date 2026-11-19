@@ -139,10 +139,20 @@ function closeAdminModal(){
 
 function unlockAdminBackend(sessionToken){
   isAdminUnlocked = true;
-  if(sessionToken) sessionStorage.setItem('kids_admin_session_token', sessionToken);
+  try{
+    let tok = sessionToken || '';
+    if(!tok || tok === 'local-hash-session' || tok === 'local-dev-session'){
+      const cachedCloud = localStorage.getItem('kids_cloud_session_token') || '';
+      if(cachedCloud) tok = cachedCloud;
+    } else {
+      localStorage.setItem('kids_cloud_session_token', tok);
+    }
+    if(tok) sessionStorage.setItem('kids_admin_session_token', tok);
+  }catch(_){}
   closeAdminModal();
   applyAdminVisibility();
   switchTab('batch');
+  if(typeof window.startCloudAutoSyncTimer === 'function') window.startCloudAutoSyncTimer();
 }
 
 // ---------- 2. 家長訂購前台：選單連動與即時防白嫖縮小版預覽 ----------
@@ -613,9 +623,12 @@ async function updateStorePreview(){
     let res = await window.buildStrokePagesForOrder(orderCfg, '向日葵國小伴學誌・線上樣本預覽請勿截圖');
     const checkedLessons = [...document.querySelectorAll('#stLessonList input:checked')].map(i => i.value);
 
-    // 按課次客製生字單防呆設計：計算完整 1 輪所需正反雙面張數，課次選取變動時自動跳至最低完整張數
+    // 按課次客製生字單防呆設計：計算完整 1 輪所需正反雙面張數與超頁警示機制
+    window._customStrokeOverLimit = false;
+    window._customStrokeOverPages = res.onePassPages || 0;
     if(packMode === 'custom'){
       const cw = ($('stCustomWords')?.value || '').trim();
+      const curQty = Math.max(1, +($('stQty')?.value || 1));
       if(!cw && checkedLessons.length > 0 && res.onePassPages > 0){
         const minSheets = Math.max(1, Math.ceil(res.onePassPages / 2));
         _customStrokeMinSheets = minSheets;
@@ -633,17 +646,32 @@ async function updateStorePreview(){
             res = await window.buildStrokePagesForOrder(orderCfg, '向日葵國小伴學誌・線上樣本預覽請勿截圖');
           }
         }
+        window._customStrokeOverPages = res.onePassPages;
+        window._customStrokeOverLimit = (res.onePassPages > 2 && +($('stQty')?.value || 1) === 1);
         if($('stCustomStrokeFoolproof')){
-          $('stCustomStrokeFoolproof').textContent = `🛡️ 按課次全字防呆：所選 ${checkedLessons.length} 課共 ${res.charCount} 字（排版佔 ${res.onePassPages} 面 A4，正反雙面需 ${minSheets} 張），張數已自動對齊 ${minSheets} 張，確保全部生字 100% 完整出現！`;
+          if(res.onePassPages > 2){
+            $('stCustomStrokeFoolproof').style.color = '#b91c1c';
+            $('stCustomStrokeFoolproof').textContent = `⚠️ 超出基本正反面（2 頁／張）提示：所選 ${checkedLessons.length} 課共 ${res.charCount} 字，排版需 ${res.onePassPages} 頁，已自動對齊最低 ${minSheets} 張（${minSheets*2} 頁正反雙面）；若只想印 1 張（2 頁），請改選「8 欄」或取消部分高筆畫課次！`;
+          } else {
+            $('stCustomStrokeFoolproof').style.color = '#0d5220';
+            $('stCustomStrokeFoolproof').textContent = `🛡️ 按課次全字防呆：所選 ${checkedLessons.length} 課共 ${res.charCount} 字（排版 ${res.onePassPages} 頁／正反雙面 1 張完整呈現，同字絕不跨頁）！`;
+          }
         }
       } else {
         _customStrokeMinSheets = 1;
         _lastCustomStrokeKey = '';
         if($('stQty')) $('stQty').min = '1';
+        window._customStrokeOverLimit = !!(cw && res.onePassPages > curQty * 2);
         if($('stCustomStrokeFoolproof')){
-          $('stCustomStrokeFoolproof').textContent = cw
-            ? `✏️ 自填生字單張模式：可依需求購買 1 張正反雙面（$5）以上，不限制最低張數。`
-            : '⚠️ 請勾選上方課次或在下方輸入想練習的國字。';
+          if(window._customStrokeOverLimit){
+            $('stCustomStrokeFoolproof').style.color = '#c0392b';
+            $('stCustomStrokeFoolproof').textContent = `⚠️ 設定未成功（已超過正反面 ${curQty*2} 頁上限）：自訂生字共需 ${res.onePassPages} 頁（超過基本正反面規格），請減少生字、改選 8 欄，或增加張數為 ${Math.ceil(res.onePassPages/2)} 張！`;
+          } else {
+            $('stCustomStrokeFoolproof').style.color = '#475569';
+            $('stCustomStrokeFoolproof').textContent = cw
+              ? `✏️ 自填生字雙面模式：共 ${res.charCount} 字（排版 ${Math.max(2, res.onePassPages)} 頁正反雙面，同字不跨頁）。`
+              : '⚠️ 請勾選上方課次或在下方輸入想練習的國字。';
+          }
         }
       }
     }
@@ -812,6 +840,13 @@ function buildCurrentSelectionsAsCartItems(){
       const custom_words = ($('stCustomWords').value || '').trim();
       if(!checkedLessons.length && !custom_words){
         alert('請至少勾選一課生字課次，或輸入自訂練習國字！');
+        return [];
+      }
+      if(window._customStrokeOverLimit){
+        const needP = window._customStrokeOverPages || 3;
+        const msg = `⚠️ 超過正反面（2 頁／張）基本規格，設定未成功！目前生字共需 ${needP} 頁，請取消部分生字、換低筆畫生字、改選 8 欄，或增加張數至 ${Math.ceil(needP/2)} 張再加入購物車。`;
+        if($('stAddMsg')){ $('stAddMsg').style.color = '#c0392b'; $('stAddMsg').textContent = msg; }
+        alert(msg);
         return [];
       }
       const mode = $('stStrokeMode').value;
@@ -1200,7 +1235,10 @@ function initStore(){
           });
           const data = await resp.json();
           if(data && data.ok && data.sessionToken){
-            try{ localStorage.setItem('kids_admin_custom_hash', fnv1a(username + ':' + password)); }catch(_){}
+            try{
+              localStorage.setItem('kids_admin_custom_hash', fnv1a(username + ':' + password));
+              localStorage.setItem('kids_cloud_session_token', data.sessionToken);
+            }catch(_){}
             unlockAdminBackend(data.sessionToken);
             if(typeof window.refreshBackupStatusUI === 'function') window.refreshBackupStatusUI();
             return;
@@ -1274,7 +1312,10 @@ function initStore(){
           if(data && data.ok){
             cloudUpdated = true;
             if(data.sessionToken){
-              try{ sessionStorage.setItem('kids_admin_session_token', data.sessionToken); }catch(_){}
+              try{
+                sessionStorage.setItem('kids_admin_session_token', data.sessionToken);
+                localStorage.setItem('kids_cloud_session_token', data.sessionToken);
+              }catch(_){}
             }
           } else if(!localMatch) {
             setMsg(`❌ 原密碼驗證失敗：${(data&&data.error)||'請確認目前密碼是否正確'}`, '#c0392b');
