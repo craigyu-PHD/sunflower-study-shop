@@ -200,7 +200,7 @@ function zhFormat(html){
   return String(html).split(/(<[^>]+>)/g).map(tok=>
     tok.startsWith('<') ? tok : tok
       .replace(/……/g,'…')
-      .replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>`<span class="tcy">${VPUNC_MAP[m]||m}</span>`)
+      .replace(/[「」『』（）()【】〔〕《》〈〉…—→]/g,m=>VPUNC_MAP[m]||m)
       .replace(/(\d+\.|\d+)/g,'<span class="tcy">$1</span>')
   ).join('');
 }
@@ -283,7 +283,7 @@ function gCellZy(zy,mainX=14){
 function gCellPunc(p,mainX=14){
   const vp=VPUNC_MAP[p]||p;
   const isClosePunc=/^[」』）)】〕》〉。，、；：？！…]$/.test(p);
-  // 向量幾何精準對齊直書主軸 x=mainX（完全不受 Mac / Windows 字體偏左下影響）
+  // 向量幾何精準對齊直書主軸 x=mainX（完全不受 Mac / Windows 字體偏左下或引號位移影響）
   let inner='';
   if(p==='。'){
     inner=`<circle cx="${mainX}" cy="11" r="2.7" fill="none" stroke="#111" stroke-width="1.5"/>`;
@@ -295,26 +295,54 @@ function gCellPunc(p,mainX=14){
     inner=`<circle cx="${mainX}" cy="7.5" r="1.55" fill="#111"/><circle cx="${mainX}" cy="14.5" r="1.55" fill="#111"/>`;
   }else if(p==='；'){
     inner=`<circle cx="${mainX}" cy="7" r="1.5" fill="#111"/><circle cx="${mainX+0.3}" cy="12.8" r="1.5" fill="#111"/><path d="M${mainX+1.2},13 Q${mainX+0.8},16.2 ${mainX-1.4},17.5" fill="none" stroke="#111" stroke-width="1.35" stroke-linecap="round"/>`;
+  }else if(p==='！'||p==='!'){
+    inner=`<line x1="${mainX}" y1="3.5" x2="${mainX}" y2="12.8" stroke="#111" stroke-width="2" stroke-linecap="round"/><circle cx="${mainX}" cy="17.2" r="1.45" fill="#111"/>`;
+  }else if(p==='？'||p==='?'){
+    inner=`<path d="M${mainX-4},7.2 C${mainX-4},3.2 ${mainX+4.2},3.2 ${mainX+4.2},7.2 C${mainX+4.2},9.6 ${mainX},10.5 ${mainX},13.2" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round"/><circle cx="${mainX}" cy="17.4" r="1.4" fill="#111"/>`;
+  }else if(p==='（'||p==='('){
+    inner=`<path d="M${mainX-7},13.5 Q${mainX},4.5 ${mainX+7},13.5" fill="none" stroke="#111" stroke-width="1.65" stroke-linecap="round"/>`;
+  }else if(p==='）'||p===')'){
+    inner=`<path d="M${mainX-7},8.5 Q${mainX},17.5 ${mainX+7},8.5" fill="none" stroke="#111" stroke-width="1.65" stroke-linecap="round"/>`;
+  }else if(p==='「'){
+    inner=`<path d="M${mainX-6.5},7.5 H${mainX+6.5} V16.5" fill="none" stroke="#111" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"/>`;
+  }else if(p==='」'){
+    inner=`<path d="M${mainX-6.5},5.5 V14.5 H${mainX+6.5}" fill="none" stroke="#111" stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"/>`;
+  }else if(p==='『'){
+    inner=`<path d="M${mainX-7},6 H${mainX+7} V17 H${mainX+3.5} V9.5 H${mainX-7} Z" fill="none" stroke="#111" stroke-width="1.3" stroke-linejoin="miter"/>`;
+  }else if(p==='』'){
+    inner=`<path d="M${mainX-7},5 V16 H${mainX+7} V12.5 H${mainX-3.5} V5 Z" fill="none" stroke="#111" stroke-width="1.3" stroke-linejoin="miter"/>`;
+  }else if(p==='…'){
+    inner=`<circle cx="${mainX}" cy="4.8" r="1.35" fill="#111"/><circle cx="${mainX}" cy="11" r="1.35" fill="#111"/><circle cx="${mainX}" cy="17.2" r="1.35" fill="#111"/>`;
+  }else if(p==='—'){
+    inner=`<line x1="${mainX}" y1="2.5" x2="${mainX}" y2="19.5" stroke="#111" stroke-width="1.7" stroke-linecap="round"/>`;
   }else{
-    inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="BiauKai,DFKai-SB,標楷體,Noto Sans TC,serif" fill="#111">${esc(vp)}</text>`;
+    inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="#111">${esc(vp)}</text>`;
   }
   return {h:22, isClosePunc, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`};
 }
 function gCellBlank(h=64,mainX=14){
-  return {h, isBlank:true, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="7.5" dominant-baseline="central" text-anchor="middle" font-size="17.5" font-family="Noto Sans TC,serif" fill="#111">︵</text><text x="${mainX}" y="${h-7.5}" dominant-baseline="central" text-anchor="middle" font-size="17.5" font-family="Noto Sans TC,serif" fill="#111">︶</text></svg>`};
+  return {h, isBlank:true, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><path d="M${mainX-7.2},10.5 Q${mainX},2.5 ${mainX+7.2},10.5" fill="none" stroke="#111" stroke-width="1.65" stroke-linecap="round"/><path d="M${mainX-7.2},${h-10.5} Q${mainX},${h-2.5} ${mainX+7.2},${h-10.5}" fill="none" stroke="#111" stroke-width="1.65" stroke-linecap="round"/></svg>`};
 }
 function gCellLabel(txt,bold=false,color='#111',fs=15,mainX=14){
-  const len = String(txt).length;
+  const s = String(txt);
+  const dotNum = s.match(/^(\d+)\.$/);
+  if(dotNum){
+    const dStr = dotNum[1];
+    const effFs = dStr.length >= 2 ? Math.min(fs, 13.5) : Math.max(fs, 15.5);
+    const dotX = mainX + (dStr.length >= 2 ? 9.5 : 6.2);
+    return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="${effFs}" font-weight="${bold?'700':'600'}" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="${color}">${esc(dStr)}</text><circle cx="${dotX}" cy="16.2" r="1.25" fill="${color}"/></svg>`};
+  }
+  const len = s.length;
   const effFs = len >= 4 ? Math.min(fs, 10.8) : (len === 3 ? Math.min(fs, 12.2) : (len === 2 ? Math.min(fs, 14) : Math.max(fs, 15.5)));
-  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11.5" dominant-baseline="central" text-anchor="middle" font-size="${effFs}" font-weight="${bold?'700':'600'}" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="${color}">${esc(txt)}</text></svg>`};
+  return {h:22, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg"><text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="${effFs}" font-weight="${bold?'700':'600'}" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="${color}">${esc(s)}</text></svg>`};
 }
 function gCellScore(pts,mainX=14){
   // 垂直堆疊置中配分標籤（緊黏前字，絕不獨立跳至次欄）
   return {h:46, isScore:true, svg:`<svg class="gcell" style="height:2.09em" viewBox="0 0 42 46" xmlns="http://www.w3.org/2000/svg">
-    <text x="${mainX}" y="7" dominant-baseline="central" text-anchor="middle" font-size="12" font-family="Noto Sans TC,serif" fill="#555">︵</text>
+    <path d="M${mainX-5.8},8.5 Q${mainX},3 ${mainX+5.8},8.5" fill="none" stroke="#555" stroke-width="1.35" stroke-linecap="round"/>
     <text x="${mainX}" y="19" dominant-baseline="central" text-anchor="middle" font-size="12.5" font-weight="700" font-family="Noto Sans TC,sans-serif" fill="#444">${esc(pts)}</text>
     <text x="${mainX}" y="31" dominant-baseline="central" text-anchor="middle" font-size="12" font-family="BiauKai,DFKai-SB,標楷體,serif" fill="#444">分</text>
-    <text x="${mainX}" y="41" dominant-baseline="central" text-anchor="middle" font-size="12" font-family="Noto Sans TC,serif" fill="#555">︶</text>
+    <path d="M${mainX-5.8},39 Q${mainX},44.5 ${mainX+5.8},39" fill="none" stroke="#555" stroke-width="1.35" stroke-linecap="round"/>
   </svg>`};
 }
 function gCellSpace(h=22){
@@ -2869,7 +2897,11 @@ function genMathVariety(grade, sem, diff, kind, vIdx=0){
       ['時針與分針在「下午 3 時正」所夾成的較小夾角是一個直角。','在「下午 3 時正」時，時針與分針重合在同一個方向。','3 時整兩針相差 3 大格 ＝ 90° 直角。'],
       ['利用長方形長 10 公分、寬 6 公分的尺寸，可剪出最大邊長為 6 公分的正方形。','長 10 公分寬 6 公分的長方形，可以剪出邊長 10 公分的正方形。','正方形邊長受限於較短邊。'],
       ['小數 3.4 中的「4」是在十分位，表示有 4 個 0.1。','小數 3.4 中的「4」是在百分位，代表 4 個 0.01。','小數點右邊第一位為十分位。'],
-      ['1 公里 50 公尺和 1050 公尺所代表的路程長度一模一樣。','1 公里 50 公尺換算成公尺是 1500 公尺。','1×1000＋50＝1050 公尺。']
+      ['1 公里 50 公尺和 1050 公尺所代表的路程長度一模一樣。','1 公里 50 公尺換算成公尺是 1500 公尺。','1×1000＋50＝1050 公尺。'],
+      ['超商買 2 瓶 25 元的牛奶用 100 元鈔票付款，找回的錢剛好是 1 個 50 元硬幣。','買 2 瓶 25 元牛奶付 100 元，只會找回 25 元。','100－25×2＝50 元。'],
+      ['把一條長 2 公尺的彩帶剪成每段 50 公分裝飾教室，剛好可以剪出 4 段。','2 公尺彩帶剪成每段 50 公分，可以剪出 20 段。','200÷50＝4 段。'],
+      ['星期二早上校外教學，往後數第 5 天剛好是這週的星期日。','星期二往後數第 5 天是同一週的星期五。','2＋5＝7（星期日）。'],
+      ['平行四邊形的兩雙對邊不只互相平行，而且長度也分別相等。','平行四邊形的四個角一定全都是 90 度直角。','平行四邊形對邊平行且等長，角不一定是直角。']
     ];
     const et = extraTf[(t - 34) % extraTf.length];
     return {q: isTrue ? et[0] : et[1], a: isTrue ? '○' : '✕', exp: et[2]};
@@ -3513,21 +3545,32 @@ function genChineseRichQuestion(grade, kind, diff='mid', vIdx=0, pool=[], lsName
   return {q:`【${lsName||'生活'}短文寫作】請用「${ch}」和「${c2?c2[0]:'好'}」寫出兩句通順的話並加上標點符號。`,a:`包含「${ch}」且標點正確之兩句短文。`};
 }
 
-function genChineseDynamic(grade, kind, diff='mid', allowedUnits=null, strictUnit=false){
-  if(!window.TW||!window.ZY_DATA)return null;
-  const pool=[];
-  Object.values(TW).forEach(pubObj=>{
-    Object.values(pubObj).forEach(arr=>{
-      arr.filter(ls=>ls.g==+grade && (!allowedUnits || !allowedUnits.length || allowedUnits.includes(ls.t)))
-         .forEach(ls=>ls.c.forEach(c=>{if(c[0]&&c[2])pool.push(c);}));
-    });
-  });
-  if(!strictUnit && pool.length<4){
+const _TW_GRADE_POOL_CACHE = new Map();
+function getTwGradeChars(grade, allowedUnits){
+  if(!window.TW) return [];
+  const gk = String(+grade);
+  let allEntries = _TW_GRADE_POOL_CACHE.get(gk);
+  if(!allEntries){
+    allEntries = [];
     Object.values(TW).forEach(pubObj=>{
       Object.values(pubObj).forEach(arr=>{
-        arr.filter(ls=>ls.g==+grade).forEach(ls=>ls.c.forEach(c=>{if(c[0]&&c[2])pool.push(c);}));
+        arr.filter(ls=>ls.g==+grade).forEach(ls=>{
+          ls.c.forEach(c=>{ if(c[0]&&c[2]) allEntries.push({...c, lesson: ls.t}); });
+        });
       });
     });
+    _TW_GRADE_POOL_CACHE.set(gk, allEntries);
+  }
+  if(!allowedUnits || !allowedUnits.length) return allEntries;
+  const allowSet = new Set(allowedUnits);
+  return allEntries.filter(e=>allowSet.has(e.lesson));
+}
+
+function genChineseDynamic(grade, kind, diff='mid', allowedUnits=null, strictUnit=false){
+  if(!window.TW||!window.ZY_DATA)return null;
+  let pool = getTwGradeChars(grade, allowedUnits);
+  if(!strictUnit && pool.length<4){
+    pool = getTwGradeChars(grade, null);
   }
   const vIdx = (_zhRichRoll++) + randSeed;
   return genChineseRichQuestion(grade, kind, diff, vIdx, pool, '');
@@ -4062,16 +4105,8 @@ function matchesUnitTopics(item, subj, g, sem, unitIndices, allUnitsCount){
 function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allowedUnits){
   const isTrue = (vIdx + randSeed) % 2 === 0;
   if(subj==='國語'){
-    // 結合勾選課次生字池（適度融入寫出部首並造詞、生字語境應用）與多元語文素養題型（改錯字、相似相反詞、形近同音、情境短文、標點修辭、故事閱讀）
-    const pool=[];
-    if(window.TW){
-      Object.values(TW).forEach(pubObj=>{
-        Object.values(pubObj).forEach(arr=>{
-          arr.filter(ls=>ls.g==+g && (!allowedUnits || !allowedUnits.length || allowedUnits.includes(ls.t)))
-             .forEach(ls=>ls.c.forEach(c=>{if(c[0]&&c[2])pool.push({...c,lesson:ls.t});}));
-        });
-      });
-    }
+    // 結合勾選課次生字池（適度融入寫出部首並造詞、生字語境應用）與多元語文素養題型（改錯字、相似相反詞、形近同音、多音字、情境短文、標點修辭、故事閱讀）
+    const pool = getTwGradeChars(g, allowedUnits);
     const lsName = (allowedUnits && allowedUnits.length)
       ? allowedUnits[(vIdx + randSeed) % allowedUnits.length]
       : (pool[0] && pool[0].lesson ? pool[0].lesson : '本課');
@@ -4216,7 +4251,9 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
       {q:`【${uShort}・實作步驟】如果老師要請你向同學介紹「${tp}」，你會先說哪兩個重點或設計什麼小實驗？`,a:`寫出關於「${tp}」的兩項重點說明或觀察步驟。`},
       {q:`【${uShort}・生活實踐】學會「${tp}」之後，你在學校或家裡可以做到哪一件具體的好行為？`,a:`結合「${tp}」寫出一項具體日常實踐行動。`},
       {q:`【${uShort}・簡答說明】為什麼在「${uObj.name}」課程裡要學習「${tp}」？它對生活有什麼幫助？`,a:`說明「${tp}」的重要性與生活應用。`},
-      {q:`【${uShort}・情境練習】請用一句話向低年級的弟弟妹妹解釋什麼是「${tp}」？`,a:`以淺顯易懂的語言說明「${tp}」的特徵。`}
+      {q:`【${uShort}・情境練習】請用一句話向低年級的弟弟妹妹解釋什麼是「${tp}」？`,a:`以淺顯易懂的語言說明「${tp}」的特徵。`},
+      {q:`【${uShort}・原因追問】如果班上同學想更了解「${tp}」，你建議可以透過哪種觀察或訪談方式取得答案？`,a:`寫出具體觀察記錄、實驗操作或請教長輩與資料查詢方法。`},
+      {q:`【${uShort}・圖卡設計】要畫一張提醒大家「${tp}」的宣導海報，你會寫上哪一句清楚又好記的標語？`,a:`設計與「${tp}」相符且具體正向的簡短標語。`}
     ];
     item = cPrompts[vIdx % cPrompts.length];
   }else{
@@ -4224,7 +4261,8 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
       {q:`【${uShort}・素養情境題】老師帶領全班進行「${uShort}」探究活動，討論了「${tps.join('」、「')}」。問題：(1) 請挑出其中一項概念說明它的意思。 (2) 在生活中我們可以如何應用「${tp}」？`,a:`(1) 說明「${tps[0]}」概念。(2) 結合「${tp}」之生活應用。`},
       {q:`【${uShort}・任務挑戰】小美和同學正在製作「${uObj.name}」的海報，需要整理「${tp}」和「${tpNext}」的資料。問題：(1) 海報標題可以怎麼取？ (2) 請簡短寫出「${tp}」的一項特色或注意事項。`,a:`(1) 與「${uShort}」相關之清楚標題。(2) 「${tp}」的核心特色。`},
       {q:`【${uShort}・問題解決】在進行「${uShort}」單元學習時，有人對「${tp}」不太了解。請你舉出一個課本或生活中的現象，幫他解釋「${tp}」是什麼。`,a:`舉例說明「${tp}」在課本或生活中的具體表現。`},
-      {q:`【${uShort}・探究統整】在「${uObj.name}」單元中，小組收集了關於「${tp}」與「${tpNext}」的觀察紀錄。問題：(1) 這兩項概念有什麼共同連結？ (2) 觀察時需要注意哪一項安全或記錄原則？`,a:`(1) 皆屬於「${uShort}」的核心探究項目。(2) 客觀記錄、小心操作與遵守規範。`}
+      {q:`【${uShort}・探究統整】在「${uObj.name}」單元中，小組收集了關於「${tp}」與「${tpNext}」的觀察紀錄。問題：(1) 這兩項概念有什麼共同連結？ (2) 觀察時需要注意哪一項安全或記錄原則？`,a:`(1) 皆屬於「${uShort}」的核心探究項目。(2) 客觀記錄、小心操作與遵守規範。`},
+      {q:`【${uShort}・小記者採訪】班上舉辦「${uShort}」主題分享會，阿明想上台報告「${tp}」。問題：(1) 你會幫阿明準備哪一個生活照片或實物當教具？ (2) 台下同學提問時，他應該怎麼簡短介紹「${tpNext}」？`,a:`(1) 挑出與「${tp}」最貼近的生活案例或教具。(2) 以具體生活現象說明「${tpNext}」。`}
     ];
     item = wPrompts[vIdx % wPrompts.length];
   }
@@ -4684,9 +4722,10 @@ function updateCapInfo(pagesCount, ansPagesCount=null){
     el.className=cls; el.textContent=msg;
   });
 }
-function renderExam(){
-  const box=$('examSheet');box.innerHTML='';
-  if(!curExam||!curExam.sections.length){box.innerHTML='<p class="hint">請先選擇科目與題數並點擊「依設定產生測驗卷」。</p>';updateCapInfo(0);return;}
+function renderExam(measureOnly=false){
+  const box=$('examSheet');
+  if(!measureOnly) box.innerHTML='';
+  if(!curExam||!curExam.sections.length){if(!measureOnly){box.innerHTML='<p class="hint">請先選擇科目與題數並點擊「依設定產生測驗卷」。</p>';updateCapInfo(0);}return;}
   const {meta, sections}=curExam;
   const {D}=chooseBestLayout(curExam);
   const twoCol=meta.layout==='2col';
@@ -4695,9 +4734,11 @@ function renderExam(){
   const unitsText=meta.units.length?meta.units.join('、'):'全冊綜合複習';
   const isZh=meta.subject==='國語';
 
-  let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
-  st.textContent=isZh?'@media print{@page{size:A4 landscape;margin:0}}':'@media print{@page{size:A4 portrait;margin:0}}';
-  if($('btnExXlsx'))$('btnExXlsx').textContent=isZh?'📊 匯出 Excel（A4 橫式直書）':'📊 匯出 Excel（A4 直式）';
+  if(!measureOnly){
+    let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
+    st.textContent=isZh?'@media print{@page{size:A4 landscape;margin:0}}':'@media print{@page{size:A4 portrait;margin:0}}';
+    if($('btnExXlsx'))$('btnExXlsx').textContent=isZh?'📊 匯出 Excel（A4 橫式直書）':'📊 匯出 Excel（A4 直式）';
+  }
 
   const optLabels=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];
   const matchLabels='ㄅㄆㄇㄈㄉㄊㄋㄌ';
@@ -4909,6 +4950,8 @@ function renderExam(){
     const lastZhPg = zhPages[zhPages.length-1];
     curExam._lastTailFill = (lastZhPg && maxW>0) ? Math.min(1, lastZhPg.botW / maxW) : 0;
     curExam._pageFills = zhPageFills;
+    curExam._lastPageCount = zhPages.length;
+    if(measureOnly) return;
     const totZ=zhPages.length+(meta.withAns?1:0);
     updateCapInfo(zhPages.length);
 
@@ -5038,6 +5081,8 @@ function renderExam(){
     curExam._lastTailFill = lastCols.length
       ? Math.min(1, lastCols[lastCols.length-1].reduce((a,b)=>a+b.h,0) / Math.max(1, lastCap))
       : 0;
+    curExam._lastPageCount = pages.length;
+    if(measureOnly) return;
 
     const totalP=pages.length+(meta.withAns?1:0);
     updateCapInfo(pages.length);
@@ -5150,8 +5195,9 @@ function renderExam(){
         return {pg,inner};
       };
       let cur=createZhAnsPg();
+      const zhAnsGrade=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
       const hd=document.createElement('div');hd.className='ex-zh-hd';
-      hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期　國語科解答與解析（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>`);
+      hd.innerHTML=zhFormat(`<div><h3>國小${zhAnsGrade}年級${meta.sem}學期　國語科解答與解析（總分100分）</h3><div class="ex-sub">版本：${pubName}　難度：${diffName}</div></div>`);
       cur.inner.appendChild(hd);
 
       const meas=document.createElement('div');
@@ -5393,16 +5439,16 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 /* 國語科：A4 橫式直書（由右至左，隱藏式格子欄流） */
 .a4.ex-land{width:1122px;height:794px}
 .ex-zh-wrap{display:flex;flex-direction:row-reverse;align-items:flex-start;width:100%;height:100%;padding:22px 26px;color:#111;font-size:var(--ex-fs,13.5px);gap:4px;overflow:hidden}
-.ex-zh-hd{writing-mode:vertical-rl;text-orientation:upright;border-left:2px solid #222;padding-left:10px;margin-left:6px;height:100%;display:flex;flex-direction:column;justify-content:space-between;flex:none}
-.ex-zh-hd h3{margin:0;font-size:1.22rem;letter-spacing:.06em}
-.ex-zh-hd .ex-sub{font-size:.8rem;color:#444;margin-right:4px}
+.ex-zh-hd{writing-mode:vertical-rl;text-orientation:upright;border-left:2px solid #222;padding-left:10px;margin-left:6px;height:100%;display:flex;flex-direction:column;justify-content:space-between;flex:none;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
+.ex-zh-hd h3{margin:0;font-size:1.22rem;letter-spacing:.06em;line-height:1.3}
+.ex-zh-hd .ex-sub{font-size:.8rem;color:#444;margin-right:4px;line-height:1.3}
 .ex-zh-hd .ex-zh-info{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:600;padding-bottom:32px}
-.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em}
+.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 3px;flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:2.1em;height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:3.2em}
-.tcy{display:inline-block;text-combine-upright:all;-webkit-text-combine:horizontal;width:1.38em;text-align:center;writing-mode:horizontal-tb;vertical-align:middle;line-height:1.08;margin:1px auto}
+.tcy{text-combine-upright:all;-webkit-text-combine:horizontal;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
 .qend-glue{white-space:nowrap;display:inline}
 .qblank-glue{white-space:nowrap;display:inline}
 
@@ -5617,7 +5663,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     });
   };
   const totalQCount=()=>curExam.sections.reduce((a,s)=>a+s.qs.length,0);
-  const removeOneFromKind=(k)=>{
+  const removeOneFromKind=(k, doMeasure=true)=>{
     const sIdx=curExam.sections.findIndex(s=>s.kind===k);
     if(sIdx<0) return false;
     const sec=curExam.sections[sIdx];
@@ -5625,10 +5671,10 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     else if(curExam.sections.length>1) curExam.sections.splice(sIdx,1);
     else return false;
     refreshHeadings();
-    renderExam();
+    if(doMeasure) renderExam(true);
     return true;
   };
-  const addOneToKind=(k)=>{
+  const addOneToKind=(k, doMeasure=true)=>{
     const extQ=new Set(baseCfg.excludeQuestions||[]);
     const extS=new Set(baseCfg.excludeSigs||[]);
     const extT=new Set(baseCfg.excludeTopics||[]);
@@ -5661,7 +5707,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     }
     targetSec.qs.push(qNew);
     refreshHeadings();
-    renderExam();
+    if(doMeasure) renderExam(true);
     return true;
   };
 
@@ -5672,19 +5718,19 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     for(const k of trimKinds){
       const sec=curExam.sections.find(s=>s.kind===k);
       if(sec && sec.qs.length>(k==='match'||k==='word'?1:2)){
-        if(removeOneFromKind(k)){trimmed=true;break;}
+        if(removeOneFromKind(k,true)){trimmed=true;break;}
       }
     }
     if(!trimmed){
       for(const k of trimKinds){
         const sec=curExam.sections.find(s=>s.kind===k);
-        if(sec && sec.qs.length>1){if(removeOneFromKind(k)){trimmed=true;break;}}
+        if(sec && sec.qs.length>1){if(removeOneFromKind(k,true)){trimmed=true;break;}}
       }
     }
     if(!trimmed) break;
   }
 
-  // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或第2頁／末欄仍留白時，啟動第二優先補題（單題溢頁僅略過該大題，持續以輕量題型補滿）
+  // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或第2頁／末欄仍留白時，啟動第二優先補題（先批次快速逼近，再微調，最後一次完整繪製）
   const limits={mc:24,tf:20,fill:20,match:3,calc:14,word:8};
   const enabledSet=new Set(['mc','tf','fill','match','calc','word']);
   [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
@@ -5698,6 +5744,22 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   const blockedKinds=new Set();
   const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.92 || (curExam._lastTailFill||0)<0.90 || (curExam._pageFills||[]).some(f=>f<0.90)));
   let gStep=0, stalled=0;
+  // 若目前仍只有 1 頁且目標為 2 頁，先一次批量補 3 題輕量題再量測，大幅節省 DOM reflow 時間
+  if(curExam._lastPageCount < targetPages && growCycle.length){
+    let batchAdded = 0;
+    for(let b=0; b<4 && totalQCount()<maxTotal; b++){
+      const k = growCycle[gStep % growCycle.length];
+      gStep++;
+      const sec=curExam.sections.find(s=>s.kind===k);
+      if((sec?sec.qs.length:0) < limits[k] && addOneToKind(k, false)) batchAdded++;
+    }
+    if(batchAdded) renderExam(true);
+    while(curExam._lastPageCount > targetPages && batchAdded > 0){
+      const k = growCycle[(gStep - 1 + growCycle.length) % growCycle.length];
+      if(removeOneFromKind(k, true)) batchAdded--;
+      else break;
+    }
+  }
   while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<56 && blockedKinds.size<growCycle.length && stalled<growCycle.length*2){
     const k=growCycle[gStep % growCycle.length];
     gStep++;
@@ -5705,11 +5767,11 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     const sec=curExam.sections.find(s=>s.kind===k);
     const curLen=sec?sec.qs.length:0;
     if(curLen >= limits[k]){blockedKinds.add(k);stalled++;continue;}
-    const ok=addOneToKind(k);
+    const ok=addOneToKind(k,true);
     if(!ok){
       blockedKinds.add(k);stalled++;
     }else if(curExam._lastPageCount>targetPages){
-      removeOneFromKind(k);
+      removeOneFromKind(k,true);
       blockedKinds.add(k);
       stalled++;
     }else{
@@ -5717,6 +5779,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     }
   }
 
+  renderExam(false);
   if(syncUi){
     [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
       const sec=curExam.sections.find(s=>s.kind===k);
@@ -5746,8 +5809,9 @@ function generateFromUI(arg){
   };
   $('exMsg').textContent='';
   curExam=generateExamQuestions(cfg);
-  renderExam();
-  if(!skipAutoBalance && $('exTwoPage') && $('exTwoPage').checked && $('exLayout').value==='2col'){
+  const willBalance = !skipAutoBalance && $('exTwoPage') && $('exTwoPage').checked && $('exLayout').value==='2col';
+  renderExam(willBalance);
+  if(willBalance){
     const isZh=cfg.subject==='國語';
     autoBalanceExamToTarget(2, isZh?54:48, cfg, true);
   }
@@ -6037,11 +6101,17 @@ function getAdminCloudBackupCreds(){
 
 async function backupOrdersToGoogleCloud(orders, silent=false){
   const { url, token } = getAdminCloudBackupCreds();
-  if(!url || !token || token === 'local-dev-session'){
+  if(!url || !token || token === 'local-dev-session' || token === 'local-hash-session'){
     refreshBackupStatusUI();
-    if(!silent && $('batchMsg')){
-      $('batchMsg').style.color='#b45309';
-      $('batchMsg').textContent='ℹ️ 尚未連線 Google 雲端試算表或僅為本機開發登入；訂單已自動鏡像至瀏覽器 IndexedDB，亦可點「匯出 JSON 備份檔」保存至雲端硬碟！';
+    if(!silent){
+      if($('cloudSetupPanel')){
+        $('cloudSetupPanel').style.display='';
+        if($('gasUrlInput') && !$('gasUrlInput').value.trim()) $('gasUrlInput').focus();
+      }
+      if($('batchMsg')){
+        $('batchMsg').style.color='#b45309';
+        $('batchMsg').textContent='ℹ️ 尚未連線 Google 雲端試算表！請於下方「Google 雲端試算表連線設定精靈」貼上 Apps Script 網址並輸入密碼按「🔗 連線並驗證授權」；目前訂單亦已自動鏡像至本機 IndexedDB！';
+      }
     }
     return { ok:false, reason:'no_cloud_creds' };
   }
@@ -6126,12 +6196,24 @@ function refreshBackupStatusUI(){
   }
   if(cldEl){
     const { url, token } = getAdminCloudBackupCreds();
-    if(url && token && token !== 'local-dev-session'){
+    const isConnected = !!(url && token && token !== 'local-dev-session' && token !== 'local-hash-session');
+    if(isConnected){
       cldEl.textContent = lastCld
         ? `☁️ Google 雲端雙重自動備份已啟用（最近雲端同步：${lastCld}）`
         : `☁️ Google 雲端備份已連線（訂單變動時自動同步至 Drive 資料夾與試算表）`;
+      cldEl.style.color = '#14532d';
     }else{
-      cldEl.textContent = `雲端備份：尚未連接 Google 雲端試算表（目前由本機 IndexedDB 20份滾動快照＋JSON 匯出保護）`;
+      cldEl.textContent = `雲端備份：尚未連接 Google 雲端試算表（可點右側「⚙️ 設定／連線 Google 雲端」快速設定；目前由本機 IndexedDB＋JSON 保護）`;
+      cldEl.style.color = '#9a3412';
+    }
+    if($('btnToggleCloudSetup')){
+      $('btnToggleCloudSetup').textContent = isConnected ? '✅ Google 雲端已連線（設定）' : '⚙️ 設定／連線 Google 雲端';
+      $('btnToggleCloudSetup').style.background = isConnected ? '#e7f8ee' : '#fff7ed';
+      $('btnToggleCloudSetup').style.borderColor = isConnected ? '#22c55e' : '#fb923c';
+      $('btnToggleCloudSetup').style.color = isConnected ? '#136529' : '#9a3412';
+    }
+    if($('gasUrlInput') && !$('gasUrlInput').value && url){
+      $('gasUrlInput').value = url;
     }
   }
 }
@@ -6837,10 +6919,12 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
     };
 
     curExam = generateExamQuestions(cfg);
-    renderExam();
     if(typeof autoBalanceExamToTarget==='function'){
+      renderExam(true);
       // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面皆 90%~100% 飽滿無空白
       autoBalanceExamToTarget(2, isZh?60:64, cfg, false);
+    } else {
+      renderExam(false);
     }
     const rawPages = [...box.querySelectorAll('.a4')];
     const diffZh = {easy:'基礎熟練(鼎甲風)',mid:'標準評量(良品風)',hard:'素養挑戰(奇鼎風)',mix:'混合難度(三強混合)'}[effDiff] || '標準評量(良品風)';
@@ -7177,6 +7261,73 @@ function initExamUI(){
   }
   if($('btnCloudBackupNow')) $('btnCloudBackupNow').onclick=()=>backupOrdersToGoogleCloud(curBatchOrders, false);
   if($('btnCloudRestoreNow')) $('btnCloudRestoreNow').onclick=()=>restoreOrdersFromGoogleCloud();
+  if($('btnToggleCloudSetup')){
+    $('btnToggleCloudSetup').onclick=()=>{
+      const p=$('cloudSetupPanel'); if(!p) return;
+      p.style.display = p.style.display==='none' ? '' : 'none';
+      if(p.style.display==='' && $('gasUrlInput') && !$('gasUrlInput').value.trim()){
+        try{ $('gasUrlInput').value = localStorage.getItem('kids_gas_webapp_url') || ''; }catch(_){}
+      }
+    };
+  }
+  if($('btnCloseCloudSetup')){
+    $('btnCloseCloudSetup').onclick=()=>{ if($('cloudSetupPanel')) $('cloudSetupPanel').style.display='none'; };
+  }
+  if($('btnConnectGoogleCloud')){
+    $('btnConnectGoogleCloud').onclick=async()=>{
+      const url = ($('gasUrlInput')?.value || '').trim();
+      const u = ($('gasConnAdminUser')?.value || 'admin').trim();
+      const p = ($('gasConnAdminPass')?.value || '').trim();
+      const msgEl = $('cloudWizardMsg');
+      const setMsg = (txt, col)=>{ if(msgEl){ msgEl.style.color=col; msgEl.textContent=txt; } };
+      if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/i.test(url)){
+        setMsg('⚠️ 請貼上有效的 Google Apps Script Web App 網址（開頭為 https://script.google.com/macros/s/.../exec）', '#c0392b');
+        return;
+      }
+      if(!p){
+        setMsg('⚠️ 請輸入您在 setupAll() / ScriptProperties 中設定的後台管理員密碼', '#c0392b');
+        return;
+      }
+      setMsg('⏳ 正在驗證 Google Apps Script 授權，請稍候...', '#b45309');
+      try{
+        localStorage.setItem('kids_gas_webapp_url', url);
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'adminLogin', username: u, password: p })
+        });
+        const data = await resp.json();
+        if(data && data.ok && data.sessionToken){
+          sessionStorage.setItem('kids_admin_session_token', data.sessionToken);
+          refreshBackupStatusUI();
+          setMsg('✅ 連線並驗證授權成功！現在按「☁️ 立即備份至 Google 雲端」或「🧪 立即測試備份」即可同步至 Google 雲端硬碟與試算表。', '#136529');
+          if($('gasConnAdminPass')) $('gasConnAdminPass').value = '';
+        } else {
+          setMsg(`❌ 驗證失敗：${(data&&data.error)||'請確認帳號密碼與 Web App 權限（誰可以存取：所有人）'}`, '#c0392b');
+        }
+      }catch(err){
+        setMsg(`❌ 連線錯誤：${err.message}（請確認 Apps Script 部署權限設為「所有人」且網址正確）`, '#c0392b');
+      }
+    };
+  }
+  if($('btnCloudTestBackup')) $('btnCloudTestBackup').onclick=()=>backupOrdersToGoogleCloud(curBatchOrders, false);
+  if($('btnDisconnectGoogleCloud')){
+    $('btnDisconnectGoogleCloud').onclick=()=>{
+      try{
+        localStorage.removeItem('kids_gas_webapp_url');
+        localStorage.removeItem('sunflower_last_cloud_backup_at');
+        if(sessionStorage.getItem('kids_admin_session_token') !== 'local-dev-session'){
+          sessionStorage.setItem('kids_admin_session_token', 'local-hash-session');
+        }
+      }catch(_){}
+      if($('gasUrlInput')) $('gasUrlInput').value='';
+      refreshBackupStatusUI();
+      if($('cloudWizardMsg')){
+        $('cloudWizardMsg').style.color='#b45309';
+        $('cloudWizardMsg').textContent='🔌 已中斷 Google 雲端連線設定（本機 IndexedDB 備份仍持續保護中）。';
+      }
+    };
+  }
   if($('btnExportJsonBackup')) $('btnExportJsonBackup').onclick=exportOrdersJsonBackup;
   if($('importJsonBackupFile')){
     $('importJsonBackupFile').onchange=e=>{

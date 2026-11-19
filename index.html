@@ -131,6 +131,13 @@
   <!-- 2. 由大到小商品選配 ＋ 右側即時真實縮小版預覽 -->
   <section class="card noprint">
     <h2><span class="step">1</span> 選擇教材規格與即時版面預覽</h2>
+    <div class="st-flow-bar" id="stFlowBar">
+      <span class="flow-step active" data-step="1">① 選教材方案</span>
+      <span class="flow-arrow">➜</span>
+      <span class="flow-step active" data-step="2">② 挑範圍與課次</span>
+      <span class="flow-arrow">➜</span>
+      <span class="flow-step" data-step="3">③ 看右側預覽 → 加入購物車</span>
+    </div>
     <div class="store-builder">
       <!-- 左欄：由大到小選單 -->
       <div class="store-controls">
@@ -138,23 +145,23 @@
         <div class="pack-tabs">
           <label class="pack-tab active" id="lblPackLazy">
             <input type="radio" name="stPackMode" value="lazy" checked>
-            <b>📝 評量懶人包（20 張＝$100・附解答）</b>
-            <span>純評量測驗卷：自動將所選科目各單元與 8 大題型拆成 20 張雙面滿滿、絕不重複考卷！</span>
+            <b>📝 評量懶人包 <em class="pack-badge hot">最省心</em></b>
+            <span>20 張＝$100・附解答：各單元與題型自動輪替、正反兩面滿滿題目絕不重複。</span>
           </label>
           <label class="pack-tab" id="lblPackStroke">
             <input type="radio" name="stPackMode" value="stroke_pack">
-            <b>✍️ 生字練習本（獨立自選課次・5/10/20 張）</b>
-            <span>獨立挑選課次，依課序全字列出不缺漏；選 10/20 張可依序循環、雙倍呈現份數！</span>
+            <b>✍️ 生字練習本 <em class="pack-badge">依課序</em></b>
+            <span>5/10/20 張獨立選課：全課生字一字不漏、每字至少 5 格以上寫到滿版。</span>
           </label>
           <label class="pack-tab" id="lblPackPreschool">
             <input type="radio" name="stPackMode" value="preschool_pack">
-            <b>🐣 幼兒園運筆寫字帖（小／中／大班・5/10/20 張）</b>
-            <span>依台灣幼教課綱分齡設計！整合ㄅㄆㄇ、數字 123、ABC 大格描紅＋可愛插畫，置頂到底滿版不留白！</span>
+            <b>🐣 幼兒園寫字帖 <em class="pack-badge pre">幼教適齡</em></b>
+            <span>小／中／大班 5/10/20 張：整合ㄅㄆㄇ、123、ABC 大格描紅＋彩色可愛插畫。</span>
           </label>
           <label class="pack-tab" id="lblPackCustom">
             <input type="radio" name="stPackMode" value="custom">
-            <b>🎨 客製自由配（單張 $5 元・湊滿 20 張出貨）</b>
-            <span>單張微調生字字詞或評量範圍與難度（每張 $5 起），購物車累計滿 20 張即可出貨！</span>
+            <b>🎨 客製自由配 <em class="pack-badge cus">單張$5起</em></b>
+            <span>單張精挑字詞、單元與難度（$5/張），多筆混搭購物車滿 20 張即出貨。</span>
           </label>
         </div>
 
@@ -361,11 +368,14 @@
 
         <!-- 加入購物車操作列 -->
         <div class="add-cart-bar">
-          <label style="font-weight:700"><span id="stQtyLabel">本項張數／組數：</span>
-            <input type="number" id="stQty" value="1" min="1" max="60" style="width:4.4em;text-align:center;font-weight:700"> <span id="stQtyUnit">組（20張）</span>
-          </label>
-          <span id="stItemPriceHint" style="font-weight:700;color:#b34700">（每張 5 元 × 20 張 ＝ 小計 NT$ 100 元）</span>
-          <button id="btnAddToCart" type="button" class="btn pri big">➕ 加入購物車</button>
+          <div id="stLiveSelectionSummary" class="live-selection-summary"></div>
+          <div class="add-cart-actions">
+            <label style="font-weight:700"><span id="stQtyLabel">本項張數／組數：</span>
+              <input type="number" id="stQty" value="1" min="1" max="60" style="width:4.4em;text-align:center;font-weight:700"> <span id="stQtyUnit">組（20張）</span>
+            </label>
+            <span id="stItemPriceHint" style="font-weight:700;color:#b34700">（每張 5 元 × 20 張 ＝ 小計 NT$ 100 元）</span>
+            <button id="btnAddToCart" type="button" class="btn pri big">➕ 加入購物車</button>
+          </div>
         </div>
         <div id="stAddMsg" class="msg" style="color:#1f9d55;font-weight:700"></div>
       </div>
@@ -555,7 +565,7 @@
     <label class="chk"><input type="checkbox" id="xRef" checked> 每字首格附範字</label>
     <label class="chk"><input type="checkbox" id="xNum" checked> 範字標示筆畫數字</label>
     <label class="chk"><input type="checkbox" id="xGhost" checked> 步驟格顯示未寫筆畫（淺灰）</label>
-    <label>結尾完整書寫格數 <input type="number" id="xBlank" value="5" min="0" max="10"></label>
+    <label>結尾完整書寫格數 <input type="number" id="xBlank" value="5" min="5" max="10"></label>
     <label title="超過此筆畫數自動拆為兩欄並排，避免多筆畫字壓縮同頁其他字格">折兩欄上限 <input type="number" id="xSplitLimit" value="12" min="8" max="24"> 畫</label>
     <label class="chk"><input type="checkbox" id="xTrace"> 結尾首格淺灰描字</label>
   </div>
@@ -693,14 +703,51 @@
   <div id="batchBackupBar" class="backup-box">
     <div class="backup-status">
       <div><b>🛡️ 雙層訂單自動備份：</b><span id="backupLocalStatus">本機 IndexedDB 自動鏡像就緒</span></div>
-      <div style="font-size:.78rem;color:#166534" id="backupCloudStatus">雲端備份：尚未連接 Google 雲端試算表（可於上方登入或使用本機 JSON 備份還原）</div>
+      <div style="font-size:.78rem;color:#166534" id="backupCloudStatus">雲端備份：尚未連接 Google 雲端試算表（可點右側「⚙️ 設定／連線 Google 雲端」綁定或使用 JSON 還原）</div>
     </div>
     <div class="backup-actions">
+      <button type="button" class="btn btn-mini" style="background:#fff7ed;border:1px solid #fb923c;color:#9a3412" id="btnToggleCloudSetup">⚙️ 設定／連線 Google 雲端</button>
       <button type="button" class="btn btn-mini" style="background:#dcfce7;border:1px solid #22c55e;color:#14532d" id="btnCloudBackupNow">☁️ 立即備份至 Google 雲端</button>
       <button type="button" class="btn btn-mini" style="background:#e0f2fe;border:1px solid #38bdf8;color:#075985" id="btnCloudRestoreNow">📥 從 Google 雲端救回訂單</button>
       <button type="button" class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155" id="btnExportJsonBackup">💾 匯出 JSON 備份檔</button>
       <label class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155;cursor:pointer;margin:0">📂 匯入 JSON 還原<input type="file" id="importJsonBackupFile" accept=".json" style="display:none"></label>
     </div>
+  </div>
+  <!-- Google 雲端試算表／Drive 連線精靈（絕不寫死私人網址或密碼於網頁源碼中） -->
+  <div id="cloudSetupPanel" class="cloud-wizard-card" style="display:none">
+    <div class="cloud-wizard-hd">
+      <b>☁️ Google 雲端試算表 ＆ Drive 自動備份連線設定精靈</b>
+      <button type="button" id="btnCloseCloudSetup" class="btn btn-mini">✕ 收合</button>
+    </div>
+    <div class="gas-sync-box" style="margin-bottom:6px">
+      <div class="gas-row">
+        <div class="gas-field gas-url">
+          <span class="gas-lbl">🔗 Apps Script 網頁應用程式網址：</span>
+          <input type="url" id="gasUrlInput" placeholder="請貼上部署後產生的 https://script.google.com/macros/s/.../exec 網址">
+        </div>
+      </div>
+      <div class="gas-row">
+        <div class="gas-field">
+          <span class="gas-lbl">👤 雲端後台帳號：</span>
+          <input type="text" id="gasConnAdminUser" value="admin" placeholder="預設 admin">
+        </div>
+        <div class="gas-field">
+          <span class="gas-lbl">🔑 雲端後台密碼：</span>
+          <input type="password" id="gasConnAdminPass" placeholder="輸入 setupAll() 設定的管理員密碼">
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" id="btnConnectGoogleCloud" class="btn ok">🔗 連線並驗證授權</button>
+          <button type="button" id="btnCloudTestBackup" class="btn pri">🧪 立即測試備份</button>
+          <button type="button" id="btnDisconnectGoogleCloud" class="btn">🔌 中斷連線</button>
+        </div>
+      </div>
+      <div id="cloudWizardMsg" class="msg" style="margin-top:2px"></div>
+    </div>
+    <ol class="sync-steps" style="font-size:.82rem;color:#334155;margin-bottom:0">
+      <li>打開您的 Google 訂單試算表 → 點上方選單 <b>「擴充功能 → Apps Script」</b> → 將本專案內附的 <code>google_sheet_automation.gs</code> 全部貼上並儲存（不需公開放在網頁上）。</li>
+      <li>在上方函式下拉選單選 <code>setupAll</code> 點 <b>「▶ 執行」</b> 完成雲端權限授權（預設密碼為 ScriptProperties 內的 <code>ADMIN_PASS</code>，可自行於「專案設定 → 指令碼屬性」修改）。</li>
+      <li>點右上角 <b>「部署 → 新增部署作業 → 網頁應用程式」</b>（執行身分選「我」，誰可以存取選<b>「所有人」</b>），複製產生之 <code>.../exec</code> 網址貼回上方欄位並按<b>「🔗 連線並驗證授權」</b>，日後所有訂單就會自動雙層備份進試算表「系統訂單備份紀錄」與您的 Google 雲端硬碟資料夾！</li>
+    </ol>
   </div>
   <div id="batchTableWrap" style="width:100%;margin-top:8px"></div>
 

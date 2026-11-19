@@ -291,36 +291,73 @@ function fillStoreUnits(){
 function updateItemPriceHint(){
   const packMode = document.querySelector('input[name=stPackMode]:checked')?.value || 'lazy';
   const qty = Math.max(1, +$('stQty').value || 1);
+  const g = $('stGrade')?.value || '3', sem = $('stSem')?.value || '上';
+  const pubName = getStorePubName($('stPub')?.value || 'k');
+  const cartSheets = storeCart.reduce((s, it) => s + (+it.sheets || 0), 0);
+  let pickSummary = '', sheets = 0;
+
   if(packMode === 'lazy'){
-    const sheets = qty * 20;
+    sheets = qty * 20;
+    const subj = $('stLazySubj')?.value || '國語';
+    const scName = getStoreScopeName($('stLazyScope')?.value || 'all');
     if($('stQtyUnit')) $('stQtyUnit').textContent = '組（20張）';
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = `（${qty} 組・共 ${sheets} 張不重複評量卷 × $5 ＝ 小計 NT$ ${sheets*5} 元）`;
     }
+    pickSummary = `<b>📝 評量懶人包</b>｜國小 ${g} 年級${sem}學期・${pubName}｜<b>${subj}</b>（${scName}）｜共 ${sheets} 張（$${sheets*5}）`;
   } else if(packMode === 'stroke_pack'){
     const spSheets = +($('stSpSheets')?.value || 10);
-    const sheets = qty * spSheets;
+    sheets = qty * spSheets;
+    const lsCnt = document.querySelectorAll('#stSpLessonList input:checked').length;
+    const spMode = $('stSpMode')?.value === 'B' ? '教育部格' : '筆順引導';
+    const spCols = $('stSpCols')?.value || '8';
     if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${spSheets}張）`;
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = sheets >= 20
         ? `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元・已達 20 張可直接出貨！）`
         : `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元；購物車累計滿 20 張出貨）`;
     }
+    pickSummary = `<b>✍️ 生字練習本</b>｜國小 ${g} 年級${sem}學期・${pubName}｜已選 <b>${lsCnt} 課</b>（${spMode}・${spCols}欄）｜共 ${sheets} 張（$${sheets*5}）`;
   } else if(packMode === 'preschool_pack'){
     const preSheets = +($('stPreSheets')?.value || 10);
-    const sheets = qty * preSheets;
+    sheets = qty * preSheets;
+    const lvlMap = {small:'小班（3～4歲）', mid:'中班（4～5歲）', large:'大班（5～6歲）'};
+    const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC'};
+    const lvlTxt = lvlMap[$('stPreLevel')?.value || 'small'] || '小班';
+    const topTxt = topMap[$('stPreTopic')?.value || 'all'] || '綜合';
     if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${preSheets}張）`;
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = sheets >= 20
         ? `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元・已達 20 張可直接出貨！）`
         : `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元；購物車累計滿 20 張出貨）`;
     }
+    pickSummary = `<b>🐣 幼兒園寫字帖</b>｜${lvlTxt}｜${topTxt}｜共 ${sheets} 張（$${sheets*5}）`;
   } else {
+    sheets = qty;
     const price = qty * 5;
+    const cType = document.querySelector('input[name=stCustomType]:checked')?.value || 'stroke';
+    if(cType === 'stroke'){
+      const lsCnt = document.querySelectorAll('#stLessonList input:checked').length;
+      const cw = ($('stCustomWords')?.value || '').trim();
+      pickSummary = `<b>🎨 客製生字單</b>｜國小 ${g} 年級${sem}・${pubName}｜已選 ${lsCnt} 課${cw?`＋自訂字「${esc(cw.slice(0,8))}${cw.length>8?'…':''}」`:''}｜${sheets} 張（$${price}）`;
+    } else {
+      const subj = $('stExamSubj')?.value || '國語';
+      const uCnt = document.querySelectorAll('#stUnitList input:checked').length;
+      pickSummary = `<b>🎨 客製評量卷</b>｜國小 ${g} 年級${sem}・${pubName}｜<b>${subj}</b>・已選 ${uCnt} 單元｜${sheets} 張（$${price}）`;
+    }
     if($('stQtyUnit')) $('stQtyUnit').textContent = '張（5元/張）';
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = `（客製 ${qty} 張 × $5 ＝ 小計 NT$ ${price} 元；購物車累計滿 20 張出貨）`;
     }
+  }
+
+  const liveEl = $('stLiveSelectionSummary');
+  if(liveEl){
+    const afterCart = cartSheets + sheets;
+    const nextHint = afterCart >= 20
+      ? `<span style="color:#136529;font-weight:700">👉 確認右側預覽無誤後，按「➕ 加入購物車」即達 ${afterCart} 張出貨門檻！</span>`
+      : `<span style="color:#9a3412;font-weight:700">👉 按「➕ 加入購物車」後累計 ${afterCart}/20 張（再湊 ${20-afterCart} 張即可出貨）</span>`;
+    liveEl.innerHTML = `📌 目前已選：${pickSummary}<br>${nextHint}`;
   }
 }
 
@@ -423,6 +460,8 @@ function scheduleStorePreview(){
 
 let _lastCustomStrokeKey = '';
 let _customStrokeMinSheets = 1;
+
+let _storeExamCache = new Map();
 
 function renderPreviewPagesDualOrSingle(scaleBox, pagesArr, isLand){
   if(!pagesArr || !pagesArr.length) return;
@@ -630,7 +669,24 @@ async function updateStorePreview(){
         : `✍️ 第 ${curIdx+1}/${totSheetsShow} 張正反雙面（${g}年級${sem}・${orderCfg.cols}~8欄）`;
     }
   } else if(window.buildExamPreviewPagesForStore){
-    const pagesArr = window.buildExamPreviewPagesForStore(orderCfg);
+    const cacheKey = JSON.stringify({
+      g: orderCfg.grade, s: orderCfg.sem, p: orderCfg.pub, sub: orderCfg.subj,
+      sc: orderCfg.scope, d: orderCfg.diff, pt: orderCfg.packType, rb: orderCfg.ruby,
+      ly: orderCfg.layout, cu: orderCfg.custom_units, idx: orderCfg.previewSheetIdx || 0
+    });
+    let pagesArr = _storeExamCache.get(cacheKey);
+    if(pagesArr){
+      pagesArr = pagesArr.map(n => n.cloneNode(true));
+    } else {
+      pagesArr = window.buildExamPreviewPagesForStore(orderCfg);
+      if(pagesArr && pagesArr.length){
+        if(_storeExamCache.size > 24){
+          const firstK = _storeExamCache.keys().next().value;
+          if(firstK !== undefined) _storeExamCache.delete(firstK);
+        }
+        _storeExamCache.set(cacheKey, pagesArr.map(n => n.cloneNode(true)));
+      }
+    }
     if(pagesArr && pagesArr.length){
       const isLand = pagesArr[0].classList.contains('ex-land');
       renderPreviewPagesDualOrSingle(scaleBox, pagesArr, isLand);

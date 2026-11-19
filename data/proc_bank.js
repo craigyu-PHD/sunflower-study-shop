@@ -783,4 +783,64 @@ window.PROC_BANK = {
       ]
     }
   };
+
+  // ===== 各科多元情境與活潑題庫補充（英語／生活／自然／社會／國語）=====
+  [
+    [1, {diff:'mid',q:'"What is it?" "It is (　) blue pencil."',a:'a',opts:['a','an','two','am']}, {diff:'hard',q:'"Nice to (　) you!" "Nice to meet you, too."',a:'meet',opts:['meet','eat','see','go']}],
+    [2, {diff:'mid',q:'"How many dogs?" "Three (　)."',a:'dogs',opts:['dogs','dog','cat','pig']}, {diff:'hard',q:'"Is your sister happy?" "Yes, (　) is."',a:'she',opts:['she','he','it','I']}],
+    [3, {diff:'mid',q:'"Look! The cat is (　) the box." （在盒子上面）',a:'on',opts:['on','under','in','between']}, {diff:'hard',q:'"What can a rabbit do?" "It can (　)."',a:'jump',opts:['jump','fly','swim','sing']}],
+    [4, {diff:'mid',q:'"I want some (　), please." （我想要一些牛奶。）',a:'milk',opts:['milk','sunny','Monday','desk']}, {diff:'hard',q:'"It\'s rainy today. Take an (　) with you."',a:'umbrella',opts:['umbrella','apple','eraser','egg']}],
+    [5, {diff:'mid',q:'"How often do you go to the library?" "I (　) go there on Saturdays."',a:'usually',opts:['usually','by','next','doing']}, {diff:'hard',q:'"Excuse me, (　) is the post office?" "Go straight and turn right."',a:'where',opts:['where','who','what','how']}],
+    [6, {diff:'mid',q:'"Where did you go last summer?" "I (　) to Tainan and ate good food."',a:'went',opts:['went','go','goes','going']}, {diff:'hard',q:'"Mount Jade is (　) than Yangmingshan."',a:'higher',opts:['higher','high','highest','more high']}]
+  ].forEach(([g, s1, s2])=>{ PB.eng.sentences[g].push(s1, s2); });
+
+  PB.life.facts.push(
+    {diff:'easy',q:'每天早上起床後先把雙手和臉洗乾淨，再吃早餐更有精神。',ok:1},
+    {diff:'mid',q:'用放大鏡觀察樹皮紋理與葉脈時，眼睛要隔一小段距離調整焦距，絕不能拿來直視太陽。',ok:1},
+    {diff:'hard',q:'把沾滿菜渣與油漬的便當盒直接丟進資源回收桶，是最正確的分類方式。',ok:0,exp:'資源回收容器應先清空廚餘並簡單沖洗擦乾再回收。'},
+    {diff:'mid',q:'農曆過年時家家戶戶常貼春聯、大掃除與吃團圓飯，代表辭舊迎新。',ok:1}
+  );
+  PB.life.pairs.push(
+    ['資源回收桶','洗淨壓扁的寶特瓶與鋁罐'],
+    ['一般垃圾桶','沾滿油漬用過的衛生紙'],
+    ['紅燈停','靜待綠燈並左右察看來車'],
+    ['百葉箱或通風處','避免陽光直射測量真實氣溫']
+  );
+
+  PB.sci.mid.facts.push(
+    {diff:'easy',q:'觀察水生植物布袋蓮時，會發現它膨大的葉柄裡有氣室，所以能漂浮在水面上。',ok:1},
+    {diff:'mid',q:'在燈泡並聯的電路中，拿掉其中一顆燈泡，另一顆燈泡依然會繼續發亮。',ok:1},
+    {diff:'hard',q:'在完全黑暗、沒有陽光的環境下，已經發芽的綠豆苗一樣會長出飽滿鮮綠的健康葉片。',ok:0,exp:'植物需要光照行光合作用並合成葉綠素，缺光時會徒長且葉片偏黃。'},
+    {diff:'mid',q:'利用糖和水調配出飽和糖水後，如果再繼續加糖不加熱也不攪拌，多餘的糖會沉在杯底。',ok:1}
+  );
+  PB.sci.high.facts.push(
+    {diff:'easy',q:'用指北針測量磁鐵磁極時，指北針 N 極會被磁鐵的 S 極吸引過來。',ok:1},
+    {diff:'mid',q:'台灣夏末秋初常見的颱風大多發源於溫暖的熱帶太平洋海面，伴隨強風與豪雨。',ok:1},
+    {diff:'hard',q:'把生鏽的鐵釘泡在乾燥密封的油罐裡完全隔絕空氣和水，鐵鏽還會迅速蔓延。',ok:0,exp:'缺少氧氣與水分就不會繼續發生生鏽反應。'},
+    {diff:'mid',q:'用定滑輪升旗時，雖然不能省力，卻能把向上拉改成輕鬆地向下拉升旗繩。',ok:1}
+  );
+
+  PB.soc.mid.facts.push(
+    {diff:'easy',q:'搭乘公車或捷運時禮讓老弱婦孺與行動不便者坐博愛座，是尊重他人的美德。',ok:1},
+    {diff:'mid',q:'規劃家鄉旅遊地圖時，可以利用「指北針方向標」與「比例尺」辨識景點方位與實際距離。',ok:1},
+    {diff:'hard',q:'在網路商店購物收到有瑕疵的商品時，因為網路不能退貨，所以只能自認倒楣。',ok:0,exp:'非客製化的網購商品依法享有七日猶豫期，瑕疵商品亦應由賣家負責退換。'}
+  );
+  PB.soc.high.facts.push(
+    {diff:'easy',q:'台灣四面環海，擁有豐富的海港資源（如高雄港、基隆港）與漁業文化。',ok:1},
+    {diff:'mid',q:'「生產履歷（產銷履歷）」標章可以讓消費者掃描條碼追蹤農產品的耕種過程與檢驗紀錄。',ok:1},
+    {diff:'hard',q:'因為水資源可以不斷循環降雨，所以日常生活中打開水龍頭大量浪費自來水完全沒關係。',ok:0,exp:'台灣山高水急不易蓄水，仍需全民節約用水與保護集水區。'}
+  );
+
+  PB.zh.low.typos.push(
+    ['太陽公公露出了笑臉，大地一片暖洋洋。','太陽公公露出了笑臉，大地一片暖羊羊。','羊','洋','暖羊羊','暖洋洋','形容天氣溫暖舒服疊字詞寫作「暖洋洋」。'],
+    ['教室裡的桌椅排得整整齊齊，看起來真舒服。','教室裡的桌椅排得整整其其，看起來真舒服。','其','齊','整整其其','整整齊齊','整齊的「齊」上方為齊頭，「其」是其他。']
+  );
+  PB.zh.mid.typos.push(
+    ['這座森林步道綠意盎然，空氣非常清新宜人。','這座森林步道綠意盎然，空氣非常青新宜人。','青','清','青新','清新','「清新」指乾淨涼爽新鮮，用三點水的「清」。'],
+    ['他每天堅持練琴半小時，琴藝一天比一天進步。','他每天堅特練琴半小時，琴藝一天比一天進步。','特','持','堅特','堅持','「堅持」是用手一直扶住維持，故為提手旁的「持」。']
+  );
+  PB.zh.high.typos.push(
+    ['面對接踵而至的挑戰，他依然沉著冷靜地找出解決之道。','面對接腫而至的挑戰，他依然沉著冷靜地找出解決之道。','腫','踵','接腫','接踵','「接踵而至」的踵指腳後跟（足部），形容人或事接連不斷。'],
+    ['經過科學家鍥而不捨的研究，這項技術終於突破瓶頸。','經過科學家契而不捨的研究，這項技術終於突破瓶頸。','契','鍥','契而不捨','鍥而不捨','「鍥而不捨」意為不停雕刻，故為金字旁的「鍥」。']
+  );
 })();

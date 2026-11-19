@@ -260,6 +260,20 @@
     return cv;
   }
 
+  const _preschoolUrlCache = new Map();
+  function drawPreschoolCellCached(item, rowIdx, totalRows, w, h, showIllust, levelId){
+    const key = `${levelId}|${item.kind}|${item.sym}|${item.ex}|${rowIdx}|${totalRows}|${w}x${h}|${showIllust?1:0}`;
+    if(_preschoolUrlCache.has(key)) return _preschoolUrlCache.get(key);
+    const cv = drawPreschoolCell(item, rowIdx, totalRows, w, h, showIllust, levelId);
+    const url = cv.toDataURL();
+    if(_preschoolUrlCache.size > 600){
+      const first = _preschoolUrlCache.keys().next().value;
+      if(first !== undefined) _preschoolUrlCache.delete(first);
+    }
+    _preschoolUrlCache.set(key, url);
+    return url;
+  }
+
   function buildPreschoolPagesForConfig(cfg){
     const levelId = PRESCHOOL_LEVELS[cfg.level] ? cfg.level : 'small';
     const lvl = PRESCHOOL_LEVELS[levelId];
@@ -320,9 +334,8 @@
 
       slice.forEach((item, c) => {
         for(let r = 0; r < rows; r++){
-          const cv = drawPreschoolCell(item, r, rows, cwMax, chh, showIllust, levelId);
           const im = document.createElement('img');
-          im.src = cv.toDataURL();
+          im.src = drawPreschoolCellCached(item, r, rows, cwMax, chh, showIllust, levelId);
           im.style.cssText = `position:absolute;left:${leftOff + c * cwMax}px;top:${topOff + r * chh}px;width:${cwMax}px;height:${chh}px;display:block`;
           pg.appendChild(im);
         }

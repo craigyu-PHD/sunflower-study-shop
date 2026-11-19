@@ -203,7 +203,7 @@ function buildLayout(){
   const cw=Math.round(sq*(zy?1.3:1));
   const chh=Math.round(sq);
   const splitLimit=($('xSplitLimit') && +$('xSplitLimit').value) || 12;
-  const nbReq=Math.max(0,+$('xBlank').value||0);
+  const nbReq=Math.max(5,+$('xBlank').value||5);
   const wantTrace=$('xTrace').checked;
   const pages=[];
 
@@ -223,8 +223,8 @@ function buildLayout(){
       const strokeN=HZ_DATA[ch][0].length;
       const steps=charItemsA(ch,zy);
       if(!steps.length) return;
-      // 超過拆欄上限或剩餘練習格不足時，筆畫一路順下排滿第 1 欄後再順接第 2 欄，兩欄皆補滿至底 R 格
-      const shouldSplit=(strokeN>splitLimit) || (steps.length + Math.min(2, nbReq) > R);
+      // 每個字最少保留 5 格以上完整練習格（只能多於 5 格，不可少於 5 格）；不足時自動延展至下一欄並補滿至底 R 格
+      const shouldSplit=(strokeN>splitLimit) || (steps.length + nbReq > R);
       if(!shouldSplit){
         const col1=padColumnToR(steps.slice(0, R), true);
         charGroups.push({ch, colLists:[col1]});
@@ -233,8 +233,9 @@ function buildLayout(){
         for(let k=0;k<steps.length;k+=R){
           chunks.push(steps.slice(k,k+R));
         }
-        // 若所有筆畫剛好填滿第 1 欄（例如 13 畫在 14 列格中），另起第 2 欄全欄練習格讓孩子充分書寫
-        if(chunks.length===1){
+        // 若最後一欄剩餘格數不足 nbReq（預設最少 5 格），延伸多起一全欄練習格，確保練習次數 >= 5 格且無留白
+        const lastRemain = R - chunks[chunks.length - 1].length;
+        if(lastRemain < nbReq){
           chunks.push([]);
         }
         chunks.forEach((ck, idx)=>{
@@ -299,8 +300,18 @@ function imgCanvas(it,pg){
 const cvCache=new Map();
 function cachedCanvas(it,pg){
   const key=it.ch+'|'+JSON.stringify(it.o||'S')+'|'+it.span+'|'+pg.img+'|'+pg.cw+'|'+pg.chh;
-  if(!cvCache.has(key))cvCache.set(key,imgCanvas(it,pg));
+  if(!cvCache.has(key)){
+    if(cvCache.size>1600){
+      const firstKey=cvCache.keys().next().value;
+      if(firstKey!==undefined) cvCache.delete(firstKey);
+    }
+    cvCache.set(key,imgCanvas(it,pg));
+  }
   return cvCache.get(key);
+}
+function cachedDataUrl(it,pg){
+  const cv=cachedCanvas(it,pg);
+  return cv._dataUrl || (cv._dataUrl=cv.toDataURL());
 }
 // ---------- 預覽（A4 直式）----------
 async function generate(){
@@ -310,7 +321,6 @@ async function generate(){
   const miss=[...new Set(text)].filter(c=>!ok.includes(c));
   if(miss.length)$('msg').textContent='查無筆順資料，已略過：'+miss.join(' ');
   curChars=text.filter(c=>ok.includes(c));
-  cvCache.clear();
   render();
   return curChars.length>0;
 }
@@ -328,8 +338,7 @@ function render(){
     const edge=document.createElement('div');edge.className='edge';pg.appendChild(edge);
     const colPad=Math.round((pCwMax-pgData.cw)/2);
     pgData.items.forEach(it=>{
-      const cv=cachedCanvas(it,pgData);
-      const im=new Image();im.src=cv.toDataURL();
+      const im=new Image();im.src=cachedDataUrl(it,pgData);
       im.style.left=(left+it.col*pCwMax+colPad)+'px';
       im.style.top=(MARGIN+it.row*pgData.chh)+'px';
       im.style.width=pgData.cw+'px';im.style.height=(pgData.chh*it.span)+'px';
@@ -405,28 +414,52 @@ window.buildStrokePagesForOrder=async function(order, wmTextOverride=''){
     curChars = validBase.slice();
     L = buildLayout();
     onePassPages = L.pages.length;
-    // 若正反兩面仍有空餘格／選擇多張，依課序重複、周而復始接續排列至足夠面數
-    let guard = 0;
-    while(L.pages.length < wantTotalPages && guard < 40){
-      curChars = curChars.concat(validBase);
-      L = buildLayout();
-      guard++;
+    // 一次估算倍數後補齊頁數（大幅減少重複 buildLayout() 運算開銷）
+    if(onePassPages > 0 && L.pages.length < wantTotalPages){
+      const mult = Math.max(1, Math.floor(wantTotalPages / onePassPages));
+      if(mult > 1){
+        for(let m=1; m<mult; m++) curChars = curChars.concat(validBase);
+        L = buildLayout();
+      }
+      let guard = 0;
+      while(L.pages.length < wantTotalPages && guard < 12){
+        curChars = curChars.concat(validBase);
+        L = buildLayout();
+        guard++;
+      }
     }
-    // 補滿最後一頁剩餘空白欄位（沿課序依字循環填滿至 7/8 欄，不溢頁、不留白）
-    let colGuard = 0;
-    while(L.pages.length && colGuard < 16){
+    // 計算末頁剩餘欄位並一次補足字元後重算（無須逐字重算版面）
+    if(L.pages.length){
       const targetPg = L.pages[Math.min(L.pages.length, wantTotalPages) - 1];
       const usedCols = targetPg ? new Set(targetPg.items.map(it=>it.col)).size : chosenCols;
-      if(usedCols >= chosenCols) break;
-      const nextCh = validBase[curChars.length % validBase.length];
-      curChars.push(nextCh);
-      const nextL = buildLayout();
-      if(nextL.pages.length > wantTotalPages){
-        curChars.pop();
-        break;
+      const freeCols = Math.max(0, chosenCols - usedCols);
+      if(freeCols > 0 && L.pages.length <= wantTotalPages){
+        const hasRef=$('xRef').checked, splitLim=($('xSplitLimit') && +$('xSplitLimit').value)||12, nbReq=Math.max(5,+$('xBlank').value||5);
+        const colsFor = ch => {
+          if(targetMode !== 'A') return 1;
+          const stN = (window.HZ_DATA && HZ_DATA[ch] && HZ_DATA[ch][0]) ? HZ_DATA[ch][0].length : 8;
+          const stepsLen = stN + (hasRef ? 1 : 0);
+          const R_est = targetPg.R || 14;
+          if(!(stN > splitLim || stepsLen + nbReq > R_est)) return 1;
+          const c = Math.ceil(stepsLen / R_est);
+          const lastRem = c * R_est - stepsLen;
+          return lastRem < nbReq ? c + 1 : c;
+        };
+        let remCols = freeCols, added = 0;
+        while(remCols > 0 && added < 16){
+          const nextCh = validBase[curChars.length % validBase.length];
+          const need = colsFor(nextCh);
+          if(need > remCols) break;
+          curChars.push(nextCh);
+          remCols -= need;
+          added++;
+        }
+        if(added > 0){
+          const nextL = buildLayout();
+          if(nextL.pages.length <= wantTotalPages) L = nextL;
+          else curChars.length -= added;
+        }
       }
-      L = nextL;
-      colGuard++;
     }
   }
 
@@ -448,8 +481,7 @@ window.buildStrokePagesForOrder=async function(order, wmTextOverride=''){
     const edge=document.createElement('div');edge.className='edge';pg.appendChild(edge);
     const colPad=Math.round((pCwMax-pgData.cw)/2);
     pgData.items.forEach(it=>{
-      const cv=cachedCanvas(it,pgData);
-      const im=new Image();im.src=cv.toDataURL();
+      const im=new Image();im.src=cachedDataUrl(it,pgData);
       im.style.left=(leftOffset+it.col*pCwMax+colPad)+'px';
       im.style.top=(MARGIN+it.row*pgData.chh)+'px';
       im.style.width=pgData.cw+'px';im.style.height=(pgData.chh*it.span)+'px';
