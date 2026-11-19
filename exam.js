@@ -3227,6 +3227,292 @@ function genMathVariety(grade, sem, diff, kind, vIdx=0){
 }
 
 // ===== 2. 動態國語字音/字形抽題 =====
+let _zhRichRoll = 0;
+
+function genChineseRichQuestion(grade, kind, diff='mid', vIdx=0, pool=[], lsName=''){
+  const g = +grade;
+  const tier = g<=2?'low':(g<=4?'mid':'high');
+  const Z = window.PROC_BANK && window.PROC_BANK.zh && window.PROC_BANK.zh[tier];
+  const idioms=[
+    ['一心一意','專心一意，沒有雜念','三心二意'],['鳥語花香','形容春天景色美好','寸草不生'],
+    ['守株待兔','比喻不知變通、妄想不勞而獲','腳踏實地'],['井底之蛙','比喻見識狹窄的人','見多識廣'],
+    ['畫蛇添足','比喻做了多餘的事反而壞事','恰到好處'],['半途而廢','做事情沒有堅持到底','持之以恆'],
+    ['雪中送炭','在別人急需時給予幫助','錦上添花'],['水落石出','比喻事情真相大白','撲朔迷離'],
+    ['亡羊補牢','事後及時補救還不算太晚','未雨綢繆'],['胸有成竹','做事之前已經有完整的把握','驚慌失措'],
+    ['掩耳盜鈴','比喻自己欺騙自己','實事求是'],['飲水思源','比喻不忘本、懂得感恩','忘恩負義'],
+    ['狐假虎威','借著別人的威勢欺壓他人','自食其力'],['愚公移山','比喻有恆心毅力不怕困難','知難而退'],
+    ['塞翁失馬','比喻一時的損失可能變成好處','禍不單行'],['一鳴驚人','平時默默無聞卻突然有驚人表現','默默無聞'],
+    ['鐵杵磨針','比喻只要有恆心終能成功','虎頭蛇尾'],['破釜沉舟','下定決心不留退路','猶豫不決'],
+    ['聞雞起舞','比喻及時奮發努力','苟且偷安'],['同心協力','大家團結一致共同努力','分道揚鑣'],
+    ['名落孫山','比喻考試或選拔沒有錄取','金榜題名'],['津津有味','形容吃得很有味道或趣味濃厚','索然無味'],
+    ['小心翼翼','形容舉動十分謹慎小心','粗心大意'],['恍然大悟','形容忽然完全明白過來','百思不解']
+  ];
+  const hasTW = pool && pool.length >= 4;
+  const nq = s => String(s||'').replace(/「/g,'『').replace(/」/g,'』');
+  const c1 = hasTW ? pool[vIdx % pool.length] : null;
+  const c2 = hasTW ? pool[(vIdx + 1) % pool.length] : null;
+  const c3 = hasTW ? pool[(vIdx + 2) % pool.length] : null;
+  const ch = c1 ? c1[0] : '春', zy = c1 ? c1[2] : 'ㄔㄨㄣ', rad = (c1 && c1[3]) || '日', st = (c1 && c1[4]) || 9;
+  const lsTag = lsName ? `（${lsName}）` : (c1 && c1.lesson ? `（${c1.lesson}）` : '');
+
+  if(Z){
+    if(kind === 'mc'){
+      const slot = vIdx % 7;
+      if(slot === 0 && Z.typos && Z.typos.length){
+        const t = Z.typos[(vIdx + Math.floor(vIdx/7)) % Z.typos.length];
+        const distChars = shuffle([...new Set(Z.typos.map(x=>x[3]).filter(x=>x!==t[2]&&x!==t[3]))]).slice(0,2);
+        return {q:`檢查錯別字：「${t[1]}」這句話中，哪一個字寫錯了？`,opts:uniqueOpts(t[2],[t[3],...distChars]),a:t[2],exp:t[6],_zhTopic:'typo_'+t[5]};
+      }
+      if(slot === 1 && Z.synAnt && Z.synAnt.length){
+        const sa = Z.synAnt[(vIdx + Math.floor(vIdx/7)) % Z.synAnt.length];
+        const askAnt = (diff === 'hard' && vIdx % 2 === 1) || vIdx % 3 === 2;
+        const target = askAnt ? sa[2] : sa[1];
+        const otherWords = shuffle(Z.synAnt.filter(x=>x[0]!==sa[0]).map(x=>askAnt?x[2]:x[1])).slice(0,2);
+        return {
+          q: askAnt ? `語詞辨析：「${nq(sa[3])}」句中的「${sa[0]}」，下列哪一個是它的相反詞？` : `語詞替換：「${nq(sa[3])}」句中的「${sa[0]}」，可以替換成哪一個意思相近的詞語？`,
+          opts: uniqueOpts(target, [askAnt?sa[1]:sa[2], ...otherWords]),
+          a: target,
+          exp: `「${sa[0]}」的相似詞是「${sa[1]}」，相反詞是「${sa[2]}」。`,
+          _zhTopic: 'syn_'+sa[0]
+        };
+      }
+      if(slot === 2 && Z.confuse && Z.confuse.length){
+        const cf = Z.confuse[(vIdx + Math.floor(vIdx/7)) % Z.confuse.length];
+        const ansParts = cf.a.split('；');
+        const distOrders = [];
+        const C = cf.choices;
+        for(let k=0; k<32 && distOrders.length<3; k++){
+          const cand = ansParts.map((_,bi)=>C[(bi*(k+1)+Math.floor(k/C.length)+1+k)%C.length]).join('；');
+          if(cand !== cf.a && !distOrders.includes(cand)) distOrders.push(cand);
+        }
+        // 針對僅有 2 字選擇的 2 格題（如 在/再），確保補滿 3 個不同干擾組合
+        if(distOrders.length<3 && ansParts.length===2){
+          const extra = [`${C[1]}；${C[0]}`, `${C[0]}；${C[0]}`, `${C[1]}；${C[1]}`];
+          extra.forEach(c=>{ if(distOrders.length<3 && c!==cf.a && !distOrders.includes(c)) distOrders.push(c); });
+        }
+        return {q:`選字填空：「${cf.q}」空格中依序最適合填入哪一組字？`,opts:uniqueOpts(cf.a,distOrders.slice(0,3)),a:cf.a,exp:cf.exp,_zhTopic:'confuse_'+C.join('')};
+      }
+      if(slot === 3 && Z.poly && Z.poly.length){
+        const p = Z.poly[(vIdx + Math.floor(vIdx/7)) % Z.poly.length];
+        const useSecond = (vIdx % 2 === 1);
+        const sent = useSecond ? p.s2 : p.s1;
+        const word = useSecond ? p.w2 : p.w1;
+        const ansZy = useSecond ? p.zy2 : p.zy1;
+        const altZy = useSecond ? p.zy1 : p.zy2;
+        const otherZys = shuffle(Z.poly.filter(x=>x.ch!==p.ch).map(x=>x.zy1).filter(z=>z!==ansZy&&z!==altZy)).slice(0,2);
+        return {
+          q:`多音字判讀：「${sent}」句中「${word}」的「${p.ch}」字，正確讀音是什麼？`,
+          opts:uniqueOpts(ansZy,[altZy,...otherZys]),
+          a:ansZy,
+          exp:`「${p.w1}」讀作 ${p.zy1}；「${p.w2}」讀作 ${p.zy2}。`,
+          _zhTopic:'poly_'+p.ch
+        };
+      }
+      if(slot === 4 && Z.puncMc && Z.puncMc.length){
+        const pm = Z.puncMc[(vIdx + Math.floor(vIdx/7)) % Z.puncMc.length];
+        return {...pm, opts:pm.opts.slice(), _zhTopic:'punc_'+pm.q.slice(0,10)};
+      }
+      if(slot === 5 && Z.typos && Z.typos.length){
+        const t = Z.typos[(vIdx + 5 + Math.floor(vIdx/7)) % Z.typos.length];
+        const distW = shuffle(Z.typos.filter(x=>x[5]!==t[5]).map(x=>x[5])).slice(0,2);
+        return {q:`詞語改錯：「${t[1]}」裡的「${t[4]}」寫錯了，應該改成哪一個詞語？`,opts:uniqueOpts(t[5],[t[4],...distW]),a:t[5],exp:t[6],_zhTopic:'typo_'+t[5]};
+      }
+      // slot === 6: 課本 TW 生字應用或高年級成語情境
+      if(hasTW && (vIdx % 2 === 0 || +g <= 2)){
+        const others = shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
+        if(vIdx % 4 === 0 && rad){
+          const sameRad = pool.find(x=>x[0]!==ch&&x[3]===rad);
+          const diffRads = shuffle(pool.filter(x=>x[0]!==ch&&x[3]!==rad)).slice(0,3).map(x=>x[0]);
+          if(sameRad && diffRads.length>=3){
+            return {q:`${lsTag}下列哪一個國字和「${ch}」屬於相同部首（${rad}部）？`,opts:uniqueOpts(sameRad[0],diffRads),a:sameRad[0],exp:`「${ch}」與「${sameRad[0]}」皆屬${rad}部。`};
+          }
+        }
+        return {q:`${lsTag}課文重點字「${ch}」的正確讀音是哪一個？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}，屬${rad}部。`};
+      }
+      const idm = idioms[(vIdx + randSeed) % idioms.length];
+      const dist = shuffle(idioms.filter(x=>x[0]!==idm[0])).slice(0,3).map(x=>x[0]);
+      return {q:`成語情境應用：如果要形容「${idm[1]}」，最適合使用下列哪一個成語？`,opts:uniqueOpts(idm[0],dist),a:idm[0],exp:`「${idm[0]}」指${idm[1]}。`,_zhTopic:'idm_'+idm[0]};
+    }
+
+    if(kind === 'tf'){
+      const slot = vIdx % 5;
+      const isTrue = ((vIdx + randSeed) % 2 === 0);
+      if(slot === 0 && Z.typos && Z.typos.length){
+        const t = Z.typos[(vIdx + Math.floor(vIdx/5)) % Z.typos.length];
+        return {
+          q:`用字檢核：「${isTrue ? t[0] : t[1]}」這句話裡面完全沒有錯別字。`,
+          a:isTrue?'○':'✕',
+          exp:isTrue?`用字皆正確（「${t[5]}」無誤）。`:t[6],
+          _zhTopic:'typo_'+t[5]
+        };
+      }
+      if(slot === 1 && Z.synAnt && Z.synAnt.length){
+        const sa = Z.synAnt[(vIdx + Math.floor(vIdx/5)) % Z.synAnt.length];
+        const askSyn = (vIdx % 2 === 0);
+        const shown = isTrue ? (askSyn ? sa[1] : sa[2]) : (askSyn ? sa[2] : sa[1]);
+        return {
+          q:`詞義判斷：在「${nq(sa[3])}」裡，「${sa[0]}」和「${shown}」是一組意思${askSyn?'相近':'相反'}的詞語。`,
+          a:isTrue?'○':'✕',
+          exp:`「${sa[0]}」的相似詞是「${sa[1]}」，相反詞是「${sa[2]}」。`,
+          _zhTopic:'syn_'+sa[0]
+        };
+      }
+      if(slot === 2 && Z.poly && Z.poly.length){
+        const p = Z.poly[(vIdx + Math.floor(vIdx/5)) % Z.poly.length];
+        const claimSame = !isTrue;
+        return {
+          q:`多音字辨析：「${p.w1}（${p.s1}）」與「${p.w2}（${p.s2}）」中的「${p.ch}」，兩者讀音${claimSame?'完全相同':'不相同'}。`,
+          a:isTrue?'○':'✕',
+          exp:`「${p.w1}」讀作 ${p.zy1}，「${p.w2}」讀作 ${p.zy2}，讀音不同。`,
+          _zhTopic:'poly_'+p.ch
+        };
+      }
+      if(slot === 3 && Z.puncMc && Z.puncMc.length){
+        const idm = idioms[(vIdx + randSeed) % idioms.length];
+        const fakeMeaning = isTrue ? idm[1] : idioms[(vIdx + randSeed + 3) % idioms.length][1];
+        return {
+          q:`成語判別：成語「${idm[0]}」的意思是指「${fakeMeaning}」。`,
+          a:isTrue?'○':'✕',
+          exp:`「${idm[0]}」正確意思為：${idm[1]}。`,
+          _zhTopic:'idm_'+idm[0]
+        };
+      }
+      if(hasTW){
+        const fakeZy = isTrue ? zy : (c2 && c2[2] !== zy ? c2[2] : 'ㄅㄚ');
+        return {q:`${lsTag}課文生字「${ch}」的正確讀音是「${fakeZy}」。`,a:isTrue?'○':'✕',exp:`「${ch}」正確讀音為 ${zy}。`};
+      }
+    }
+
+    if(kind === 'fill'){
+      const slot = vIdx % 5;
+      if(slot === 0 && Z.ctxWrite && Z.ctxWrite.length){
+        const cw = Z.ctxWrite[(vIdx + Math.floor(vIdx/5)) % Z.ctxWrite.length];
+        return {q:cw.q, a:cw.a, _zhTopic:'ctx_'+cw.q.slice(6,16)};
+      }
+      if(slot === 1 && Z.confuse && Z.confuse.length){
+        const cf = Z.confuse[(vIdx + Math.floor(vIdx/5)) % Z.confuse.length];
+        return {q:`圈選正確用字（${cf.choices.join('、')}）：${cf.q}`, a:cf.a, exp:cf.exp, _zhTopic:'confuse_'+cf.choices.join('')};
+      }
+      if(slot === 2 && Z.typos && Z.typos.length){
+        const t = Z.typos[(vIdx + Math.floor(vIdx/5)) % Z.typos.length];
+        return {q:`先找錯字再改正：「${t[1]}」這句中的（　）是錯別字，應該改寫為（　）字。`, a:`${t[2]}；${t[3]}`, exp:t[6], _zhTopic:'typo_'+t[5]};
+      }
+      if(slot === 3){
+        if(vIdx % 2 === 0 && Z.synAnt && Z.synAnt.length){
+          const sa = Z.synAnt[(vIdx + Math.floor(vIdx/5)) % Z.synAnt.length];
+          return {q:`語詞替換：「${nq(sa[3])}」中的「${sa[0]}」，相似詞是（　　），相反詞是（　　）。`, a:`${sa[1]}；${sa[2]}`, _zhTopic:'syn_'+sa[0]};
+        }
+        if(Z.poly && Z.poly.length){
+          const p = Z.poly[(vIdx + Math.floor(vIdx/5)) % Z.poly.length];
+          return {q:`多音字辨音：「${nq(p.s1)}」的「${p.ch}」讀作（　　）；「${nq(p.s2)}」的「${p.ch}」讀作（　　）。`, a:`${p.zy1}；${p.zy2}`, _zhTopic:'poly_'+p.ch};
+        }
+      }
+      if(hasTW){
+        return {q:`${lsTag}寫出部首並造詞：國字「${ch}」屬於（　）部，可以造一個語詞（　　　）。`, a:`${rad}部；例：依「${ch}」字義造詞`};
+      }
+    }
+
+    if(kind === 'match'){
+      const slot = vIdx % 4;
+      if(slot === 0 && Z.synAnt && Z.synAnt.length >= 4){
+        const pick4 = [], seenR = new Set();
+        for(let i=0; i<Z.synAnt.length && pick4.length<4; i++){
+          const sa = Z.synAnt[(vIdx*3 + i) % Z.synAnt.length];
+          if(!seenR.has(sa[1])){ seenR.add(sa[1]); pick4.push([sa[0], sa[1]]); }
+        }
+        if(pick4.length===4) return {q:`相似詞連連看（將「${pick4[0][0]}」等四組意思相近的詞語配對）`, pairs:pick4, arch:'zh_match_syn'};
+      }
+      if(slot === 1 && Z.synAnt && Z.synAnt.length >= 4){
+        const pick4 = [], seenR = new Set();
+        for(let i=0; i<Z.synAnt.length && pick4.length<4; i++){
+          const sa = Z.synAnt[(vIdx*5 + i) % Z.synAnt.length];
+          if(!seenR.has(sa[2])){ seenR.add(sa[2]); pick4.push([sa[0], sa[2]]); }
+        }
+        if(pick4.length===4) return {q:`相反詞連連看（將「${pick4[0][0]}」等四組意思相反的詞語配對）`, pairs:pick4, arch:'zh_match_ant'};
+      }
+      if(slot === 2 && Z.poly && Z.poly.length >= 4){
+        const pick4 = [], seenR = new Set();
+        for(let i=0; i<Z.poly.length && pick4.length<4; i++){
+          const p = Z.poly[(vIdx*2 + i) % Z.poly.length];
+          const use2 = (i % 2 === 1);
+          const lbl = `「${use2?p.w2:p.w1}」的「${p.ch}」`, ans = use2?p.zy2:p.zy1;
+          if(!seenR.has(ans)){ seenR.add(ans); pick4.push([lbl, ans]); }
+        }
+        if(pick4.length===4) return {q:`多音字讀音配對（依「${pick4[0][0]}」等詞語選出正確注音）`, pairs:pick4, arch:'zh_match_poly'};
+      }
+      const idm4 = [];
+      for(let i=0; i<4; i++) idm4.push(idioms[(vIdx*3 + i) % idioms.length]);
+      return {q:`成語與意義配對（將「${idm4[0][0]}」等四個成語連到正確解釋）`, pairs:idm4.map(x=>[x[0], x[1]]), arch:'zh_match_idm'};
+    }
+
+    if(kind === 'calc'){
+      const slot = vIdx % 4;
+      if(slot === 0 && Z.typos && Z.typos.length){
+        const t = Z.typos[(vIdx + Math.floor(vIdx/4)) % Z.typos.length];
+        return {q:`改錯字並造句：「${nq(t[1])}」這句話裡面有一個錯別字，請先圈出錯字並寫出正確寫法，再用改正後的詞語造一個完整的句子。`, a:`錯字「${t[2]}」改為「${t[3]}」（${t[5]}）；造句依詞義作答。`, _zhTopic:'typo_'+t[5]};
+      }
+      if(slot === 1 && Z.calcTasks && Z.calcTasks.length){
+        const ct = Z.calcTasks[(vIdx + Math.floor(vIdx/4)) % Z.calcTasks.length];
+        return {...ct, _zhTopic:'calc_'+ct.q.slice(0,12)};
+      }
+      if(slot === 2 && Z.synAnt && Z.synAnt.length){
+        const sa = Z.synAnt[(vIdx + Math.floor(vIdx/4)) % Z.synAnt.length];
+        return {q:`詞語替換造句：請先寫出「${sa[0]}」的一個相似詞與相反詞，再運用「${sa[1]}」寫出一個新句子。`, a:`相似詞：${sa[1]}；相反詞：${sa[2]}；造句依詞義作答。`, _zhTopic:'syn_'+sa[0]};
+      }
+      if(hasTW){
+        return {q:`${lsTag}寫出部首並造詞：請寫出「${ch}」的部首、造一個語詞，並用這個語詞寫出一句完整通順的話。`, a:`${rad}部；依「${ch}」造詞並造句。`};
+      }
+    }
+
+    if(kind === 'word'){
+      const rPool = Z.reading || [];
+      const ctxCount = (Z.ctxWrite && Z.ctxWrite.length) || 0;
+      const secTotal = ctxCount + idioms.length;
+      if(rPool.length && vIdx % 3 !== 2){
+        const rIdx = (vIdx + Math.floor(vIdx / 3)) % rPool.length;
+        return {...rPool[rIdx], _zhTopic:'read_'+rIdx};
+      }
+      const k = Math.floor(vIdx / 3) % Math.max(1, secTotal);
+      if(Z.ctxWrite && k < ctxCount){
+        const cw = Z.ctxWrite[k];
+        const cleanStory = cw.q.replace(/^看注音寫國字：/, '').replace(/[˙]?[ㄅ-ㄩ]{1,3}[ˊˇˋ]?（　）/g, '').replace(/[（(]\s*[）)]/g, '');
+        const blanksAns = cw.a.split('；').join('');
+        const restored = cw.q.replace(/^看注音寫國字：/, '');
+        return {
+          q:`【短文情境閱讀】請讀這段文字：\n「${restored}」\n問題：(1) 請將文中的注音寫成正確國字。(2) 這段文字主要描寫什麼事情或情境？`,
+          a:`(1) ${cw.a}（完整詞語：${blanksAns}）。 (2) ${cleanStory.slice(0,22)}…等生活／故事情境。`,
+          _zhTopic:'ctxread_'+k
+        };
+      }
+      const idmIdx = (k - ctxCount) % idioms.length;
+      const idm = idioms[idmIdx];
+      return {
+        q:`【成語情境閱讀與應用】\n老師在閱讀課堂上舉例說明成語「${idm[0]}」，指出它的意思是指「${idm[1]}」。\n問題：(1) 與「${idm[0]}」意思相反的詞語是什麼？ (2) 請簡短寫出在什麼樣的情境下適合使用「${idm[0]}」？`,
+        a:`(1) ${idm[2]}。 (2) 當想形容「${idm[1]}」的情況時適用。`,
+        _zhTopic:'idmread_'+idm[0]
+      };
+    }
+  }
+
+  // Fallback（若無 PROC_BANK.zh 時維持基本安全保底）
+  if(!hasTW) return null;
+  if(kind==='mc'){
+    const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
+    return {q:`${lsTag}「${ch}」的正確讀音是哪一個？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}，${rad}部。`};
+  }
+  if(kind==='tf'){
+    const isTrue=Math.random()<0.5, wrong=c2?c2[2]:'ㄅㄚ', shown=isTrue?zy:wrong;
+    return {q:`${lsTag}國字「${ch}」的讀音是「${shown}」。`,a:isTrue?'○':'✕',exp:`正確讀音為 ${zy}。`};
+  }
+  if(kind==='fill') return {q:`${lsTag}寫出部首並造詞：國字「${ch}」是（　）部，語詞可寫作（　　　）。`,a:`${rad}部；依「${ch}」造詞`};
+  if(kind==='match'){
+    const idm4=shuffle(idioms).slice(0,4);
+    return {q:`${lsTag}成語與意義連連看`,pairs:idm4.map(x=>[x[0],x[1]])};
+  }
+  if(kind==='calc') return {q:`${lsTag}造詞與造句練習：請用「${ch}」造一個語詞，再寫出一個完整的句子。`,a:`例：使用「${ch}」造詞並完成通順句子。`};
+  return {q:`【${lsName||'生活'}短文寫作】請用「${ch}」和「${c2?c2[0]:'好'}」寫出兩句通順的話並加上標點符號。`,a:`包含「${ch}」且標點正確之兩句短文。`};
+}
+
 function genChineseDynamic(grade, kind, diff='mid', allowedUnits=null, strictUnit=false){
   if(!window.TW||!window.ZY_DATA)return null;
   const pool=[];
@@ -3243,88 +3529,8 @@ function genChineseDynamic(grade, kind, diff='mid', allowedUnits=null, strictUni
       });
     });
   }
-  if(pool.length<4)return null;
-  const item=pick(pool), ch=item[0], zy=item[2], rad=item[3], strokes=item[4];
-  const item2=pick(pool.filter(x=>x[0]!==ch));
-  const item3=pick(pool.filter(x=>x[0]!==ch&&x[0]!==item2[0]));
-  const item4=pick(pool.filter(x=>x[0]!==ch&&x[0]!==item2[0]&&x[0]!==item3[0]));
-  const idioms=[
-    ['一心一意','專心一意，沒有雜念','三心二意'],['鳥語花香','形容春天景色美好','寸草不生'],
-    ['守株待兔','比喻不知變通、妄想不勞而獲','腳踏實地'],['井底之蛙','比喻見識狹窄的人','見多識廣'],
-    ['畫蛇添足','比喻做了多餘的事反而壞事','恰到好處'],['半途而廢','做事情沒有堅持到底','持之以恆'],
-    ['雪中送炭','在別人急需時給予幫助','錦上添花'],['水落石出','比喻事情真相大白','撲朔迷離'],
-    ['亡羊補牢','事後及時補救還不算太晚','未雨綢繆'],['胸有成竹','做事之前已經有完整的把握','驚慌失措'],
-    ['掩耳盜鈴','比喻自己欺騙自己','實事求是'],['飲水思源','比喻不忘本、懂得感恩','忘恩負義'],
-    ['狐假虎威','借著別人的威勢欺壓他人','自食其力'],['愚公移山','比喻有恆心毅力不怕困難','知難而退'],
-    ['塞翁失馬','比喻一時的損失可能變成好處','禍不單行'],['一鳴驚人','平時默默無聞卻突然有驚人表現','默默無聞'],
-    ['鐵杵磨針','比喻只要有恆心終能成功','虎頭蛇尾'],['破釜沉舟','下定決心不留退路','猶豫不決'],
-    ['聞雞起舞','比喻及時奮發努力','苟且偷安'],['同心協力','大家團結一致共同努力','分道揚鑣'],
-    ['名落孫山','比喻考試或選拔沒有錄取','金榜題名'],['津津有味','形容吃得很有味道或趣味濃厚','索然無味'],
-    ['小心翼翼','形容舉動十分謹慎小心','粗心大意'],['恍然大悟','形容忽然完全明白過來','百思不解']
-  ];
-  if(kind==='fill'){
-    const r=Math.random();
-    if(diff==='hard'&&+grade>=3&&r<0.5){
-      const idm=pick(idioms);
-      return {q:`成語與相反詞應用：「${idm[1]}」可用成語「${idm[0][0]}（　）${idm[0][2]}${idm[0][3]}」，它的相反詞是「${idm[2]}」。`,a:idm[0][1]};
-    }
-    if(diff!=='easy'&&r<0.35&&rad&&item2[3]){
-      return {q:`部首與筆畫比較：「${ch}」是（　）部、共 ${strokes||''} 畫；「${item2[0]}」是（　）部。`,a:`${rad}；${item2[3]}`};
-    }
-    if(r<0.45) return {q:`寫出注音與總筆畫：「${ch}」讀作（　　），共（　）畫。`,a:`${zy}；${strokes||''}`};
-    if(r<0.75) return {q:`看注音寫國字與部首：「${zy}」（　），屬於（　）部。`,a:`${ch}；${rad||''}`};
-    return {q:`寫出正確注音：「${ch}」（　　）、「${item2[0]}」（　　）。`,a:`${zy}；${item2[2]}`};
-  }
-  if(kind==='mc'){
-    if(diff==='hard'&&+grade>=3&&Math.random()<0.45){
-      const idm=pick(idioms), dist=shuffle(idioms.filter(x=>x[0]!==idm[0])).slice(0,3).map(x=>x[0]);
-      return {q:`哪一個成語的意思是「${idm[1]}」？`,opts:uniqueOpts(idm[0],dist),a:idm[0],exp:`「${idm[0]}」指${idm[1]}。`};
-    }
-    if(diff!=='easy'&&Math.random()<0.35&&rad){
-      const sameR=pool.find(x=>x[0]!==ch&&x[3]===rad);
-      const diffR=shuffle(pool.filter(x=>x[0]!==ch&&x[3]!==rad)).slice(0,3).map(x=>x[0]);
-      if(sameR&&diffR.length>=3) return {q:`下列哪一個國字和「${ch}」屬於相同的部首（${rad}部）？`,opts:uniqueOpts(sameR[0],diffR),a:sameR[0],exp:`「${ch}」與「${sameR[0]}」皆屬${rad}部。`};
-    }
-    if(Math.random()<0.38&&rad){
-      const rDist=shuffle([...new Set(pool.map(x=>x[3]).filter(x=>x&&x!==rad))]).slice(0,3);
-      if(rDist.length>=3) return {q:`國字「${ch}」的部首是哪一個？`,opts:uniqueOpts(`${rad}部`,rDist.map(x=>`${x}部`)),a:`${rad}部`,exp:`「${ch}」屬${rad}部，讀作 ${zy}。`};
-    }
-    const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
-    return {q:`「${ch}」的正確讀音是哪一個？`,opts:uniqueOpts(zy,others),a:zy,exp:`「${ch}」讀作 ${zy}${rad?`，${rad}部`:''}。`};
-  }
-  if(kind==='tf'){
-    const isTrue=Math.random()<0.5;
-    if(Math.random()<0.45&&rad&&strokes){
-      const fakeS=isTrue?strokes:(+strokes+pick([1,-1,2]));
-      return {q:`國字「${ch}」屬於「${rad}部」，總筆畫共 ${fakeS} 畫。`,a:isTrue?'○':'✕',exp:`「${ch}」為${rad}部，共 ${strokes} 畫。`};
-    }
-    const wrong=pick(pool.filter(x=>x[2]!==zy))[2];
-    const shown=isTrue?zy:wrong;
-    return {q:`國字「${ch}」的讀音是「${shown}」。`,a:isTrue?'○':'✕',exp:`正確讀音為 ${zy}。`};
-  }
-  if(kind==='match'){
-    const pairs=[[ `「${ch}」的注音`, zy ],[ `「${item2[0]}」的部首`, `${item2[3]||'口'}部` ],[ `「${item3[0]}」的注音`, item3[2] ],[ `「${item4[0]}」的總筆畫`, `${item4[4]||8} 畫` ]];
-    return {q:'國字字音與部首筆畫配對',pairs};
-  }
-  if(kind==='calc'){
-    const tmpls=[
-      {q:`一字多詞寫作：請用國字「${ch}」（${zy}）造出兩個不同的完整語詞。`,a:`例：依「${ch}」字義寫出兩個正確語詞。`},
-      {q:`造詞與造句練習：請先用「${ch}」（${zy}）造一個語詞，再用該語詞寫出一個完整句子。`,a:`例：使用「${ch}」造詞並完成通順句子。`},
-      {q:`字形結構解析：請寫出「${ch}」的部首與去掉部首後的剩餘筆畫數，並造一個語詞。`,a:`部首：${rad||''}部；總筆畫 ${strokes||''} 畫；語詞依字義作答。`},
-      {q:`雙字聯想造句：請同時將「${ch}（${zy}）」與「${item2[0]}（${item2[2]}）」這兩個字各造一個詞，並串成一句話。`,a:`例：同時運用「${ch}」與「${item2[0]}」完成通順句子。`},
-      {q:`語詞接力擴寫：請用「${ch}」寫出一個四字語詞或短語（例如形容動作或景物）。`,a:`例：包含「${ch}」的四字語詞或短語。`}
-    ];
-    return pick(tmpls);
-  }
-  if(kind==='word'){
-    const tmpls=[
-      {q:`【字詞整合應用】請觀察「${ch}（${zy}）」、「${item2[0]}（${item2[2]}）」和「${item3[0]}（${item3[2]}）」三個字：\n(1) 哪一個字的總筆畫最多？共幾畫？\n(2) 請任選一個字造詞並寫出一句完整的話。`,a:`(1) 比較三字筆畫數：${ch}(${strokes}畫)、${item2[0]}(${item2[4]}畫)、${item3[0]}(${item3[4]}畫)。(2) 依選字造詞造句。`},
-      {q:`【短文寫作任務】小晴在日記裡寫到「${ch}」和「${item2[0]}」兩個字。請你幫她用這兩個字設計一段兩句話以上的生活小短文，並加上正確標點符號。`,a:`例：包含「${ch}」與「${item2[0]}」且標點正確之兩句短文。`},
-      {q:`【語文素養挑戰】比較「${ch}（${rad}部）」與「${item2[0]}（${item2[3]}部）」兩個字的字義關聯，並寫出「${ch}」在不同語詞中的讀音或意思。`,a:`說明部首與字義關聯，並寫出正確語詞應用。`}
-    ];
-    return pick(tmpls);
-  }
-  return null;
+  const vIdx = (_zhRichRoll++) + randSeed;
+  return genChineseRichQuestion(grade, kind, diff, vIdx, pool, '');
 }
 
 
@@ -3559,7 +3765,8 @@ function inferTopicKeys(item, subj){
     if(re.test(full)) keys.push(name);
   }
   if(subj==='國語'){
-    // 擷取題目鎖定之目標單字或成語，確保同一國字或成語絕不在整份考卷重複出現
+    // 擷取題目鎖定之目標單字、成語或專屬題組標籤，確保同一目標絕不在整份考卷重複出現
+    if(item._zhTopic) keys.push('zh_item_' + item._zhTopic);
     const qm=[...String(item.q||'').matchAll(/「([^」]{1,4})」/g)].map(m=>m[1]);
     qm.forEach(w=>{if(w.length===1||w.length===4)keys.push('zh_target_'+w);});
   }
@@ -3644,13 +3851,16 @@ function inferArchetypeKeys(item, subj, kindKey=''){
     if(/加\s*0|減\s*0|放進\s*0\s*顆/.test(q)) keys.push('arch_concept_zero');
     if(/比大小.*＞.*＜|填\s*＞、＜/.test(q)) keys.push('arch_concept_cmp_sym');
   } else if(subj === '國語'){
+    // 嚴格壓低純筆畫／純部首／孤立單字注音題數量，確保多元改錯字、相似相反詞、形近字與語意理解為主體
+    if(/總筆畫|多少畫|筆畫比較/.test(q)) keys.push('arch_zh_pure_stroke');
+    if(/的部首是哪一個|屬於相同部首|屬於相同的部首|部首「[^」]+」配對/.test(q)) keys.push('arch_zh_pure_radical');
+    if(/寫出部首並造詞|部首與造詞|部首延伸想一想/.test(q)) keys.push('arch_zh_rad_word_' + kindKey);
+    if((/正確讀音|正確注音|注音是哪一個|對應的正確國字|注音雙拼/.test(q)) && !/多音字/.test(q)) keys.push('arch_zh_iso_zy_' + kindKey);
+    if(/寫出注音與總筆畫|看注音寫國字與部首/.test(q)) keys.push('arch_zh_rote_fill');
     if(/量詞/.test(full)) keys.push('arch_zh_measure_word');
-    if(/相反詞|反義詞/.test(full)) keys.push('arch_zh_antonym');
-    if(/相似詞|近義詞/.test(full)) keys.push('arch_zh_synonym');
     if(/疊字/.test(full)) keys.push('arch_zh_redup');
-    if(/錯別字|改為/.test(full)) keys.push('arch_zh_typo');
     if(/組合成語|四字成語/.test(q)) keys.push('arch_zh_idiom_' + kindKey);
-    if(/部首/.test(q) && kindKey !== 'calc') keys.push('arch_zh_radical_' + kindKey);
+    if(/部首/.test(q) && kindKey !== 'calc' && !/寫出部首並造詞/.test(q)) keys.push('arch_zh_radical_' + kindKey);
   }
   return [...new Set(keys)];
 }
@@ -3758,7 +3968,7 @@ function matchesUnitTopics(item, subj, g, sem, unitIndices, allUnitsCount){
     if(item.sem && item.sem !== sem) return false;
     return unitIndices.includes(+item.u);
   }
-  if(subj==='國語') return false; // 國語勾選特定單課時，100% 由該課生字與課文動態出題，不混入全冊通用靜態題
+  if(subj==='國語') return true; // 國語靜態題庫已依低／中／高年級分級設計（改錯字、相似相反詞、修辭標點、閱讀素養），各課複習與期中期末皆可自然融合出題
   const q = String(item.q||'') + ' ' + String(item.a||'') + ' ' + String(item.exp||'') + ' ' + (item.pairs ? item.pairs.flat().join(' ') : '');
   const UNIT_KW = {
     '生活_1_上_0': /上課|鐘聲|校園|教室|禮貌|走廊|樓梯|同學|朋友|打招呼|課堂|規矩/,
@@ -3850,7 +4060,7 @@ function matchesUnitTopics(item, subj, g, sem, unitIndices, allUnitsCount){
 function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allowedUnits){
   const isTrue = (vIdx + randSeed) % 2 === 0;
   if(subj==='國語'){
-    // 100% 從勾選課次之生字池抽題，並支援所有 6 種題型（含多版型短語造句與閱讀理解）
+    // 結合勾選課次生字池（適度融入寫出部首並造詞、生字語境應用）與多元語文素養題型（改錯字、相似相反詞、形近同音、情境短文、標點修辭、故事閱讀）
     const pool=[];
     if(window.TW){
       Object.values(TW).forEach(pubObj=>{
@@ -3860,92 +4070,10 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
         });
       });
     }
-    if(pool.length>=4){
-      const nP = pool.length;
-      const c1=pool[(vIdx+randSeed)%nP];
-      const c2=pool[(vIdx+1+randSeed)%nP];
-      const c3=pool[(vIdx+2+randSeed)%nP];
-      const c4=pool[(vIdx+3+randSeed)%nP];
-      const ch=c1[0], zy=c1[2], rad=c1[3]||'口', st=c1[4]||8, lsName=c1.lesson||'本課';
-      const isR = c1[1]==='r';
-      const kindTag = isR ? '認讀' : '生字';
-      if(kindKey==='mc'){
-        const mMod = vIdx % 6;
-        if(mMod===0){
-          const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
-          return {q:`（${lsName}）「${ch}」這個${kindTag}字的正確注音是哪一個？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}，屬${rad}部。`};
-        }
-        if(mMod===1){
-          const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[0]);
-          return {q:`（${lsName}）注音「${zy}」在課文裡對應的正確國字是哪一個？`,opts:uniqueOpts(ch,others.length>=3?others:['天','地','人']),a:ch,exp:`${zy} 寫作「${ch}」（${rad}部）。`};
-        }
-        if(mMod===2){
-          const rDist=shuffle([...new Set(pool.map(x=>x[3]).filter(x=>x&&x!==rad)),'水','木','手','心']).slice(0,3);
-          return {q:`（${lsName}）國字「${ch}」的部首是哪一個？`,opts:uniqueOpts(`${rad}部`,rDist.map(x=>`${x}部`)),a:`${rad}部`,exp:`「${ch}」屬${rad}部，共 ${st} 畫。`};
-        }
-        if(mMod===3){
-          return {q:`（${lsName}）國字「${ch}」的總筆畫數是多少畫？`,opts:uniqueOpts(`${st} 畫`,[`${+st+1} 畫`,`${Math.max(1,+st-1)} 畫`,`${+st+2} 畫`]),a:`${st} 畫`,exp:`「${ch}」共 ${st} 畫。`};
-        }
-        if(mMod===4){
-          const sameRad = pool.find(x=>x[0]!==ch&&x[3]===rad);
-          const diffRads = shuffle(pool.filter(x=>x[0]!==ch&&x[3]!==rad)).slice(0,3).map(x=>x[0]);
-          if(sameRad && diffRads.length>=3){
-            return {q:`（${lsName}）下列哪一個字和「${ch}」屬於相同部首（${rad}部）？`,opts:uniqueOpts(sameRad[0],diffRads),a:sameRad[0],exp:`「${ch}」與「${sameRad[0]}」皆為${rad}部。`};
-          }
-        }
-        const others=shuffle(pool.filter(x=>x[0]!==ch&&x[2]!==zy)).slice(0,3).map(x=>x[2]);
-        return {q:`（${lsName}）詞句中的「${ch}」正確讀音為何？`,opts:uniqueOpts(zy,others.length>=3?others:['ㄅㄚ','ㄇㄚ','ㄉㄚ']),a:zy,exp:`「${ch}」讀作 ${zy}。`};
-      }
-      if(kindKey==='tf'){
-        const tMod = vIdx % 4;
-        if(tMod===0){
-          const fakeZy=isTrue?zy:c2[2];
-          return {q:`（${lsName}）國字「${ch}」的正確讀音是「${fakeZy}」。`,a:isTrue?'○':'✕',exp:`「${ch}」正確讀音為 ${zy}。`};
-        }
-        if(tMod===1){
-          const fakeRad=isTrue?rad:(c2[3]!==rad?c2[3]:'言');
-          return {q:`（${lsName}）檢查字形：「${ch}」和部首「${fakeRad}部」配對正確。`,a:isTrue?'○':'✕',exp:`「${ch}」屬於${rad}部。`};
-        }
-        if(tMod===2){
-          const bigger = (+c1[4]||8) > (+c2[4]||8);
-          const claim = isTrue ? bigger : !bigger;
-          return {q:`（${lsName}）筆畫比較：「${ch}」的總筆畫數比「${c2[0]}」還要多（若同畫數請判錯）。`,a:(+c1[4]===+c2[4]?(isTrue?'✕':'✕'):(claim?'○':'✕')),exp:`「${ch}」共 ${st} 畫，「${c2[0]}」共 ${c2[4]||8} 畫。`};
-        }
-        const fakeSt=isTrue?st:(+st+2);
-        return {q:`（${lsName}）國字「${ch}」屬於「${rad}部」，總筆畫共 ${fakeSt} 畫。`,a:isTrue?'○':'✕',exp:`「${ch}」屬${rad}部，共 ${st} 畫。`};
-      }
-      if(kindKey==='fill'){
-        const fMod = vIdx % 4;
-        if(fMod===0) return {q:`（${lsName}）寫出國字注音與總筆畫：「${ch}」讀作（　　），共（　）畫。`,a:`${zy}；${st}`};
-        if(fMod===1) return {q:`（${lsName}）看注音寫國字與部首：「${zy}」寫作（　），是（　）部。`,a:`${ch}；${rad}`};
-        if(fMod===2) return {q:`（${lsName}）生字結構練習：「${ch}」是（　）部，扣掉部首後還可以配對「${c2[0]}」（　）部一起記憶。`,a:`${rad}；${c2[3]||'口'}`};
-        return {q:`（${lsName}）${kindTag}字注音雙拼：「${c1[0]}」（　　）、「${c2[0]}」（　　）。`,a:`${c1[2]}；${c2[2]}`};
-      }
-      if(kindKey==='match'){
-        const mMod = vIdx % 3;
-        const mTitles = [`${lsName}生字與認讀字綜合配對`,`${lsName}字音部首與筆畫配對`,`${lsName}課文重點字形配對`];
-        return {q:mTitles[mMod],pairs:[
-          [`「${c1[0]}」的注音`,c1[2]],
-          [`「${c2[0]}」的部首`,`${c2[3]||'口'}部`],
-          [`「${c3[0]}」的注音`,c3[2]],
-          [`「${c4[0]}」的總筆畫`,`${c4[4]||8} 畫`]
-        ]};
-      }
-      if(kindKey==='calc'){
-        const cMod = vIdx % 5;
-        if(cMod===0) return {q:`（${lsName}）一字多詞練習：請用「${ch}」（${zy}）造出兩個不同的完整語詞。`,a:`例：依「${ch}」字義寫出兩個正確語詞。`};
-        if(cMod===1) return {q:`（${lsName}）造詞與造句練習：請用本課字「${ch}」（${zy}）先造一個語詞，再寫出一個完整的句子。`,a:`例：使用「${ch}」造詞並完成通順句子。`};
-        if(cMod===2) return {q:`（${lsName}）部首延伸想一想：「${ch}」是「${rad}部」，請用「${ch}」造一個詞，並另外寫出一個相同部首的字。`,a:`部首 ${rad}部；依「${ch}」造詞並舉同部首字。`};
-        if(cMod===3) return {q:`（${lsName}）雙字聯想句型：請將「${ch}（${zy}）」和「${c2[0]}（${c2[2]}）」兩個字各造一個語詞，並寫進同一句話裡。`,a:`同時活用「${ch}」與「${c2[0]}」寫出完整通順句子。`};
-        return {q:`（${lsName}）短語擴寫任務：請替語詞「${ch}」加上形容詞或動作詞，寫成一個四字以上的生動短語。`,a:`例：依「${ch}」語意完成四字以上短語。`};
-      }
-      if(kindKey==='word'){
-        const wMod = vIdx % 3;
-        if(wMod===0) return {q:`【${lsName}字詞應用】在〈${lsName}〉中我們學到「${c1[0]}（${c1[2]}）」、「${c2[0]}（${c2[2]}）」和「${c3[0]}（${c3[2]}）」。問題：(1)「${c1[0]}」是什麼部首、共幾畫？ (2)請挑選其中一個字寫出語詞並造句。`,a:`(1) ${rad}部，共 ${st} 畫。(2) 依該字造詞與完整句子。`};
-        if(wMod===1) return {q:`【${lsName}課文短文寫作】小晴想用〈${lsName}〉學到的「${ch}」和「${c2[0]}」寫生活日記。請你幫她寫出兩句通順的句子，並正確使用逗號和句號。`,a:`包含「${ch}」與「${c2[0]}」且標點正確之兩句短文。`};
-        return {q:`【${lsName}字義理解】比較〈${lsName}〉的「${ch}（${rad}部）」與「${c3[0]}（${c3[3]||'口'}部）」：哪一個字的筆畫比較多？多幾畫？並用它造一個完整的句子。`,a:`${ch}（${st}畫）與 ${c3[0]}（${c3[4]||8}畫）相減得差值，並依字義造句。`};
-      }
-    }
+    const lsName = (allowedUnits && allowedUnits.length)
+      ? allowedUnits[(vIdx + randSeed) % allowedUnits.length]
+      : (pool[0] && pool[0].lesson ? pool[0].lesson : '本課');
+    return genChineseRichQuestion(g, kindKey, effD, vIdx, pool, lsName);
   }
 
   // 英語科依勾選 Unit 精準抽題
@@ -4085,6 +4213,22 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
   return attachMatchingSvg(item, subj, g);
 }
 
+function getExamSectionTitle(subj, kind){
+  const map = {
+    '國語': { mc:'選擇題', tf:'是非題', fill:'字音字形與填空', match:'連連看', calc:'改錯、短語與造句', word:'閱讀測驗' },
+    '數學': { mc:'選擇題', tf:'是非題', fill:'填填看', match:'連連看', calc:'算算看（計算題）', word:'應用題' },
+    '英語': { mc:'選擇題（Choice）', tf:'是非題（True or False）', fill:'字彙填空（Fill in the Blanks）', match:'圖文配對（Matching）', calc:'句子書寫（Writing）', word:'閱讀測驗（Reading）' }
+  };
+  const def = { mc:'選擇題', tf:'是非題', fill:'填填看', match:'連連看', calc:'分類與問答練習', word:'素養閱讀測驗' };
+  return (map[subj] && map[subj][kind]) || def[kind] || kind;
+}
+
+function normSubNums(s){
+  return String(s||'')
+    .replace(/(問題[:：]\s*|\n)(\d+)\.\s+/g, '$1($2) ')
+    .replace(/\s+(\d+)\.\s+(?=[^\n]*[？?])/g, ' ($1) ');
+}
+
 function normalizeTemplateSig(q){
   if(!q)return '';
   return String(q)
@@ -4201,11 +4345,15 @@ function generateExamQuestions(cfg){
             if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true) && !hasArchetypeConflict(cand, kindKey, true)){item=cand;break;}
           }
         }
-        // 第三輪：跨題型多變化數學題庫 genMathVariety（完整掃描 96 個題型槽位＋單元過濾＋零重複題型原型＆版型）
+        // 第三輪：跨題型多變化數學題庫 genMathVariety（先試指定難度，未足再補掃各難度共 288 槽位，嚴格鎖定單元過濾與零重複原型）
         if(!item){
-          for(let k=0;k<96;k++){
-            const cand=genMathVariety(g,cfg.sem,effD,kindKey,k+i+randSeed);
-            if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true) && !hasArchetypeConflict(cand, kindKey, true)){item=cand;break;}
+          const dOrders=[effD,...['easy','mid','hard'].filter(x=>x!==effD)];
+          for(const dTry of dOrders){
+            if(item) break;
+            for(let k=0;k<96;k++){
+              const cand=genMathVariety(g,cfg.sem,dTry,kindKey,k+i+randSeed);
+              if(cand && isMathItemAllowedForUnits(cand, g, cfg.sem, uIdxs) && !isGlobalDup(cand,true) && !hasArchetypeConflict(cand, kindKey, true)){item=cand;break;}
+            }
           }
         }
         // 第四輪：補足掃描 genMathUnitSynth / genMathVariety / genMathForUnit / 靜態出版社庫（嚴格鎖定：單元合格＋跨張不重版型 checkSig＋單張零重複 SVG 圖形原型！）
@@ -4331,12 +4479,12 @@ function generateExamQuestions(cfg){
     if(qs.length)sections.push({kind:kindKey,title,qs});
   };
 
-  pullBank('mc', cfg.nMc, '選出正確的答案');
-  pullBank('tf', cfg.nTf, '對的畫 ○，錯的打 ✕');
-  pullBank('fill', cfg.nFill, '填填看／做做看');
-  pullBank('match', cfg.nMatch, '連連看／看圖配對');
-  pullBank('calc', cfg.nCalc, subj==='數學'?'計算題':'實作與寫作練習');
-  pullBank('word', cfg.nWord, subj==='數學'?'素養養成題／生活應用':'閱讀理解與應用');
+  pullBank('mc', cfg.nMc, getExamSectionTitle(subj,'mc'));
+  pullBank('tf', cfg.nTf, getExamSectionTitle(subj,'tf'));
+  pullBank('fill', cfg.nFill, getExamSectionTitle(subj,'fill'));
+  pullBank('match', cfg.nMatch, getExamSectionTitle(subj,'match'));
+  pullBank('calc', cfg.nCalc, getExamSectionTitle(subj,'calc'));
+  pullBank('word', cfg.nWord, getExamSectionTitle(subj,'word'));
 
   assignScores(sections);
   const CN=['一','二','三','四','五','六'];
@@ -4536,7 +4684,7 @@ function renderExam(){
     const brk=zhMode?'︵　　︶':'(　　)';
     const noRaw=zhMode?`<span class="tcy">${b.num}.</span>`:`${b.num}.`;
     const noText=(kind==='mc'||kind==='tf')?`${noRaw} ${brk}`:noRaw;
-    const rawQ = String(q.q || '').trimEnd();
+    const rawQ = normSubNums(String(q.q || '').trimEnd());
     const ptsTag = `<span class="qpts">（${q.pts}分）</span>`;
     // 防止括弧與配分標籤（5分）單獨掉落換行：將最後一詞（含括弧＋句尾標點）與配分緊密黏合
     const glueTailMatch = rawQ.match(/^(.*?)((?:[^\s\n])?[（(][\s　]*[）)][？。！：.,!?]?|[^\s\n]{1,2}[？。！：.,!?]?)$/);
@@ -4557,7 +4705,7 @@ function renderExam(){
     if(kind==='mc'){
       body+=`<div class="qopts">${q.opts.map((o,i)=>`<span>${optLabels[i]} ${rubyHtml(o)}</span>`).join('')}</div>`;
     }else if(kind==='match'){
-      const rows=q.pairs.map((p,i)=>`<div><b>${i+1}.</b> <span class="h-blank">（　　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
+      const rows=q.pairs.map((p,i)=>`<div><b>(${i+1})</b> <span class="h-blank">（　　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
       body+=`<div class="ex-match">${rows}</div>`;
     }else if(kind==='calc'||kind==='word'){
       body+=`<div class="qbox ${kind}"></div>`;
@@ -4622,12 +4770,12 @@ function renderExam(){
       const indentH=headCells.reduce((a,c)=>a+c.h,0);
 
       if(kind==='match'){
-        const stemCells=[...headCells,...tokenizeZhCells(q.q,useZy,mainX),gCellScore(q.pts,mainX)];
+        const stemCells=[...headCells,...tokenizeZhCells(normSubNums(q.q),useZy,mainX),gCellScore(q.pts,mainX)];
         const allCols=[...packCols(stemCells,indentH)];
         q.pairs.forEach((pr,i)=>{
           const pCells=[
             gCellSpace(12),
-            gCellLabel(`${i+1}.`,true,'#111',14,mainX),
+            gCellLabel(`(${i+1})`,true,'#111',13.5,mainX),
             gCellBlank(50,mainX),
             ...tokenizeZhCells(pr[0],useZy,mainX),
             gCellSpace(14),
@@ -4644,7 +4792,7 @@ function renderExam(){
         return {el:wrap, colCount:allCols.length};
       }
 
-      const bodyCells=[...headCells,...tokenizeZhCells(q.q,useZy,mainX),gCellScore(q.pts,mainX)];
+      const bodyCells=[...headCells,...tokenizeZhCells(normSubNums(q.q),useZy,mainX),gCellScore(q.pts,mainX)];
       const qCols=packCols(bodyCells, indentH);
 
       if(kind==='mc'){
@@ -4689,9 +4837,10 @@ function renderExam(){
     const mwOuter=document.createElement('div');mwOuter.className='ex-zh-tiers';
     const mw=document.createElement('div');mw.className='ex-zh-tier';
     mw.style.setProperty('--ex-fs',zhFs+'px');
+    const zhGrade=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
     const hdM=document.createElement('div');hdM.className='ex-zh-hd';
-    hdM.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期 國語評量卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
-      <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　</span></div>`);
+    hdM.innerHTML=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
+      <div class="ex-zh-info"><span>班級：（）年（）班</span><span>座號：（）</span><span>姓名：（）</span><span>得分：（）</span></div>`);
     mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
     maxW=mw.clientWidth-26;
     const hdW=hdM.getBoundingClientRect().width+16;
@@ -4765,9 +4914,10 @@ function renderExam(){
           }
         }
         if(isFirstTop){
+          const zhGradeTop=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
           const hd=document.createElement('div');hd.className='ex-zh-hd';
-          hd.innerHTML=zhFormat(`<div><h3>國小${meta.grade}年級${meta.sem}學期 國語評量卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
-            <div class="ex-zh-info"><span>班級：　</span><span>姓名：　　</span><span>座號：　</span><span>得分：　</span></div>`);
+          hd.innerHTML=zhFormat(`<div><h3>國小${zhGradeTop}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
+            <div class="ex-zh-info"><span>班級：（）年（）班</span><span>座號：（）</span><span>姓名：（）</span><span>得分：（）</span></div>`);
           tierEl.appendChild(hd);
         }
         items.forEach(b=>{
@@ -4803,9 +4953,9 @@ function renderExam(){
       mw.style.setProperty('--ex-box-calc',candD.calcH+'px');
       mw.style.setProperty('--ex-box-word',candD.wordH+'px');
       const hdM=document.createElement('div');hdM.className='ex-hd';
-      hdM.innerHTML=`<h3>國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}評量測驗卷（總分 100 分）</h3>
+      hdM.innerHTML=`<h3>國小 ${meta.grade} 年級${meta.sem}學期　${meta.subject}評量試卷（總分 100 分）</h3>
         <div class="ex-sub">版本：${pubName}　｜　難度：${diffName}　｜　範圍：${unitsText}</div>
-        <div class="ex-info"><span>班級：________</span><span>姓名：____________</span><span>座號：____</span><span>得分：________</span></div>`;
+        <div class="ex-info"><span>班級：____年____班</span><span>座號：____</span><span>姓名：__________</span><span>得分：________</span></div>`;
       mw.appendChild(hdM);
       const colM=document.createElement('div');
       colM.style.width=twoCol?'350px':'734px';
@@ -4987,7 +5137,7 @@ function renderExam(){
         sec.qs.forEach((q,i)=>{
           let ans=q.a;
           if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);ans=`${['①','②','③','④'][ix]} ${q.a}`;}
-          else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`${j+1}→${L[q.right.indexOf(p[1])]}`).join('、');}
+          else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`(${j+1})→${L[q.right.indexOf(p[1])]}`).join('、');}
           ans=String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2)');
           const col=document.createElement('div');
           col.style.cssText='writing-mode:vertical-rl;text-orientation:upright;height:100%;margin:0 4px;line-height:1.55;font-size:13.5px;flex:none';
@@ -5059,7 +5209,7 @@ function renderExam(){
           const d=document.createElement('div');d.className='ex-ans';
           let ans=q.a;
           if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);const L=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];ans=`${L[ix]} ${q.a}`;}
-          else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`${j+1}→${L[q.right.indexOf(p[1])]}`).join(' ');}
+          else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`(${j+1})→${L[q.right.indexOf(p[1])]}`).join(' ');}
           ans=String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2) ');
           d.innerHTML=`<b>${i+1}.</b> ${esc(ans)}${q.exp?` <span class="hint">（${esc(q.exp)}）</span>`:''}`;
           grid.appendChild(d);
@@ -5346,12 +5496,12 @@ async function exportExamXlsx(){
     Object.assign(wt.getCell(tr,1),{value:sec.heading,font:{name:'Noto Sans TC',size:11,bold:true,color:{argb:'FF7A3B00'}},fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF3DF'}}});
     wt.getRow(tr).height=20; tr++;
     sec.qs.forEach((q,i)=>{
-      let qTxt=q.q;
+      let qTxt=normSubNums(q.q);
       if(sec.kind==='mc'){const L=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];qTxt+='　'+q.opts.map((o,k)=>`${L[k]} ${o}`).join('　');}
       else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';qTxt+='　'+q.pairs.map((p,k)=>`(${k+1})${p[0]} / ${L[k]}.${q.right[k]}`).join('；');}
       let ans=q.a;
       if(sec.kind==='mc'){const ix=q.opts.indexOf(q.a);const L=meta.subject==='英語'?['(A)','(B)','(C)','(D)']:['①','②','③','④'];ans=`${L[ix]} ${q.a}`;}
-      else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`${j+1}→${L[q.right.indexOf(p[1])]}`).join('、');}
+      else if(sec.kind==='match'){const L='ㄅㄆㄇㄈㄉㄊㄋㄌ';ans=q.pairs.map((p,j)=>`(${j+1})→${L[q.right.indexOf(p[1])]}`).join('、');}
       wt.getCell(tr,1).value=`第 ${i+1} 題`; wt.getCell(tr,1).font={name:'Noto Sans TC',size:10,bold:true};
       wt.getCell(tr,2).value=qTxt; wt.getCell(tr,2).font={name:'Noto Sans TC',size:10}; wt.getCell(tr,2).alignment={wrapText:true,vertical:'top'};
       wt.getCell(tr,3).value=String(ans)+(q.exp?`（${q.exp}）`:''); wt.getCell(tr,3).font={name:'Noto Sans TC',size:10}; wt.getCell(tr,3).alignment={wrapText:true,vertical:'top'};
@@ -5421,10 +5571,12 @@ function clampInput(id){
 function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   if(!curExam) return;
   const KIND_TITLES={
-    mc:'選出正確的答案', tf:'對的畫 ○，錯的打 ✕', fill:'填填看／做做看',
-    match:'連連看／看圖配對',
-    calc: baseCfg.subject==='數學'?'計算題':'實作與寫作練習',
-    word: baseCfg.subject==='數學'?'素養養成題／生活應用':'閱讀理解與應用'
+    mc: getExamSectionTitle(baseCfg.subject,'mc'),
+    tf: getExamSectionTitle(baseCfg.subject,'tf'),
+    fill: getExamSectionTitle(baseCfg.subject,'fill'),
+    match: getExamSectionTitle(baseCfg.subject,'match'),
+    calc: getExamSectionTitle(baseCfg.subject,'calc'),
+    word: getExamSectionTitle(baseCfg.subject,'word')
   };
   const CN=['一','二','三','四','五','六'];
   const refreshHeadings=()=>{
@@ -6489,17 +6641,19 @@ function buildBatchAnswerPagesA4(records, order, wmText){
   };
 
   const renderSecDiv = (rec, sec)=>{
-    let qNumStart = 1;
-    for(const s of rec.sections){ if(s===sec)break; qNumStart += s.qs.length; }
+    const CN=['一','二','三','四','五','六'];
+    const secIdx = rec.sections.indexOf(sec);
+    const secPrefix = secIdx >= 0 && CN[secIdx] ? `${CN[secIdx]}、` : '';
     const items = sec.qs.map((q,qi)=>{
       let ans = q.a;
       if(sec.kind==='mc'){ const ix=q.opts.indexOf(q.a); ans = `${optMap[ix]||''} ${q.a}`; }
-      else if(sec.kind==='match'){ ans = q.pairs.map((pr,j)=>`${j+1}→${matchL[q.right.indexOf(pr[1])]}`).join('/'); }
-      return `<b>${qNumStart+qi}.</b>${esc(ans)}`;
+      else if(sec.kind==='match'){ ans = q.pairs.map((pr,j)=>`(${j+1})→${matchL[q.right.indexOf(pr[1])]}`).join('/'); }
+      ans = String(ans).replace(/(^|\s)(\d+)\.\s/g,'$1($2) ');
+      return `<b>${qi+1}.</b>${esc(ans)}`;
     }).join('　');
     const div = document.createElement('div');
     div.style.marginTop = '3px';
-    div.innerHTML = `<span style="color:#b35a00;font-weight:700">${esc(sec.title)}：</span>${items}`;
+    div.innerHTML = `<span style="color:#b35a00;font-weight:700">${esc(secPrefix + sec.title)}：</span>${items}`;
     return div;
   };
 
