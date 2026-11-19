@@ -131,6 +131,7 @@ function openAdminModal(){
     $('btnAdmLocalUnlock').style.display = isLocalEnv ? 'inline-block' : 'none';
   }
   modal.style.display = 'flex';
+  setTimeout(() => { if($('admPass')) $('admPass').focus(); }, 60);
 }
 
 function closeAdminModal(){
@@ -1248,6 +1249,16 @@ function initStore(){
       $('admAuthMsg').style.color = '#c0392b';
       $('admAuthMsg').textContent = '❌ 管理員帳號或密碼錯誤！';
     };
+    ['admUser', 'admPass'].forEach(id => {
+      if($(id)){
+        $(id).addEventListener('keydown', e => {
+          if(e.key === 'Enter' && !e.isComposing){
+            e.preventDefault();
+            $('btnAdmLoginSubmit').click();
+          }
+        });
+      }
+    });
   }
 
   // 修改管理員與雲端後台密碼彈窗（同步本機雜湊與 Google Apps Script 指令碼屬性）
@@ -1265,6 +1276,16 @@ function initStore(){
     };
   });
   if($('btnCloseChgPassModal')) $('btnCloseChgPassModal').onclick = closeChgPassModal;
+  ['chgAdmUser', 'chgOldPass', 'chgNewPass', 'chgNewPass2'].forEach(id => {
+    if($(id)){
+      $(id).addEventListener('keydown', e => {
+        if(e.key === 'Enter' && !e.isComposing && $('btnChgPassSubmit')){
+          e.preventDefault();
+          $('btnChgPassSubmit').click();
+        }
+      });
+    }
+  });
   if($('btnChgPassReset')){
     $('btnChgPassReset').onclick = () => {
       try{ localStorage.removeItem('kids_admin_custom_hash'); }catch(_){}

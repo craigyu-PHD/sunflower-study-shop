@@ -6194,11 +6194,11 @@ async function backupOrdersToGoogleCloud(orders, silent=false){
       if($('cloudSetupPanel')) $('cloudSetupPanel').style.display='';
       if($('batchMsg')){
         $('batchMsg').style.color='#b45309';
-        $('batchMsg').textContent='ℹ️ 尚未取得本瀏覽器的 Google 雲端 30 天授權憑證！請點右上角「🔐 管理員後台」重新輸入一次管理員密碼即可自動直連（無須另填雲端密碼）；本機 IndexedDB 仍已保護中。';
+        $('batchMsg').textContent='ℹ️ 尚未取得本瀏覽器的 Google 雲端永久授權憑證！請點右上角「🔐 管理員後台」重新輸入一次管理員密碼即可自動直連（無須另填雲端密碼）；本機 IndexedDB 仍已保護中。';
       }
       if($('cloudWizardMsg')){
         $('cloudWizardMsg').style.color='#b45309';
-        $('cloudWizardMsg').textContent='ℹ️ 請先由網站右上角管理員登入一次即可完成自動直連，之後 30 天內重整網頁皆自動連線，無須再次輸入密碼。';
+        $('cloudWizardMsg').textContent='ℹ️ 請先由網站右上角管理員登入一次即可完成自動直連並永久保留憑證，重整網頁皆自動連線，無須再次輸入密碼。';
       }
     }
     return { ok:false, reason:'no_cloud_creds' };
@@ -6252,7 +6252,7 @@ async function restoreOrdersFromGoogleCloud(){
   if(!url || !token || token === 'local-dev-session' || token === 'local-hash-session'){
     if($('batchMsg')){
       $('batchMsg').style.color='#b45309';
-      $('batchMsg').textContent='ℹ️ 尚未取得本瀏覽器 Google 雲端 30 天授權憑證，無法讀取雲端備份！請先由右上角重新登入一次管理員密碼即可自動直連，或使用右側「📂 匯入 JSON 還原」。';
+      $('batchMsg').textContent='ℹ️ 尚未取得本瀏覽器 Google 雲端永久授權憑證，無法讀取雲端備份！請先由右上角重新登入一次管理員密碼即可自動直連，或使用右側「📂 匯入 JSON 還原」。';
     }
     return;
   }
@@ -6310,7 +6310,7 @@ function refreshBackupStatusUI(){
         : `☁️ Google 雲端已直接連線（每 5 分鐘與每次異動自動同步｜尚無同步時間紀錄，可點右側「☁️ 立即備份」）`;
       cldEl.style.color = '#14532d';
     }else{
-      cldEl.textContent = `雲端備份：已載入預設試算表端點（登入網站後台一次即自動建立 30 天直連憑證；目前由本機 IndexedDB＋JSON 保護）`;
+      cldEl.textContent = `雲端備份：已載入預設試算表端點（登入網站後台一次即自動建立永久直連憑證；目前由本機 IndexedDB＋JSON 保護）`;
       cldEl.style.color = '#9a3412';
     }
     if($('btnToggleCloudSetup')){
@@ -7495,7 +7495,7 @@ function initExamUI(){
         if(res && res.ok){
           setMsg('✅ 已直接連線並完成最新雲端備份！（往後免輸入密碼，每 5 分鐘自動備份）', '#136529');
         } else if(res && res.reason === 'no_cloud_creds'){
-          setMsg('ℹ️ 已儲存端點網址！請點右上角重新驗證一次網站管理員密碼即可自動建立 30 天直連憑證（無須另填雲端密碼）。', '#b45309');
+          setMsg('ℹ️ 已儲存端點網址！請點右上角重新驗證一次網站管理員密碼即可自動建立永久直連憑證（無須另填雲端密碼）。', '#b45309');
         }
       }catch(err){
         setMsg(`❌ 連線失敗：${err.message}（請確認網路與網址設定）`, '#c0392b');
