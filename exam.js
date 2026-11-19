@@ -4797,7 +4797,7 @@ function renderExam(measureOnly=false){
     // 國語科：改採真實國小考卷「上下雙排直書」欄流（由大至小嘗試字級，讓 2 頁剛好填滿無半欄留白）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
     const mainX=useZy?14:21;
-    const zhCandFs=($('exTwoPage')&&$('exTwoPage').checked)?[13.8, 13.0, 12.2, 11.4]:[13.2, 12.4, 11.6];
+    const zhCandFs=($('exTwoPage')&&$('exTwoPage').checked)?[15.2, 14.4, 13.6, 12.8, 12.0]:[14.4, 13.6, 12.8];
     let zhFs=zhCandFs[0], zhPages=[], zhPageFills=[], maxW=860;
     for(const _candFs of zhCandFs){
       zhFs=_candFs;
@@ -4890,11 +4890,12 @@ function renderExam(measureOnly=false){
       });
       let extraCols=0;
       if(kind==='calc'||kind==='word'){
-        const isWide = kind==='word' && /造句|仿寫|短文|改寫|心得|為什麼|請寫出|舉例|說明|理由/.test(q.q||'');
+        const ansLen = String(q.a || '').replace(/\s+/g,'').length;
+        const isLong = kind==='word' && (ansLen > 10 || /造句|仿寫|短文|改寫|心得|為什麼|請寫出|舉例|說明|理由/.test(q.q||''));
         const qb=document.createElement('div');
-        qb.className='qbox '+kind+(isWide?' wide':'');
+        qb.className='qbox '+kind+(isLong?' wide':'');
         wrap.appendChild(qb);
-        extraCols = isWide ? 3.5 : (kind==='word' ? 2.5 : 1.7);
+        extraCols = isLong ? 2.8 : (kind==='word' ? 2.0 : 1.5);
       }
       return {el:wrap, colCount:qCols.length+extraCols};
     };
@@ -4985,15 +4986,15 @@ function renderExam(measureOnly=false){
         const spareW=Math.max(0,(maxW-14)-usedW);
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
-        if(spareW>16 && items.length>=2){
-          const qGap=Math.min(54, 3+(spareW*0.60)/qCount);
-          const colGap=Math.min(44, 4+(spareW*0.46)/itemCnt);
+        if(spareW>14 && items.length>=2){
+          const qGap=Math.min(26, 3+(spareW*0.48)/qCount);
+          const colGap=Math.min(18, 2.5+(spareW*0.34)/itemCnt);
           tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
           tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
           if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>45){
-            tierEl.style.setProperty('--zh-box-calc','3.6em');
-            tierEl.style.setProperty('--zh-box-word','5.4em');
-            tierEl.style.setProperty('--zh-box-word-wide','7.2em');
+            tierEl.style.setProperty('--zh-box-calc','2.9em');
+            tierEl.style.setProperty('--zh-box-word','4.2em');
+            tierEl.style.setProperty('--zh-box-word-wide','5.8em');
           }
         }
         if(isFirstTop){
@@ -5495,9 +5496,9 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 3px;flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
-.ex-zh-q .qbox{border:1.2px dashed #94a3b8;border-radius:5px;width:var(--zh-box-calc,3.0em);height:94%;margin:0 3px;flex:none}
-.ex-zh-q .qbox.word{width:var(--zh-box-word,4.4em)}
-.ex-zh-q .qbox.word.wide{width:var(--zh-box-word-wide,6.2em)}
+.ex-zh-q .qbox{border:1.2px dashed #94a3b8;border-radius:5px;width:var(--zh-box-calc,2.6em);height:94%;margin:0 2px;flex:none}
+.ex-zh-q .qbox.word{width:var(--zh-box-word,3.8em)}
+.ex-zh-q .qbox.word.wide{width:var(--zh-box-word-wide,5.4em)}
 .tcy{text-combine-upright:all;-webkit-text-combine:horizontal;display:inline-block;min-width:1em;text-align:center;line-height:1;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
 .v-arrow{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1.1em;text-align:center;line-height:1;font-family:"Noto Sans TC",sans-serif;vertical-align:middle}
 .qend-glue{white-space:nowrap;display:inline}
@@ -7415,7 +7416,13 @@ function initExamUI(){
   $('btnExGen').onclick=generateFromUI;
   $('btnExDice').onclick=rollMixedDice;
   $('btnExXlsx').onclick=()=>exportExamXlsx().catch(e=>{$('exMsg').textContent='匯出失敗：'+e.message;});
-  $('btnExPrint').onclick=()=>{if(!curExam)generateFromUI();window.print();};
+  $('btnExPrint').onclick=()=>{
+    if(!curExam) generateFromUI();
+    const isZh = curExam && curExam.meta && curExam.meta.subject === '國語';
+    let st=$('examPrintStyle');if(!st){st=document.createElement('style');st.id='examPrintStyle';document.head.appendChild(st);}
+    st.textContent=isZh?'@media print{@page{size:A4 landscape;margin:0}}':'@media print{@page{size:A4 portrait;margin:0}}';
+    window.print();
+  };
   ['exLayout','exTwoPage','exAns','exRuby','exDiff','chkMc','chkTf','chkFill','chkMatch','chkCalc','chkWord','numMc','numTf','numFill','numMatch','numCalc','numWord'].forEach(id=>{const e=$(id);if(!e)return;e.onchange=generateFromUI;if(e.type==='number')e.oninput=generateFromUI;});
 
   const refreshWatermarks=()=>{

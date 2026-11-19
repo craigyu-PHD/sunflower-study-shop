@@ -725,7 +725,7 @@
       <button type="button" class="btn" id="btnSelNone">⬜ 全取消</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-      <button type="button" class="btn ok" id="btnExportRecCsv">💾 匯出對帳紀錄 CSV</button>
+      <button type="button" class="btn" id="btnExportRecCsv" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;font-weight:700">💾 匯出對帳紀錄 CSV</button>
       <button type="button" class="btn" id="btnUndoClearOrders" style="display:none;font-size:.82rem;color:#0d5220;background:#e7f8ee;border:1px solid #28a745">↩️ 復原清空</button>
       <button type="button" class="btn" id="btnClearLocalOrders" style="font-size:.82rem;color:#a71d2a;background:#fdeaea;border:1px solid #f5c2c7">🗑️ 清空全部訂單</button>
     </div>
@@ -742,11 +742,11 @@
   <div id="batchBackupBar" class="backup-box">
     <div class="backup-status">
       <div><b>🛡️ 雙層訂單自動備份：</b><span id="backupLocalStatus">本機 IndexedDB 自動鏡像就緒</span></div>
-      <div style="font-size:.78rem;color:#166534" id="backupCloudStatus">雲端備份：已載入預設雲端試算表端點（登入後台自動同步，或於右側進行設定）</div>
+      <div style="font-size:.78rem;color:#1e40af" id="backupCloudStatus">雲端備份：已載入預設雲端試算表端點（登入後台自動同步，或於右側進行設定）</div>
     </div>
     <div class="backup-actions">
-      <button type="button" class="btn btn-mini" style="background:#dcfce7;border:1px solid #22c55e;color:#14532d" id="btnCloudBackupNow">☁️ 立即備份</button>
-      <button type="button" class="btn btn-mini" style="background:#e0f2fe;border:1px solid #38bdf8;color:#075985" id="btnCloudRestoreNow">📥 從雲端救回訂單</button>
+      <button type="button" class="btn btn-mini" style="background:#e0f2fe;border:1px solid #0284c7;color:#0369a1" id="btnCloudBackupNow">☁️ 立即備份</button>
+      <button type="button" class="btn btn-mini" style="background:#f3e8ff;border:1px solid #a855f7;color:#6b21a8" id="btnCloudRestoreNow">📥 從雲端救回訂單</button>
       <button type="button" class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155" id="btnExportJsonBackup">💾 匯出 JSON 備份檔</button>
       <label class="btn btn-mini" style="background:#fff;border:1px solid #cbd5e1;color:#334155;cursor:pointer;margin:0">📂 匯入 JSON 還原<input type="file" id="importJsonBackupFile" accept=".json" style="display:none"></label>
       <button type="button" class="btn btn-mini" style="background:#fff7ed;border:1px solid #fb923c;color:#9a3412" id="btnToggleCloudSetup">⚙️ 雲端與密碼設定</button>
