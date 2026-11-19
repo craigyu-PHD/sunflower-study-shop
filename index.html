@@ -14,6 +14,7 @@
     <nav class="nav-tabs" role="tablist">
       <button class="nav-tab active" data-tab="store" type="button">🛒 家長線上訂購</button>
       <button class="nav-tab admin-only" data-tab="batch" type="button" style="display:none">📦 訂單對帳＆批次印製 <span id="navOrdBadge" class="nav-badge">0</span></button>
+      <button class="nav-tab admin-only" data-tab="preschool" type="button" style="display:none">🐣 幼兒園運筆寫字帖</button>
       <button class="nav-tab admin-only" data-tab="stroke" type="button" style="display:none">✍️ 寫字帖工作台</button>
       <button class="nav-tab admin-only" data-tab="exam" type="button" style="display:none">📝 測驗卷工作台</button>
       <button id="btnAdminAuth" class="btn-admin-entry" type="button">🔐 管理員後台</button>
@@ -145,6 +146,11 @@
             <b>✍️ 生字練習本（獨立自選課次・5/10/20 張）</b>
             <span>獨立挑選課次，依課序全字列出不缺漏；選 10/20 張可依序循環、雙倍呈現份數！</span>
           </label>
+          <label class="pack-tab" id="lblPackPreschool">
+            <input type="radio" name="stPackMode" value="preschool_pack">
+            <b>🐣 幼兒園運筆寫字帖（小／中／大班・5/10/20 張）</b>
+            <span>依台灣幼教課綱分齡設計！整合ㄅㄆㄇ、數字 123、ABC 大格描紅＋可愛插畫，置頂到底滿版不留白！</span>
+          </label>
           <label class="pack-tab" id="lblPackCustom">
             <input type="radio" name="stPackMode" value="custom">
             <b>🎨 客製自由配（單張 $5 元・湊滿 20 張出貨）</b>
@@ -152,6 +158,7 @@
           </label>
         </div>
 
+        <div id="stBasicSchoolWrap">
         <div class="sub">② 基本學籍設定（由大到小）</div>
         <div class="row">
           <label>年級
@@ -178,6 +185,7 @@
               <option value="std">108課綱通用</option>
             </select>
           </label>
+        </div>
         </div>
 
         <!-- 評量測驗懶人包專屬設定（純評量卷，不綁生字練習） -->
@@ -236,6 +244,39 @@
           </div>
           <div id="stSpLessonList" class="units-box units-box-store"></div>
           <div id="stSpCoverageInfo" class="hint" style="margin-top:5px;color:#7a4b10"></div>
+        </div>
+
+        <!-- 幼兒園運筆寫字帖專區（分小班／中班／大班：ㄅㄆㄇ、阿拉伯數字、ABC 歸為同一類按年齡推進） -->
+        <div id="stPreschoolPanel" class="cfg-panel" style="display:none">
+          <div class="sub">② 選擇幼兒園班別與練習進度（ㄅㄆㄇ・數字 123・ABC 統合設計）</div>
+          <div class="row">
+            <label style="flex:1;min-width:170px">幼兒園班別（適齡格距）
+              <select id="stPreLevel">
+                <option value="small" selected>小班（3～4歲｜5欄×6列大格啟蒙）</option>
+                <option value="mid">中班（4～5歲｜6欄×7列筆順建立）</option>
+                <option value="large">大班（5～6歲｜7欄×9列幼小銜接）</option>
+              </select>
+            </label>
+            <label style="flex:1.2;min-width:190px">學習項目分類
+              <select id="stPreTopic">
+                <option value="all" selected>🌈 三合一綜合順序（數字 → ㄅㄆㄇ → ABC）</option>
+                <option value="zy">🗣️ 注音符號（ㄅㄆㄇ）</option>
+                <option value="num">🔢 阿拉伯數字（123）</option>
+                <option value="abc">🔤 英文字母（ABC）</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label style="flex:1;min-width:170px">選擇張數（正反雙面滿格）
+              <select id="stPreSheets">
+                <option value="5">5 張（$25・單輪試寫／湊滿20張出貨）</option>
+                <option value="10" selected>10 張（$50・正反20面充足練習）</option>
+                <option value="20">20 張（$100・全階段反覆練習達標出貨）</option>
+              </select>
+            </label>
+            <label class="chk"><input type="checkbox" id="stPreIllust" checked> 🎨 附可愛彩色小插圖與數數提示</label>
+          </div>
+          <div id="stPreDesc" class="hint" style="margin-top:4px;color:#7a4b10;line-height:1.5"></div>
         </div>
 
         <!-- 客製包專屬設定 -->
@@ -430,6 +471,47 @@
       <button type="button" id="btnAdmLoginSubmit" class="btn pri big">🔓 驗證並進入後台</button>
     </div>
   </div>
+</div>
+
+<!-- ==================== 獨立分頁：幼兒園運筆與符號啟蒙寫字帖（後台，位於訂單對帳之後、寫字帖／測驗卷之前） ==================== -->
+<div id="viewPreschool" style="display:none">
+<section class="card noprint">
+  <h2><span class="step">1</span> 幼兒園班別與綜合教材設定（小班 → 中班 → 大班）</h2>
+  <p class="hint" style="margin-top:0">依台灣《幼兒園教保活動課程大綱》與幼小銜接進度設計，將「注音符號（ㄅㄆㄇ）、阿拉伯數字、ABC」統整為同一體系，採加寬描紅大格與可愛小插圖，置頂到底滿格編排絕不留白。</p>
+  <div class="row">
+    <label>幼兒園班別
+      <select id="wbPreLevel">
+        <option value="small" selected>小班（3～4歲｜5欄×6列大格）</option>
+        <option value="mid">中班（4～5歲｜6欄×7列標準格）</option>
+        <option value="large">大班（5～6歲｜7欄×9列銜接格）</option>
+      </select>
+    </label>
+    <label>練習內容分類
+      <select id="wbPreTopic">
+        <option value="all" selected>🌈 三合一綜合順序（數字 → ㄅㄆㄇ → ABC）</option>
+        <option value="zy">🗣️ 注音符號（ㄅㄆㄇ）</option>
+        <option value="num">🔢 阿拉伯數字（123）</option>
+        <option value="abc">🔤 英文字母（ABC）</option>
+      </select>
+    </label>
+    <label>印製張數（正反雙面）
+      <select id="wbPreSheets">
+        <option value="1">1 張（2面）</option>
+        <option value="3">3 張（6面）</option>
+        <option value="5" selected>5 張（10面）</option>
+        <option value="10">10 張（20面）</option>
+        <option value="20">20 張（40面）</option>
+      </select>
+    </label>
+    <label class="chk"><input type="checkbox" id="wbPreIllust" checked> 🎨 附可愛彩色小插圖與起筆提示</label>
+  </div>
+  <div id="wbPreInfo" class="hint" style="color:#7a4b10;margin-top:4px"></div>
+  <div class="row" style="margin-top:10px">
+    <button id="btnWbPreGen" type="button" class="btn pri big">🐣 產生幼兒園寫字帖預覽</button>
+    <button id="btnWbPrePrint" type="button" class="btn ok big">🖨️ 直接列印 A4</button>
+  </div>
+</section>
+<section id="preSheet"></section>
 </div>
 
 <!-- ==================== 分頁一：筆畫練習寫字帖（後台） ==================== -->
@@ -658,6 +740,7 @@
 <script src="data/curriculum.js"></script>
 <script src="data/exam_bank.js"></script>
 <script src="data/proc_bank.js"></script>
+<script src="data/preschool.js"></script>
 <script src="app.js"></script>
 <script src="exam.js"></script>
 <script src="store.js"></script>

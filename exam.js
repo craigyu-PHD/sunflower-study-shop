@@ -3823,8 +3823,10 @@ function inferArchetypeKeys(item, subj, kindKey=''){
   const keys = [];
   if(!item) return keys;
   if(item.arch) keys.push('arch_' + item.arch);
-  const svgArch = inferSvgArchetype(item.svg);
-  if(svgArch) keys.push('arch_' + svgArch);
+  if(subj === '數學'){
+    const svgArch = inferSvgArchetype(item.svg);
+    if(svgArch) keys.push('arch_' + svgArch);
+  }
 
   const q = String(item.q || '');
   const full = q + ' ' + String(item.a || '') + ' ' + String(item.exp || '');
@@ -4131,8 +4133,8 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
   const uList = ((CURRICULUM[g]||{})[subj]||{})[sem]||[];
   const uObj = uList[uIdx] || uList[0] || {name:`單元${uIdx+1}`,topics:['核心概念一','核心概念二','核心概念三']};
   const tps = uObj.topics || ['核心概念'];
-  const tp = tps[vIdx % tps.length];
-  const tpNext = tps[(vIdx+1) % tps.length];
+  const tp = tps[(vIdx + Math.floor(vIdx / 5)) % tps.length];
+  const tpNext = tps[(vIdx + 1 + Math.floor(vIdx / 5)) % tps.length];
   const uShort = uObj.name.split('：')[1] || uObj.name;
   const otherUnits = uList.filter((_,idx)=>idx!==uIdx);
   const wrongTopics = otherUnits.flatMap(u=>u.topics||[]).concat(['隨意破壞環境','不遵守安全規則','未經查證的猜測']);
@@ -4154,7 +4156,11 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
       `在「${uShort}」主題討論中，老師提到的「${tpNext}」與下列哪個概念同屬本單元？`,
       `整理「${uObj.name}」重點筆記時，哪一個項目應該列入本單元？`,
       `小美想深入了解「${uShort}」，下列哪一項是她在課本中會學到的內容？`,
-      `複習${subj}科「${uObj.name}」時，下列哪個選項是正確的核心概念？`
+      `複習${subj}科「${uObj.name}」時，下列哪個選項是正確的核心概念？`,
+      `在「${uShort}」的分組討論裡，哪一項概念是大家一定要認識的？`,
+      `關於「${uObj.name}」單元評量目標，下列何者屬於本單元的學習內容？`,
+      `小明設計「${uShort}」海報時，應該把哪一項知識放進重點區？`,
+      `閱讀「${uObj.name}」課文後，哪個詞語代表本單元的重要概念？`
     ];
     item = {q:mcPrompts[vIdx%mcPrompts.length], opts:uniqueOpts(tp,dist), a:tp, exp:`「${uObj.name}」重點為：${tps.join('、')}。`};
   }else if(kindKey==='tf'){
@@ -4168,7 +4174,12 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
         `「${shown}」屬於「${uObj.name}」單元中所探討的重要內容。`,
         `在「${uShort}」的課程活動裡，重點包含了「${shown}」的認識與實踐。`,
         `複習「${uObj.name}」時，「${shown}」是本單元的核心觀念之一。`,
-        `課堂進行「${uShort}」探究時，老師會帶領大家認識「${shown}」。`
+        `課堂進行「${uShort}」探究時，老師會帶領大家認識「${shown}」。`,
+        `整理「${uShort}」學習單時，「${shown}」應該被列入本單元重點。`,
+        `小美和同學討論「${uObj.name}」的內容，主題正巧與「${shown}」有關。`,
+        `在「${uShort}」的知識架構中，「${shown}」是不可或缺的一環。`,
+        `如果想完成「${uObj.name}」的報告，資料中一定會提到「${shown}」。`,
+        `下列敘述正確嗎：「${shown}」是「${uShort}」課程中的重要課題。`
       ];
       item = {q:tfPrompts[vIdx%tfPrompts.length], a:isTrue?'○':'✕', exp:`「${uObj.name}」重點為：${tps.join('、')}。`};
     }
@@ -4181,7 +4192,11 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
         {q:`在「${uObj.name}」中，我們學習了「${tp}」與（　　　　　）等重要概念。`,a:tpNext},
         {q:`複習「${uShort}」時，除了「${tpNext}」之外，（　　　　　）也是本單元的關鍵重點。`,a:tp},
         {q:`「${uObj.name}」單元的學習重點包含（　　　　　）以及「${tpNext}」。`,a:tp},
-        {q:`進行「${uShort}」探究活動時，認識「${tp}」與（　　　　　）能幫助我們掌握單元概念。`,a:tpNext}
+        {q:`進行「${uShort}」探究活動時，認識「${tp}」與（　　　　　）能幫助我們掌握單元概念。`,a:tpNext},
+        {q:`完成「${uShort}」心智圖時，在「${tp}」旁邊最適合補上的同單元概念是（　　　　　）。`,a:tpNext},
+        {q:`老師提醒「${uObj.name}」有兩項核心重點，分別是「${tp}」和（　　　　　）。`,a:tpNext},
+        {q:`小華整理「${uShort}」筆記，先寫下了「${tpNext}」，接著又寫下同單元的（　　　　　）。`,a:tp},
+        {q:`認識「${uObj.name}」課程時，從「${tp}」延伸觀察到的另一個重點是（　　　　　）。`,a:tpNext}
       ];
       item = fillPrompts[vIdx%fillPrompts.length];
     }
@@ -4199,14 +4214,17 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
       {q:`【${uShort}・觀察紀錄】請針對本單元的「${tp}」，寫出兩項你在課堂活動或日常生活中觀察到的具體例子。`,a:`依「${tp}」寫出兩項具體實例（如：${tps.join('、')}相關觀察）。`},
       {q:`【${uShort}・概念比較】學習「${uObj.name}」時，請比較「${tp}」與「${tpNext}」兩者在生活中有什麼不同或關聯？`,a:`說明「${tp}」與「${tpNext}」之關聯或差異。`},
       {q:`【${uShort}・實作步驟】如果老師要請你向同學介紹「${tp}」，你會先說哪兩個重點或設計什麼小實驗？`,a:`寫出關於「${tp}」的兩項重點說明或觀察步驟。`},
-      {q:`【${uShort}・生活實踐】學會「${tp}」之後，你在學校或家裡可以做到哪一件具體的好行為？`,a:`結合「${tp}」寫出一項具體日常實踐行動。`}
+      {q:`【${uShort}・生活實踐】學會「${tp}」之後，你在學校或家裡可以做到哪一件具體的好行為？`,a:`結合「${tp}」寫出一項具體日常實踐行動。`},
+      {q:`【${uShort}・簡答說明】為什麼在「${uObj.name}」課程裡要學習「${tp}」？它對生活有什麼幫助？`,a:`說明「${tp}」的重要性與生活應用。`},
+      {q:`【${uShort}・情境練習】請用一句話向低年級的弟弟妹妹解釋什麼是「${tp}」？`,a:`以淺顯易懂的語言說明「${tp}」的特徵。`}
     ];
     item = cPrompts[vIdx % cPrompts.length];
   }else{
     const wPrompts = [
       {q:`【${uShort}・素養情境題】老師帶領全班進行「${uShort}」探究活動，討論了「${tps.join('」、「')}」。問題：(1) 請挑出其中一項概念說明它的意思。 (2) 在生活中我們可以如何應用「${tp}」？`,a:`(1) 說明「${tps[0]}」概念。(2) 結合「${tp}」之生活應用。`},
       {q:`【${uShort}・任務挑戰】小美和同學正在製作「${uObj.name}」的海報，需要整理「${tp}」和「${tpNext}」的資料。問題：(1) 海報標題可以怎麼取？ (2) 請簡短寫出「${tp}」的一項特色或注意事項。`,a:`(1) 與「${uShort}」相關之清楚標題。(2) 「${tp}」的核心特色。`},
-      {q:`【${uShort}・問題解決】在進行「${uShort}」單元學習時，有人對「${tp}」不太了解。請你舉出一個課本或生活中的現象，幫他解釋「${tp}」是什麼。`,a:`舉例說明「${tp}」在課本或生活中的具體表現。`}
+      {q:`【${uShort}・問題解決】在進行「${uShort}」單元學習時，有人對「${tp}」不太了解。請你舉出一個課本或生活中的現象，幫他解釋「${tp}」是什麼。`,a:`舉例說明「${tp}」在課本或生活中的具體表現。`},
+      {q:`【${uShort}・探究統整】在「${uObj.name}」單元中，小組收集了關於「${tp}」與「${tpNext}」的觀察紀錄。問題：(1) 這兩項概念有什麼共同連結？ (2) 觀察時需要注意哪一項安全或記錄原則？`,a:`(1) 皆屬於「${uShort}」的核心探究項目。(2) 客觀記錄、小心操作與遵守規範。`}
     ];
     item = wPrompts[vIdx % wPrompts.length];
   }
@@ -4464,6 +4482,11 @@ function generateExamQuestions(cfg){
           let item=chosen.opts?{...chosen,opts:shuffle(chosen.opts)}:{...chosen};
           if(chosen.pairs){const sh=shuffle(chosen.pairs.map(p=>p[1]));item={...item,right:sh};}
           attachMatchingSvg(item, subj, g);
+          if(subj !== '數學' && item.svg){
+            const decoA = 'deco_' + inferSvgArchetype(item.svg);
+            if(examArchetypesUsed.has(decoA)) delete item.svg;
+            else examArchetypesUsed.add(decoA);
+          }
 
           item._diff=effD;
           item._broadCat=inferBroadCategory(item,subj,kindKey);
@@ -4903,14 +4926,14 @@ function renderExam(){
         const spareW=Math.max(0,(maxW-16)-usedW);
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
-        if(spareW>20 && items.length>=2){
-          const qGap=Math.min(28, 3+(spareW*0.52)/qCount);
-          const colGap=Math.min(26, 4+(spareW*0.42)/itemCnt);
+        if(spareW>16 && items.length>=2){
+          const qGap=Math.min(40, 3+(spareW*0.58)/qCount);
+          const colGap=Math.min(34, 4+(spareW*0.44)/itemCnt);
           tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
           tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
-          if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>50){
-            tierEl.style.setProperty('--zh-box-calc','3.2em');
-            tierEl.style.setProperty('--zh-box-word','4.6em');
+          if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>35){
+            tierEl.style.setProperty('--zh-box-calc','3.6em');
+            tierEl.style.setProperty('--zh-box-word','5.2em');
           }
         }
         if(isFirstTop){
@@ -4988,11 +5011,14 @@ function renderExam(){
       if(curCols[0].length||curCols[1].length)candPages.push(twoCol?curCols:[curCols[0]]);
       if(twoCol&&candPages.length){
         const last=candPages[candPages.length-1];
-        if(last[0].length>=2&&last[1].length===0){
-          const totH=last[0].reduce((a,b)=>a+b.h,0);
-          let acc=0, cut=Math.ceil(last[0].length/2);
-          for(let i=0;i<last[0].length;i++){acc+=last[0][i].h;if(acc>=totH*0.5&&last[0][i].type!=='sec'){cut=i+1;break;}}
-          if(cut>0&&cut<last[0].length){last[1]=last[0].slice(cut);last[0]=last[0].slice(0,cut);}
+        const lastMaxH=capH(candPages.length-1);
+        const h0=last[0].reduce((a,b)=>a+b.h,0), h1=last[1].reduce((a,b)=>a+b.h,0);
+        if((last[0].length>=2&&last[1].length===0) || (last[0].length+last[1].length>=4 && h1<lastMaxH*0.78 && h0>h1*1.28)){
+          const merged=[...last[0],...last[1]];
+          const totH=merged.reduce((a,b)=>a+b.h,0);
+          let acc=0, cut=Math.ceil(merged.length/2);
+          for(let i=0;i<merged.length;i++){acc+=merged[i].h;if(acc>=totH*0.48&&merged[i].type!=='sec'){cut=i+1;break;}}
+          if(cut>0&&cut<merged.length){last[0]=merged.slice(0,cut);last[1]=merged.slice(cut);}
         }
       }
       chosenD=candD; pages=candPages;
@@ -5025,20 +5051,20 @@ function renderExam(){
       const pageMaxH = chosenCapHs[pgIdx] || 1054;
       const calcStretch = (colList) => {
         const usedH = colList.reduce((a,b)=>a+b.h, 0);
-        const spare = Math.max(0, pageMaxH * 0.95 - usedH);
+        const spare = Math.max(0, pageMaxH * 0.96 - usedH);
         const qCnt = Math.max(1, colList.filter(b=>b.type==='q').length);
         let lh = chosenD.lh, gap = chosenD.gap, calcH = chosenD.calcH, wordH = chosenD.wordH;
-        if(spare > 18 && usedH > 100){
+        if(spare > 14 && usedH > 100){
           const hasCalc = colList.some(b=>b.kind==='calc');
           const hasWord = colList.some(b=>b.kind==='word');
           const rFill = usedH / Math.max(1, pageMaxH);
-          const lhBoost = rFill < 0.88 ? Math.min(0.32, (0.92 - rFill) * 0.88) : 0.08;
-          lh = Math.min(1.86, +(chosenD.lh + lhBoost).toFixed(2));
-          gap = Math.min(42, Math.round(chosenD.gap + Math.min(28, (spare * 0.60) / qCnt)));
-          if(hasCalc) calcH = Math.min(82, Math.round(chosenD.calcH + Math.min(34, spare * 0.24)));
-          if(hasWord) wordH = Math.min(104, Math.round(chosenD.wordH + Math.min(42, spare * 0.30)));
+          const lhBoost = rFill < 0.92 ? Math.min(0.36, (0.94 - rFill) * 0.95) : 0.08;
+          lh = Math.min(1.92, +(chosenD.lh + lhBoost).toFixed(2));
+          gap = Math.min(54, Math.round(chosenD.gap + Math.min(38, (spare * 0.65) / qCnt)));
+          if(hasCalc) calcH = Math.min(98, Math.round(chosenD.calcH + Math.min(44, spare * 0.28)));
+          if(hasWord) wordH = Math.min(124, Math.round(chosenD.wordH + Math.min(56, spare * 0.34)));
         }
-        return {lh, gap, calcH, wordH};
+        return {lh, gap, calcH, wordH, usedH};
       };
       const baseSt = calcStretch(cols.flat());
       inner.style.setProperty('--ex-fs',chosenD.fs+'px');
@@ -5059,6 +5085,9 @@ function renderExam(){
         el.style.setProperty('--ex-gap',stCol.gap+'px');
         el.style.setProperty('--ex-box-calc',stCol.calcH+'px');
         el.style.setProperty('--ex-box-word',stCol.wordH+'px');
+        if(list.length >= 3 && stCol.usedH >= pageMaxH * 0.56){
+          el.classList.add('ex-col-stretch');
+        }
         list.forEach(b=>{
           if(b.type==='sec'){const d=document.createElement('div');d.className='ex-sec';d.textContent=b.text;el.appendChild(d);}
           else el.appendChild(makeQEl(b,false));
@@ -5656,7 +5685,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   }
 
   // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或第2頁／末欄仍留白時，啟動第二優先補題（單題溢頁僅略過該大題，持續以輕量題型補滿）
-  const limits={mc:18,tf:16,fill:16,match:3,calc:10,word:6};
+  const limits={mc:24,tf:20,fill:20,match:3,calc:14,word:8};
   const enabledSet=new Set(['mc','tf','fill','match','calc','word']);
   [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
     if(syncUi){
@@ -5667,7 +5696,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   });
   const growCycle=['mc','fill','tf','calc','word','match'].filter(k=>enabledSet.has(k));
   const blockedKinds=new Set();
-  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.91 || (curExam._lastTailFill||0)<0.86));
+  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.92 || (curExam._lastTailFill||0)<0.90 || (curExam._pageFills||[]).some(f=>f<0.90)));
   let gStep=0, stalled=0;
   while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<56 && blockedKinds.size<growCycle.length && stalled<growCycle.length*2){
     const k=growCycle[gStep % growCycle.length];
@@ -6536,7 +6565,7 @@ function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
         </div>
       </div>
       <div class="cover-grid">
-        <div><b>年級／科目：</b><span>國小 ${esc(order.grade)} 年級 ${esc(order.sem)}｜${esc(order.subj)}（${esc(order.pubName)}）</span></div>
+        <div><b>年級／科目：</b><span>${order.plan==='preschool'?`${esc(order.grade)}｜${esc(order.subj)}`:`國小 ${esc(order.grade)} 年級 ${esc(order.sem)}｜${esc(order.subj)}（${esc(order.pubName)}）`}</span></div>
         <div><b>訂購方案：</b><span>${esc(order.planName)}（${esc(order.packType||'懶人包')}）</span></div>
         <div><b>教材張數：</b><span>共 ${order.sheets||20} 張內容（印製 ${stats.contentPages-1} 頁＋本取貨聯）</span></div>
         <div><b>領取時程：</b><span><b>${esc(sched.deliveryStr)}</b>（請於週五中午 12:00 以後至週日晚上 21:00 以前憑編號領取）</span></div>
@@ -6560,7 +6589,7 @@ function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
         <div class="cover-grid" style="border-top:none;padding-top:0;font-size:.84rem">
           <div><b>家長／電話：</b><span>${esc(order.parent_label)}${order.contact?`（${esc(order.contact)}）`:''}</span></div>
           <div><b>下單／梯次：</b><span>${esc(order.created_at||'—')}｜${esc(sched.batchLabel)}</span></div>
-          <div><b>年級／版本：</b><span>${esc(order.grade)}年級${esc(order.sem)}・${esc(order.pubName)}・${esc(order.subj)}</span></div>
+          <div><b>年級／版本：</b><span>${order.plan==='preschool'?`${esc(order.grade)}・${esc(order.pubName)}`:`${esc(order.grade)}年級${esc(order.sem)}・${esc(order.pubName)}`}・${esc(order.subj)}</span></div>
           <div><b>範圍／規格：</b><span>${esc(order.scopeName)}・${esc(order.diffName)}・${order.ruby?'附注音':'無注音'}</span></div>
         </div>
         <div class="cover-items">
@@ -6810,8 +6839,8 @@ function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false){
     curExam = generateExamQuestions(cfg);
     renderExam();
     if(typeof autoBalanceExamToTarget==='function'){
-      // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面皆飽滿無明顯空白
-      autoBalanceExamToTarget(2, isZh?54:48, cfg, false);
+      // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面皆 90%~100% 飽滿無空白
+      autoBalanceExamToTarget(2, isZh?60:64, cfg, false);
     }
     const rawPages = [...box.querySelectorAll('.a4')];
     const diffZh = {easy:'基礎熟練(鼎甲風)',mid:'標準評量(良品風)',hard:'素養挑戰(奇鼎風)',mix:'混合難度(三強混合)'}[effDiff] || '標準評量(良品風)';
@@ -6951,7 +6980,14 @@ async function generateBatchAll(overrideOrders=null){
     let strokeRes = {pages:[], charCount:0};
     let examRes = {pages:[], qPages:0, ansPages:0};
 
-    if(ord.plan==='stroke' || ord.plan==='both'){
+    if(ord.plan==='preschool' && window.PRESCHOOL_BANK){
+      const lvlGuess = ord.preLevel || (/大班/.test(ord.grade)?'large':(/中班/.test(ord.grade)?'mid':'small'));
+      const topGuess = ord.preTopic || (/注音/.test(ord.subj)?'zy':(/數字/.test(ord.subj)?'num':(/ABC/i.test(ord.subj)?'abc':'all')));
+      const preRes = window.PRESCHOOL_BANK.buildPages({
+        level: lvlGuess, topic: topGuess, sheets: +ord.sheets || 10, illust: ord.preIllust !== false, wmText
+      });
+      strokeRes = { pages: preRes.pages || [], charCount: preRes.itemCount || 0 };
+    }else if(ord.plan==='stroke' || ord.plan==='both'){
       if(window.buildStrokePagesForOrder){
         strokeRes = await window.buildStrokePagesForOrder(ord, wmText);
       }

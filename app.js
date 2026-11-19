@@ -186,8 +186,6 @@ function charItemsA(ch,zy){
   const hasRef=$('xRef').checked, zt=zy?getZy(ch):'';
   if(hasRef)list.push({span:1,o:{k:n,numbers:$('xNum').checked,zy,zyText:zt,label:'範字'}});
   for(let s=1;s<=n;s++)list.push({span:1,o:{k:s,hi:true,ghost:$('xGhost').checked,zy,zyText:(!hasRef&&s===1)?zt:'',label:String(s)}});
-  const nb=Math.max(0,+$('xBlank').value||0);
-  for(let b=0;b<nb;b++)list.push({span:1,o:{k:0,zy,ghost:$('xTrace').checked&&b===0}});
   return list;
 }
 
@@ -197,37 +195,51 @@ function buildLayout(){
   // 每頁最少 7 欄、最多 8 欄彈性調整（低年級預設 7 欄較大格、中高年級可 8 欄較多字）
   const rawCols=+$('xCols').value||7;
   const cols=Math.max(7, Math.min(8, rawCols));
-  const minCols=7, maxCols=8;
   const cwMax=Math.floor(CONTENT_W/cols);
-  const sqMax=Math.floor(zy?cwMax/1.3:cwMax);
-  // 僅當筆畫超過上限（預設 >12 畫即 ≥13 畫）或極端格數（>19 格）時，該字才自動折成兩欄；一般字維持 1 欄！
-  const hardMaxRows=19;
+  const pSqMax=Math.floor(zy?cwMax/1.3:cwMax);
+  // 統一全版固定列數 R，確保不論筆畫多寡皆由最頂端排至最底端，高度一致不留白
+  const R=Math.max(8, Math.ceil(CONTENT_H/pSqMax));
+  const sq=Math.min(Math.floor(CONTENT_H/R), pSqMax);
+  const cw=Math.round(sq*(zy?1.3:1));
+  const chh=Math.round(sq);
   const splitLimit=($('xSplitLimit') && +$('xSplitLimit').value) || 12;
+  const nbReq=Math.max(0,+$('xBlank').value||0);
+  const wantTrace=$('xTrace').checked;
   const pages=[];
+
+  const padColumnToR=(colArr, traceStart=true)=>{
+    let firstBlank=true;
+    while(colArr.length<R){
+      colArr.push({span:1,o:{k:0,zy,ghost:wantTrace&&traceStart&&firstBlank}});
+      firstBlank=false;
+    }
+    return colArr;
+  };
 
   if(mode==='A'){
     const charGroups=[];
     curChars.forEach(ch=>{
       if(!window.HZ_DATA || !HZ_DATA[ch] || !HZ_DATA[ch][0]) return;
       const strokeN=HZ_DATA[ch][0].length;
-      const fullList=charItemsA(ch,zy);
-      if(!fullList.length) return;
-      const shouldSplit=(strokeN>splitLimit) || (fullList.length>hardMaxRows);
+      const steps=charItemsA(ch,zy);
+      if(!steps.length) return;
+      // 超過拆欄上限或剩餘練習格不足時，筆畫一路順下排滿第 1 欄後再順接第 2 欄，兩欄皆補滿至底 R 格
+      const shouldSplit=(strokeN>splitLimit) || (steps.length + Math.min(2, nbReq) > R);
       if(!shouldSplit){
-        charGroups.push({ch, colLists:[fullList]});
+        const col1=padColumnToR(steps.slice(0, R), true);
+        charGroups.push({ch, colLists:[col1]});
       }else{
-        const half=Math.ceil(fullList.length/2);
-        const colStep=half<=18 ? half : 18;
         const chunks=[];
-        for(let k=0;k<fullList.length;k+=colStep){
-          chunks.push(fullList.slice(k,k+colStep));
+        for(let k=0;k<steps.length;k+=R){
+          chunks.push(steps.slice(k,k+R));
         }
-        // 補齊末欄空白練習格，使同一字兩欄底部齊平美觀
-        const last=chunks[chunks.length-1];
-        const targetLen=chunks[0].length;
-        while(last.length<targetLen){
-          last.push({span:1,o:{k:0,zy,ghost:false}});
+        // 若所有筆畫剛好填滿第 1 欄（例如 13 畫在 14 列格中），另起第 2 欄全欄練習格讓孩子充分書寫
+        if(chunks.length===1){
+          chunks.push([]);
         }
+        chunks.forEach((ck, idx)=>{
+          padColumnToR(ck, idx===chunks.length-1);
+        });
         charGroups.push({ch, colLists:chunks});
       }
     });
@@ -235,18 +247,11 @@ function buildLayout(){
     let curPageCols=[];
     const flushPage=()=>{
       if(!curPageCols.length)return;
-      const pageCols=cols;
-      const pCwMax=Math.floor(CONTENT_W/pageCols);
-      const pSqMax=Math.floor(zy?pCwMax/1.3:pCwMax);
-      const R=Math.max(1,...curPageCols.map(c=>c.list.length));
-      const sq=Math.min(Math.floor(CONTENT_H/R), pSqMax);
-      const cw=Math.round(sq*(zy?1.3:1));
-      const chh=Math.round(sq);
       const items=[];
       curPageCols.forEach((colObj,cIdx)=>{
         colObj.list.forEach((it,rIdx)=>items.push({ch:colObj.ch,col:cIdx,row:rIdx,...it}));
       });
-      pages.push({R,cw,chh,sq,cols:pageCols,cwMax:pCwMax,img:Math.min(300,Math.round(sq*3)),items});
+      pages.push({R,cw,chh,sq,cols,cwMax,img:Math.min(300,Math.round(sq*3)),items});
       curPageCols=[];
     };
 
@@ -264,21 +269,21 @@ function buildLayout(){
   }else{
     for(let i=0;i<curChars.length;i+=cols){
       const slice=curChars.slice(i,i+cols);
-      const cw=cwMax;
-      const sq=zy?cw/1.3:cw;
-      const chh=Math.round(sq);
-      const R=Math.max(4,Math.floor(CONTENT_H/chh));
+      const cwB=cwMax;
+      const sqB=zy?cwB/1.3:cwB;
+      const chhB=Math.round(sqB);
+      const RB=Math.max(4,Math.floor(CONTENT_H/chhB));
       const tn=+$('xTraceN').value||0;
       const items=[];
       slice.forEach((ch,c)=>{
         const n=HZ_DATA[ch][0].length;
         items.push({ch,col:c,row:0,span:1,o:{k:n,zy,zyText:zy?getZy(ch):''}});
-        const sp=Math.max(2,Math.min(4,Math.ceil(n/6)+1,R-1));
+        const sp=Math.max(2,Math.min(4,Math.ceil(n/6)+1,RB-1));
         items.push({ch,col:c,row:1,span:sp,strip:true});
-        const rest=Math.max(0,R-1-sp);
+        const rest=Math.max(0,RB-1-sp);
         for(let b=0;b<rest;b++)items.push({ch,col:c,row:1+sp+b,span:1,o:{k:0,zy,ghost:b<tn}});
       });
-      pages.push({R,cw,chh,sq,cols,cwMax,img:Math.min(300,Math.round(sq*3)),items});
+      pages.push({R:RB,cw:cwB,chh:chhB,sq:sqB,cols,cwMax,img:Math.min(300,Math.round(sqB*3)),items});
     }
   }
   return {mode,zy,cols,cwMax,pages};
@@ -406,6 +411,22 @@ window.buildStrokePagesForOrder=async function(order, wmTextOverride=''){
       curChars = curChars.concat(validBase);
       L = buildLayout();
       guard++;
+    }
+    // 補滿最後一頁剩餘空白欄位（沿課序依字循環填滿至 7/8 欄，不溢頁、不留白）
+    let colGuard = 0;
+    while(L.pages.length && colGuard < 16){
+      const targetPg = L.pages[Math.min(L.pages.length, wantTotalPages) - 1];
+      const usedCols = targetPg ? new Set(targetPg.items.map(it=>it.col)).size : chosenCols;
+      if(usedCols >= chosenCols) break;
+      const nextCh = validBase[curChars.length % validBase.length];
+      curChars.push(nextCh);
+      const nextL = buildLayout();
+      if(nextL.pages.length > wantTotalPages){
+        curChars.pop();
+        break;
+      }
+      L = nextL;
+      colGuard++;
     }
   }
 

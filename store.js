@@ -70,6 +70,29 @@ function applyAdminVisibility(){
   }
 }
 
+function renderPreschoolWorkbench(){
+  const sheet = $('preSheet');
+  if(!sheet || !window.PRESCHOOL_BANK) return;
+  const level = $('wbPreLevel')?.value || 'small';
+  const topic = $('wbPreTopic')?.value || 'all';
+  const sheets = Math.max(1, +($('wbPreSheets')?.value || 5));
+  const illust = $('wbPreIllust') ? $('wbPreIllust').checked : true;
+  const wm = typeof window.getWmText === 'function' ? window.getWmText() : '';
+  const res = window.PRESCHOOL_BANK.buildPages({ level, topic, sheets, illust, wmText: wm });
+  if($('wbPreInfo') && res.level){
+    $('wbPreInfo').textContent = `📐 ${res.level.name}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列＝${res.level.cols*res.level.rows} 格置頂到底全滿）｜${res.level.desc}（共 ${res.pages.length} 面 A4）`;
+  }
+  sheet.innerHTML = '';
+  res.pages.forEach((pg, idx) => {
+    const cap = document.createElement('div');
+    cap.className = 'pcap';
+    cap.textContent = `A4 直式幼兒園寫字帖（${res.level.cols}欄×${res.level.rows}列）　第 ${idx+1} / ${res.pages.length} 頁`;
+    sheet.appendChild(cap);
+    sheet.appendChild(pg);
+  });
+}
+window.renderPreschoolWorkbench = renderPreschoolWorkbench;
+
 function switchTab(tabName){
   if(tabName !== 'store' && !isAdminUnlocked){
     openAdminModal();
@@ -79,12 +102,16 @@ function switchTab(tabName){
     b.classList.toggle('active', b.dataset.tab === tabName);
   });
   if($('viewStore')) $('viewStore').style.display = tabName === 'store' ? '' : 'none';
+  if($('viewPreschool')) $('viewPreschool').style.display = tabName === 'preschool' ? '' : 'none';
   if($('viewStroke')) $('viewStroke').style.display = tabName === 'stroke' ? '' : 'none';
   if($('viewExam')) $('viewExam').style.display = tabName === 'exam' ? '' : 'none';
   if($('viewBatch')) $('viewBatch').style.display = tabName === 'batch' ? '' : 'none';
   if($('wmBar')) $('wmBar').style.display = (isAdminUnlocked && tabName !== 'store') ? '' : 'none';
 
-  if(tabName === 'stroke'){
+  if(tabName === 'preschool'){
+    const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
+    renderPreschoolWorkbench();
+  } else if(tabName === 'stroke'){
     const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
     if(typeof window.generate === 'function') window.generate();
   } else if(tabName === 'exam'){
@@ -279,6 +306,15 @@ function updateItemPriceHint(){
         ? `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元・已達 20 張可直接出貨！）`
         : `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元；購物車累計滿 20 張出貨）`;
     }
+  } else if(packMode === 'preschool_pack'){
+    const preSheets = +($('stPreSheets')?.value || 10);
+    const sheets = qty * preSheets;
+    if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${preSheets}張）`;
+    if($('stItemPriceHint')){
+      $('stItemPriceHint').textContent = sheets >= 20
+        ? `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元・已達 20 張可直接出貨！）`
+        : `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元；購物車累計滿 20 張出貨）`;
+    }
   } else {
     const price = qty * 5;
     if($('stQtyUnit')) $('stQtyUnit').textContent = '張（5元/張）';
@@ -297,6 +333,22 @@ function getPreviewSheetMeta(){
     { name:'精選選擇＋實戰加強卷' }, { name:'閱讀素養＋圖表挑戰卷' },
     { name:'高分易錯診斷特訓卷' }, { name:'全範圍綜合魔王總複習' }
   ]);
+
+  if(packMode === 'preschool_pack'){
+    const preSheets = +($('stPreSheets')?.value || 10);
+    const lvl = $('stPreLevel')?.value || 'small';
+    const lvlName = {small:'小班',mid:'中班',large:'大班'}[lvl] || '小班';
+    const topic = $('stPreTopic')?.value || 'all';
+    const topName = {all:'ㄅㄆㄇ・123・ABC',zy:'注音符號',num:'數字123',abc:'英文字母'}[topic] || '綜合';
+    const list = [];
+    for(let i = 0; i < preSheets; i++){
+      list.push({
+        idx: i, type: 'preschool', preIdx: i,
+        label: `第 ${i+1}/${preSheets} 張｜🐣 幼兒園${lvlName}（${topName}）`
+      });
+    }
+    return list;
+  }
 
   if(packMode === 'stroke_pack'){
     const spSheets = +($('stSpSheets')?.value || 10);
@@ -429,7 +481,22 @@ async function updateStorePreview(){
   let previewType = activeMeta ? activeMeta.type : 'exam';
   let orderCfg = null;
 
-  if(packMode === 'lazy'){
+  if(packMode === 'preschool_pack'){
+    const lvl = $('stPreLevel')?.value || 'small';
+    const topic = $('stPreTopic')?.value || 'all';
+    const sheets = +($('stPreSheets')?.value || 10);
+    const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
+    orderCfg = {
+      plan: 'preschool',
+      preLevel: lvl,
+      preTopic: topic,
+      sheets,
+      illust,
+      sampleLimit: 1,
+      previewPageIdx: activeMeta ? (activeMeta.preIdx || 0) : 0
+    };
+    previewType = 'preschool';
+  } else if(packMode === 'lazy'){
     const scope = $('stLazyScope').value;
     const subj = $('stLazySubj').value || '國語';
     orderCfg = {
@@ -486,7 +553,24 @@ async function updateStorePreview(){
   }
 
   scaleBox.innerHTML = '';
-  if(previewType === 'stroke' && window.buildStrokePagesForOrder){
+  if(previewType === 'preschool' && window.PRESCHOOL_BANK){
+    const res = window.PRESCHOOL_BANK.buildPages({
+      level: orderCfg.preLevel,
+      topic: orderCfg.preTopic,
+      sheets: orderCfg.sheets,
+      illust: orderCfg.illust,
+      sampleLimit: 1,
+      previewPageIdx: orderCfg.previewPageIdx,
+      wmText: '向日葵國小伴學誌・線上樣本預覽請勿截圖'
+    });
+    if($('stPreDesc') && res.level){
+      $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列置頂到底滿格、共收錄 ${res.itemCount} 個階段符號依序循環）`;
+    }
+    if(res.pages && res.pages.length){
+      renderPreviewPagesDualOrSingle(scaleBox, res.pages, false);
+      if(badge) badge.textContent = `🐣 第 ${curIdx+1}/${orderCfg.sheets} 張正反雙面（${res.level.name}・${res.level.cols}欄×${res.level.rows}列）`;
+    }
+  } else if(previewType === 'stroke' && window.buildStrokePagesForOrder){
     let res = await window.buildStrokePagesForOrder(orderCfg, '向日葵國小伴學誌・線上樣本預覽請勿截圖');
     const checkedLessons = [...document.querySelectorAll('#stLessonList input:checked')].map(i => i.value);
 
@@ -565,7 +649,45 @@ function buildCurrentSelectionsAsCartItems(){
   const qty = Math.max(1, +$('stQty').value || 1);
   const items = [];
 
-  if(packMode === 'lazy'){
+  if(packMode === 'preschool_pack'){
+    const preSheets = +($('stPreSheets')?.value || 10);
+    const lvlId = $('stPreLevel')?.value || 'small';
+    const lvlObj = (window.PRESCHOOL_BANK && window.PRESCHOOL_BANK.levels[lvlId]) || { name: '小班', cols: 5, rows: 6 };
+    const topic = $('stPreTopic')?.value || 'all';
+    const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）' }[topic] || '綜合進度';
+    const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
+    const sheets = preSheets * qty;
+    const amount = sheets * 5;
+    items.push({
+      id: 'C' + Date.now() + '_PRE',
+      packType: '幼兒園寫字帖',
+      plan: 'preschool',
+      planName: `🐣 幼兒園寫字帖・${lvlObj.name}（${preSheets}張／本）`,
+      grade: `幼兒園${lvlObj.name}`,
+      sem: '適齡先修',
+      pub: 'pre',
+      pubName: '台灣幼教適齡課綱',
+      subj: topicName,
+      scope: topic,
+      scopeName: lvlObj.name,
+      diff: lvlId,
+      diffName: lvlObj.stageTitle || '運筆與符號啟蒙',
+      ruby: true,
+      strokeMode: 'A',
+      cols: lvlObj.cols,
+      layout: '2col',
+      preLevel: lvlId,
+      preTopic: topic,
+      preIllust: illust,
+      custom_words: '',
+      custom_units: `${lvlObj.name}｜${topicName}`,
+      spec_note: `${lvlObj.cols}欄×${lvlObj.rows}列大格滿版｜${topicName}｜${illust?'含可愛小插圖':'簡潔大格'}`,
+      unitSheets: preSheets,
+      qty,
+      sheets,
+      amount
+    });
+  } else if(packMode === 'lazy'){
     const scope = $('stLazyScope').value;
     const scopeName = getStoreScopeName(scope);
     const subj = $('stLazySubj').value || '國語';
@@ -974,20 +1096,33 @@ function initStore(){
     };
   }
 
-  // 購買模式 3 選 1：評量懶人包 vs 獨立生字練習本 vs 客製自由配
+  // 購買模式 4 選 1：評量懶人包 vs 生字練習本 vs 幼兒園運筆寫字帖 vs 客製自由配
   document.querySelectorAll('input[name=stPackMode]').forEach(r => {
     r.onchange = () => {
       const val = r.checked ? r.value : (document.querySelector('input[name=stPackMode]:checked')?.value || 'lazy');
       $('stLazyPanel').style.display = val === 'lazy' ? '' : 'none';
       if($('stStrokePackPanel')) $('stStrokePackPanel').style.display = val === 'stroke_pack' ? '' : 'none';
+      if($('stPreschoolPanel')) $('stPreschoolPanel').style.display = val === 'preschool_pack' ? '' : 'none';
       $('stCustomPanel').style.display = val === 'custom' ? '' : 'none';
+      if($('stBasicSchoolWrap')) $('stBasicSchoolWrap').style.display = val === 'preschool_pack' ? 'none' : '';
       $('lblPackLazy').classList.toggle('active', val === 'lazy');
       if($('lblPackStroke')) $('lblPackStroke').classList.toggle('active', val === 'stroke_pack');
+      if($('lblPackPreschool')) $('lblPackPreschool').classList.toggle('active', val === 'preschool_pack');
       $('lblPackCustom').classList.toggle('active', val === 'custom');
       if($('stQty')) $('stQty').value = '1';
       if($('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
       scheduleStorePreview();
     };
+  });
+
+  if($('btnWbPreGen')) $('btnWbPreGen').onclick = renderPreschoolWorkbench;
+  if($('btnWbPrePrint')) $('btnWbPrePrint').onclick = () => {
+    renderPreschoolWorkbench();
+    const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
+    window.print();
+  };
+  ['wbPreLevel','wbPreTopic','wbPreSheets','wbPreIllust'].forEach(id => {
+    if($(id)) $(id).onchange = renderPreschoolWorkbench;
   });
 
   // 客製包內：生字本 vs 評量本切換
@@ -1013,10 +1148,10 @@ function initStore(){
       scheduleStorePreview();
     };
   }
-  ['stLazySubj','stLazyScope','stSpSheets','stSpMode','stSpCols','stSpZy','stStrokeMode','stStrokeCols','stStrokeZy','stCustomWords','stExamDiff','stExamLayout','stExamRuby','stQty'].forEach(id => {
+  ['stLazySubj','stLazyScope','stSpSheets','stSpMode','stSpCols','stSpZy','stPreLevel','stPreTopic','stPreSheets','stPreIllust','stStrokeMode','stStrokeCols','stStrokeZy','stCustomWords','stExamDiff','stExamLayout','stExamRuby','stQty'].forEach(id => {
     const el = $(id); if(!el) return;
     el.onchange = () => {
-      if(id==='stSpSheets' && $('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
+      if((id==='stSpSheets'||id==='stPreSheets') && $('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
       scheduleStorePreview();
     };
     if(el.tagName === 'INPUT') el.oninput = scheduleStorePreview;
