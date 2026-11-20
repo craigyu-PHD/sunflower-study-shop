@@ -3452,7 +3452,35 @@ function genChineseRichQuestion(grade, kind, diff='mid', vIdx=0, pool=[], lsName
     }
 
     if(kind === 'match'){
-      const slot = vIdx % 4;
+      // 期中／期末常見配對題型：相似詞、相反詞、多音字、成語、量詞、部首、修辭、標點
+      const slot = vIdx % 8;
+      const pickSet=(groups,arch,title)=>{
+        const gset=groups[(vIdx*7) % groups.length];
+        if(!gset || gset.length<4) return null;
+        return {q:`${title}（${gset[0][0]}等四組連連看）`, pairs:gset.map(x=>[x[0],x[1]]), arch};
+      };
+      const measureGroups=[
+        [['一頭牛','頭'],['一本書','本'],['一朵花','朵'],['一條魚','條']],
+        [['一張桌子','張'],['一把椅子','把'],['一件衣服','件'],['一輛汽車','輛']],
+        [['一支鉛筆','支'],['一塊橡皮擦','塊'],['一雙鞋子','雙'],['一頂帽子','頂']]
+      ];
+      const radGroups=[
+        [['晴','日部'],['清','水部'],['睛','目部'],['請','言部']],
+        [['河','水部'],['說','言部'],['跑','足部'],['想','心部']],
+        [['花','艸部'],['樹','木部'],['鳥','鳥部'],['魚','魚部']]
+      ];
+      const rhetoricGroups=[
+        [['月亮像一艘小船','比喻'],['小鳥在枝頭唱歌','擬人'],['他的聲音響遍全世界','誇飾'],['是誰偷吃了蛋糕？','設問']],
+        [['白雲像綿羊','比喻'],['花朵對我點頭','擬人'],['等了好像一百年','誇飾'],['難道你不覺得嗎？','設問']]
+      ];
+      const punctGroups=[
+        [['表示疑問語氣','？'],['表示驚喜或感嘆','！'],['句中短暫停頓','，'],['句子結束停頓','。']],
+        [['引出說話內容','：'],['標示引用的用語','「」'],['列舉同類事項','、'],['語意未完的停頓','，']]
+      ];
+      if(slot === 4){ const v=pickSet(measureGroups,'zh_match_measure','量詞配對'); if(v) return v; }
+      if(slot === 5){ const v=pickSet(radGroups,'zh_match_rad','國字與部首配對'); if(v) return v; }
+      if(slot === 6){ const v=pickSet(rhetoricGroups,'zh_match_rhet','修辭格配對'); if(v) return v; }
+      if(slot === 7){ const v=pickSet(punctGroups,'zh_match_punc','標點符號用法配對'); if(v) return v; }
       if(slot === 0 && Z.synAnt && Z.synAnt.length >= 4){
         const pick4 = [], seenR = new Set();
         for(let i=0; i<Z.synAnt.length && pick4.length<4; i++){
@@ -4919,6 +4947,7 @@ function renderExam(measureOnly=false){
     // 國語科：改採真實國小考卷「上下雙排直書」欄流（由大至小嘗試字級，讓 2 頁剛好填滿無半欄留白）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
     const mainX=useZy?14:21;
+    const zhCompact=!useZy; // 無注音才套用更緊的字距／行距，有注音維持原注音軸間距
     // 國語字級：有注音／無注音共用同一組候選，避免無注音（三年級以上）被縮成小字；
     // 兩者差異只表現在字距——無注音字距更小，維持原設計「有注音／無注音字距不同」
     const zhCandFs=[16.8, 16.0, 15.2, 14.4, 13.6];
@@ -4926,7 +4955,7 @@ function renderExam(measureOnly=false){
     for(const _candFs of zhCandFs){
       zhFs=_candFs;
       const tierMaxH = 390; // 上下排可用高度往兩端伸展，減少留白
-      const maxColUnits=Math.floor((tierMaxH/zhFs)*22*1.02); // 單排內可容納之 SVG 高度單位（提高利用率）
+      const maxColUnits=Math.floor((tierMaxH/zhFs)*22*(zhCompact?1.2:1.02)); // 無注音字高較矮，可提高單欄容量以減少每題欄數
 
     const packCols=(cells, indentUnits=0)=>{
       const cols=[]; let cur=[], h=0;
@@ -5055,14 +5084,14 @@ function renderExam(measureOnly=false){
     meas.className='a4 exam-a4 ex-land';
     meas.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden';
     const mwOuter=document.createElement('div');mwOuter.className='ex-zh-tiers';
-    const mw=document.createElement('div');mw.className='ex-zh-tier';
+    const mw=document.createElement('div');mw.className='ex-zh-tier'+(zhCompact?' ex-zh-compact':'');
     mw.style.setProperty('--ex-fs',zhFs+'px');
     const zhGrade=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
     const hdM=document.createElement('div');hdM.className='ex-zh-hd';
     hdM.innerHTML=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
       <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
     mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
-    maxW=mw.clientWidth-38;
+    maxW=mw.clientWidth-22; // 與 .ex-zh-tiers 左右各 10px padding 對應，釋放更多水平空間
     const hdW=hdM.getBoundingClientRect().width+12;
 
     const pendZh=[];
@@ -5132,7 +5161,7 @@ function renderExam(measureOnly=false){
 
       const buildTierEl=(items, usedW, isFirstTop)=>{
         const tierEl=document.createElement('div');
-        tierEl.className='ex-zh-tier '+(isFirstTop?'top':'bot');
+        tierEl.className='ex-zh-tier '+(isFirstTop?'top':'bot')+(zhCompact?' ex-zh-compact':'');
         const spareW=Math.max(0,(maxW-14)-usedW);
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));

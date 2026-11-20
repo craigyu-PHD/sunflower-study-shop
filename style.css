@@ -156,7 +156,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 
 /* 國語科：A4 橫式上下雙排直書（上排＋下排，由右至左隱藏式格子欄流） */
 .a4.ex-land{width:1122px;height:794px}
-.ex-zh-tiers{width:100%;height:100%;padding:8px 18px 10px;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
+.ex-zh-tiers{width:100%;height:100%;padding:8px 10px 10px;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
 .ex-zh-tier{flex:1;min-height:0;display:flex;flex-direction:row-reverse;align-items:flex-start;width:100%;color:#111;font-size:var(--ex-fs,13px);gap:var(--zh-col-gap,4px);overflow:hidden}
 .ex-zh-tier.tier-top{border-bottom:1.5px dashed #cbbba0;padding-bottom:3px}
 .ex-zh-wrap{display:flex;flex-direction:row-reverse;align-items:flex-start;width:100%;height:100%;padding:22px 26px;color:#111;font-size:var(--ex-fs,13.5px);gap:var(--zh-col-gap,4px);overflow:hidden}
@@ -167,6 +167,13 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:5px 4px;border-top:4px solid #ff7a1a;margin:0 3px;height:100%;flex:none;font-size:.86em;line-height:1.25;letter-spacing:.01em;white-space:nowrap;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 var(--zh-q-gap,3px);flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
+/* 無注音國語卷：字距與行距等比例再壓緊（約 0.87 倍），爭取的空位用來多容納一題 */
+.ex-zh-compact .gcell{width:1.56em}
+.ex-zh-compact .g-han{height:1.02em}
+.ex-zh-compact .g-zy{height:1.14em}
+.ex-zh-compact .g-punc{height:.78em}
+.ex-zh-compact .g-blank{height:2.48em}
+.ex-zh-compact .ex-zh-col{width:1.62em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:var(--zh-box-calc,2.2em);height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:var(--zh-box-word,3.2em)}
 .preschool-a4 .pre-a4-hd{position:absolute;left:24px;right:24px;top:14px;height:64px;border-bottom:2px solid #f59e0b;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
@@ -518,14 +525,14 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .store-hero{padding-top:8px;padding-bottom:8px}
 .store-hero-top{padding-bottom:5px;margin-bottom:5px}
 .rules-grid{gap:8px;margin-bottom:8px}
-.rule-box{padding:7px 10px;font-size:.86rem;line-height:1.4}
-.rule-title{font-size:1.02rem;padding:4px 7px;margin-bottom:4px;line-height:1.25;overflow-wrap:anywhere}
+.rule-box{padding:7px 10px;font-size:.9rem;line-height:1.45}
+.rule-title{font-size:1.1rem;padding:5px 7px;margin-bottom:5px;line-height:1.3;overflow-wrap:anywhere}
 .rule-list{margin:1px 0 2px;padding-left:15px}
 .rule-list li{margin:2px 0}
 .rule-list .ok{color:#136529;font-weight:700}
 .rule-list .late{color:#b33a00;font-weight:700}
 .map-embed-wrap{height:104px}
-.legal-notice{padding:6px 9px;font-size:.81rem;line-height:1.42}
+.legal-notice{padding:7px 9px;font-size:.86rem;line-height:1.46}
 .legal-notice li{margin:2px 0}
 /* 消保法標題沿用 .rule-title，不另設字級，確保與其他三欄完全一致 */
 .pack-tab{border-width:2px;transition:.15s}
@@ -563,8 +570,8 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .store-builder>.store-controls{min-width:0}
 @media(max-width:720px){
   .rules-grid{gap:6px}
-  .rule-box{padding:7px 9px;font-size:.84rem}
-  .rule-title{font-size:1rem;padding:4px 6px;margin-bottom:5px}
+  .rule-box{padding:7px 9px;font-size:.88rem}
+  .rule-title{font-size:1.06rem;padding:4px 6px;margin-bottom:5px}
   .btn-map{font-size:.82rem;padding:6px 10px;white-space:normal;width:100%;justify-content:center;text-align:center}
   .store-builder{gap:9px}
 }

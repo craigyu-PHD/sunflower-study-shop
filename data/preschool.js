@@ -624,6 +624,23 @@
     const pad = levelId === 'large' ? 2.5 : 3;
     const bx = pad, by = pad, bw = cw - pad*2, bh = chh - pad*2;
 
+    // 寫字格：淡灰外框＋淡灰田字虛線中線；不加入紅框、筆順數字或逐筆引導線
+    const drawCellGrid = (withMid)=>{
+      g.save();
+      g.strokeStyle = '#d3dae5';
+      g.lineWidth = 1;
+      g.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      if(withMid){
+        g.strokeStyle = '#dfe5ee';
+        g.setLineDash([3, 3]);
+        g.beginPath();
+        g.moveTo(bx + bw / 2, by + 1); g.lineTo(bx + bw / 2, by + bh - 1);
+        g.moveTo(bx + 1, by + bh / 2); g.lineTo(bx + bw - 1, by + bh / 2);
+        g.stroke();
+      }
+      g.restore();
+    };
+
     if(rowIdx === 0){
       // 頂格：保留插圖徽章＋點點提示；示範字改淡灰底上的深灰字，移除彩色／紅色外框
       g.fillStyle = '#e9edf3';
@@ -787,8 +804,9 @@
       return cv;
     }
 
-    // 淡灰描寫練習格：每格皆為淡灰底上的淡灰全字，供幼兒直接描寫；
-    // 不使用紅框、田字格中線、筆順圓點編號或逐筆累積（還原為寫字帖淡灰版）
+    // 淡灰描寫練習格：每格保留完整寫字格（淡灰外框＋田字虛線），格內為淡灰全字供幼兒直接描寫；
+    // 仍不使用紅框、筆順圓點編號或逐筆累積，維持原本淡灰描寫風格
+    drawCellGrid(true);
     const sym = String(item.sym);
     const len = sym.length;
     const baseFs = len >= 3 ? bh * 0.44 : (len === 2 ? bh * 0.56 : bh * 0.72);
