@@ -289,6 +289,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .rule-title{font-weight:900;color:#7c2d12;font-size:1.18rem;text-align:center;letter-spacing:.04em;background:linear-gradient(135deg,#fff3db,#ffe4b5);border-bottom:2px solid #f59e0b;border-radius:8px;padding:7px 10px;margin-bottom:10px}
 .btn-map{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#2b7de9,#1758b8);color:#fff;text-decoration:none;font-weight:700;font-size:.86rem;padding:7px 14px;border-radius:8px;box-shadow:0 2px 6px #1758b844;transition:.15s;align-self:stretch;text-align:center;max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .btn-map:hover{transform:translateY(-1px);box-shadow:0 4px 10px #1758b866}
+.map-nowrap{white-space:nowrap;display:inline-block}
 .cart-tbl td,.cart-tbl th{padding:6px 5px}
 .cart-qty-wrap{display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap;max-width:100%}
 .cart-qty-wrap b{display:inline-block;min-width:2.3em;text-align:center;white-space:nowrap;font-size:.86rem}
@@ -296,9 +297,11 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .cart-del-btn{padding:2px 6px!important;font-size:.8rem!important;line-height:1.25;border-radius:6px!important;min-width:24px}
 
 .legal-notice{background:#fff8f8;border:1.5px solid #ecc6c6;border-top:3px solid #c93b3b;border-radius:10px;padding:8px 12px;font-size:.84rem;color:#4a1c1c;line-height:1.5;min-width:0}
-.legal-title{font-weight:800;color:#a71d2a;font-size:.94rem;margin-bottom:5px;line-height:1.35}
+/* 消保法標題與旁邊三欄共用 .rule-title 設計，不另行覆蓋 */
 .legal-notice ul{margin:0;padding-left:17px}
 .legal-notice li{margin:4px 0}
+.legal-k{font-weight:900;color:#a71d2a}
+.legal-em{color:#c81e1e;font-weight:900;background:linear-gradient(transparent 62%,#ffe0e0 62%)}
 
 /* 選單＋寬版即時雙面預覽雙欄佈局（螢幕較窄或手機自動改為上下單欄） */
 .store-builder{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start}
@@ -456,18 +459,25 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .back-to-top:hover{transform:translateY(-2px);box-shadow:0 9px 24px rgba(255,122,26,.6)}
 /* 批次預覽：滑桿依附檢視區左側獨立欄，不蓋考卷頁面 */
 .batch-preview-layout{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px;align-items:start}
-.batch-preview-main{min-width:0}
-.batch-rail-inline{position:sticky;top:12px;left:auto;transform:none;width:34px;height:calc(100vh - 24px);z-index:5;justify-self:center}
+/* rail 無 .show 時 display:none，若不指定欄位，main 會被自動放進 46px 第一欄而擠壞下方功能鍵 */
+.batch-preview-main{min-width:0;grid-column:2}
+.batch-rail-inline{grid-column:1;position:sticky;top:12px;left:auto;transform:none;width:34px;height:calc(100vh - 24px);z-index:5;justify-self:center}
 .batch-rail-inline.show{display:block;animation:none}
 .batch-rail-inline .batch-minimap-tick{width:34px}
-/* 訂購頁：滑桿貼在預覽框內左側，隨框捲動、不浮在全站 */
-.store-rail-inline{position:absolute;top:0;bottom:0;left:10px;transform:none;width:30px;height:auto;z-index:6;border-radius:10px}
+/* 訂購頁：滑桿貼在預覽框內左側，無外框、只有一點一點連線，做得秀氣不遮後方 */
+.store-rail-inline{position:absolute;top:8px;bottom:8px;left:6px;transform:none;width:16px;height:auto;z-index:6;background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 .store-rail-inline.show{display:block;animation:none}
-.store-rail-inline .batch-minimap-tick{width:30px}
-.store-rail-inline .batch-minimap-track,.store-rail-inline .batch-minimap-rail{top:12px;bottom:12px}
+.store-rail-inline.show:hover{transform:none;box-shadow:none}
+.store-rail-inline .batch-minimap-track{left:50%;top:8px;bottom:8px;width:1px;background:linear-gradient(180deg,#e2e8f0,#cbd5e1,#e2e8f0);opacity:.9}
+.store-rail-inline .batch-minimap-rail{top:8px;bottom:8px;width:100%}
+.store-rail-inline .batch-minimap-tick{left:0;width:16px;height:14px}
+.store-rail-inline .batch-minimap-tick::before{width:4px;height:4px;background:#cbd5e1;box-shadow:0 0 0 1px rgba(255,255,255,.9);transition:width .18s ease,height .18s ease,background .18s ease,box-shadow .18s ease}
+.store-rail-inline .batch-minimap-tick.hover::before{width:7px;height:7px;background:#fb923c;box-shadow:0 0 0 2px rgba(251,146,60,.18)}
+.store-rail-inline .batch-minimap-tick.active::before{width:8px;height:8px;background:linear-gradient(135deg,#ff9d42,#f4600a);box-shadow:0 0 0 2px rgba(244,96,10,.2)}
+.store-rail-inline .batch-minimap-tick.active.hover::before{width:9px;height:9px}
 /* rail 出現時把預覽內容往右推，避免遮住標題／分頁／試卷 */
-.store-preview-pane:has(.store-rail-inline.show) > .pv-fill{padding-left:34px}
-@media(max-width:720px){.store-preview-pane:has(.store-rail-inline.show) > .pv-fill{padding-left:30px}}
+.store-preview-pane:has(.store-rail-inline.show) > .pv-fill{padding-left:22px}
+@media(max-width:720px){.store-preview-pane:has(.store-rail-inline.show) > .pv-fill{padding-left:20px}}
 @media(max-width:720px){
   .batch-minimap{left:5px;width:30px;height:56vh}
   .batch-minimap-tick{width:30px}
@@ -475,8 +485,8 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
   .back-to-top{right:12px;bottom:12px;width:40px;height:40px}
   .batch-preview-layout{grid-template-columns:34px minmax(0,1fr);gap:6px}
   .batch-rail-inline{width:30px;height:56vh}
-  .store-rail-inline{left:7px;width:26px}
-  .store-rail-inline .batch-minimap-tick{width:26px}
+  .store-rail-inline{left:5px;width:14px}
+  .store-rail-inline .batch-minimap-tick{width:14px}
 }
 @media print{
   .batch-minimap,.back-to-top{display:none!important}
@@ -517,7 +527,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .map-embed-wrap{height:104px}
 .legal-notice{padding:6px 9px;font-size:.81rem;line-height:1.42}
 .legal-notice li{margin:2px 0}
-.legal-title{margin-bottom:2px;font-size:.9rem}
+/* 消保法標題沿用 .rule-title，不另設字級，確保與其他三欄完全一致 */
 .pack-tab{border-width:2px;transition:.15s}
 .pack-tab:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(217,119,6,.18)}
 .pack-tab.active{background:linear-gradient(135deg,#fff3dc,#ffe2b3);border-color:#f97316;box-shadow:0 4px 12px rgba(249,115,22,.28)}

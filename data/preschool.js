@@ -542,6 +542,43 @@
     });
   }
 
+  // 模式一「筆順引導」：依 STROKE_PATHS 中線逐筆累積，第 k 筆紅色、其餘深灰（同寫字帖工作台 drawCell）
+  //   upto = 要顯示的筆數（0 不畫）；回傳實際畫出的筆數。沒有虛線、沒有藍色圓點與箭頭。
+  function drawProgressiveStrokes(g, sym, centerX, glyphY, baseFs, upto){
+    const authored = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
+    const k = Math.min(Math.max(0, upto|0), authored.length);
+    if(!k) return authored.length;
+    const lw = Math.max(1.6, Math.min(baseFs * 0.072, 7));
+    for(let i = 0; i < k; i++){
+      const box = authored[i].box, seeds = authored[i].segs;
+      if(!seeds || !seeds.length) continue;
+      const mx = nx => box.x + nx * box.w;
+      const my = ny => box.y + ny * box.h;
+      g.save();
+      g.beginPath();
+      g.moveTo(mx(seeds[0][0]), my(seeds[0][1]));
+      for(let j = 1; j < seeds.length; j++){
+        const s = seeds[j];
+        if(s[0] === 'L') g.lineTo(mx(s[1]), my(s[2]));
+        else if(s[0] === 'Q') g.quadraticCurveTo(mx(s[1]), my(s[2]), mx(s[3]), my(s[4]));
+      }
+      g.strokeStyle = (i === k - 1) ? '#e02020' : '#334155';
+      g.lineWidth = lw;
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.stroke();
+      g.restore();
+    }
+    return authored.length;
+  }
+
+  // 取得符號總筆數（多字元 Aa／100 逐字相加）；不依賴 canvas，避免與呼叫端 font 互相影響
+  function getStrokeCountForSym(sym){
+    let n = 0;
+    for(const ch of String(sym || '')) n += (STROKE_PATHS[ch] || []).length;
+    return n;
+  }
+
   function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId){
     const SCALE = 2;
     const cv = document.createElement('canvas');
@@ -699,7 +736,8 @@
         g.stroke();
       }
 
-      // 下方公版黑色實心示範字（再放大、再加粗，保留最標準字體輪廓）
+      // 下方：模式一「示範格」＝田字格（全實線中線，不用虛線）＋公版黑色實心示範字
+      //   移除舊 drawStrokeOrderOverlay 的藍色圓點／箭頭／虛線引導
       const sym = String(item.sym);
       const gapPx = showIllust ? 2 : 3;
       const modelTop = showIllust ? (by + 2 + topH + gapPx) : (by + 2);
@@ -709,6 +747,21 @@
       const fontFam = (item.kind === 'abc' || item.kind === 'num')
         ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
         : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
+      // 田字格：外框＋實線十字中線（完全無虛線）
+      const tzPad = 2;
+      const zx = bx + tzPad, zyT = modelTop + tzPad;
+      const zw = bw - tzPad * 2, zh = modelH - tzPad * 2;
+      g.save();
+      g.strokeStyle = '#e8a0a0';
+      g.lineWidth = 1;
+      g.strokeRect(zx, zyT, zw, zh);
+      g.strokeStyle = '#f2cdcd';
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.moveTo(zx + zw / 2, zyT); g.lineTo(zx + zw / 2, zyT + zh);
+      g.moveTo(zx, zyT + zh / 2); g.lineTo(zx + zw, zyT + zh / 2);
+      g.stroke();
+      g.restore();
       g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
       g.textAlign = 'center';
       g.textBaseline = 'middle';
@@ -721,74 +774,59 @@
       g.strokeText(sym, gx, gy);
       g.fillText(sym, gx, gy);
       g.restore();
-
-      // multi-char（Aa、30~100）也畫引導：getStrokesForSym 已逐字拆分、localIdx 逐字重置編號
-      drawStrokeOrderOverlay(g, sym, gx, gy, baseFs, {x: bx + 2, y: modelTop, w: bw - 4, h: modelH}, true, true);
       return cv;
     }
 
-    // 練習格框線：英文採用「四線三格」、數字與注音採用「十字虛線引導大格」
-    g.strokeStyle = item.kind === 'zy' ? '#f59e0b' : (item.kind === 'num' ? '#22c55e' : '#3b82f6');
-    g.lineWidth = 1.4;
-    g.strokeRect(bx, by, bw, bh);
-
-    if(item.kind === 'abc'){
-      const y1 = by + bh * 0.18, y2 = by + bh * 0.44, y3 = by + bh * 0.72, y4 = by + bh * 0.90;
-      g.lineWidth = 0.8;
-      g.strokeStyle = '#93c5fd';
-      g.beginPath(); g.moveTo(bx, y1); g.lineTo(bx+bw, y1); g.moveTo(bx, y4); g.lineTo(bx+bw, y4); g.stroke();
-      g.setLineDash([4,3]);
-      g.beginPath(); g.moveTo(bx, y2); g.lineTo(bx+bw, y2); g.stroke();
-      g.setLineDash([]);
-      g.strokeStyle = '#f87171';
-      g.beginPath(); g.moveTo(bx, y3); g.lineTo(bx+bw, y3); g.stroke();
-    } else {
-      g.lineWidth = 0.8;
-      g.strokeStyle = '#e5e7eb';
-      g.setLineDash([4,3]);
-      g.beginPath();
-      g.moveTo(bx + bw/2, by); g.lineTo(bx + bw/2, by + bh);
-      g.moveTo(bx, by + bh/2); g.lineTo(bx + bw, by + bh/2);
-      g.stroke();
-      g.setLineDash([]);
-    }
-
+    // 模式一「逐筆累積」練習格：田字格（全實線）＋前 k-1 筆深灰、第 k 筆紅色＋左上角編號
+    //   完全不使用虛線、藍色圓點或收筆箭頭；筆順與寫字帖工作台模式一一致（STROKE_PATHS 中線）
     const sym = String(item.sym);
     const len = sym.length;
-    const isLastBlank = (rowIdx === totalRows - 1 && totalRows >= 7);
+    const totalStrokes = getStrokeCountForSym(sym);
     const baseFs = len >= 3 ? bh * 0.44 : (len === 2 ? bh * 0.56 : bh * 0.72);
     const fontFam = (item.kind === 'abc' || item.kind === 'num')
       ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
       : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
-    g.font = `600 ${Math.round(baseFs)}px ${fontFam}`;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
+    const borderColor = item.kind === 'zy' ? '#f59e0b' : (item.kind === 'num' ? '#22c55e' : '#3b82f6');
 
-    if(!isLastBlank){
-      const isGuide = rowIdx <= 2;
-      const strokeColor = rowIdx === 1 ? '#94a3b8' : (rowIdx === 2 ? '#a8b8cc' : (rowIdx <= Math.ceil(totalRows * 0.55) ? '#cbd5e1' : '#e2e8f0'));
-      if(isGuide || levelId === 'small'){
-        g.save();
-        g.strokeStyle = rowIdx === 1 ? '#c7d2df' : '#dbe3ec';
-        g.lineWidth = levelId === 'small' ? 0.9 : 0.7;
-        g.strokeText(sym, bx + bw/2, by + bh * 0.53);
-        g.fillStyle = rowIdx === 1 ? 'rgba(203,213,225,0.42)' : 'rgba(226,232,240,0.35)';
-        g.fillText(sym, bx + bw/2, by + bh * 0.53);
-        g.restore();
-      } else {
-        g.fillStyle = strokeColor;
-        g.fillText(sym, bx + bw/2, by + bh * 0.53);
-      }
+    // 田字格外框＋實線十字中線
+    g.strokeStyle = borderColor;
+    g.lineWidth = 1.4;
+    g.strokeRect(bx, by, bw, bh);
+    g.strokeStyle = '#f0cccc';
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(bx + bw/2, by); g.lineTo(bx + bw/2, by + bh);
+    g.moveTo(bx, by + bh/2); g.lineTo(bx + bw, by + bh/2);
+    g.stroke();
 
-      if(rowIdx === 1 || rowIdx === 2){
-        drawStrokeOrderOverlay(g, sym, bx + bw / 2, by + bh * 0.53, baseFs, {x: bx + 2, y: by + 2, w: bw - 4, h: bh - 4}, rowIdx === 2, false);
-      }
+    const gx = bx + bw / 2, gy = by + bh * 0.53;
+    if(rowIdx >= 1 && rowIdx <= totalStrokes){
+      // 逐筆累積：前 rowIdx-1 筆深灰、第 rowIdx 筆紅色
+      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
+      drawProgressiveStrokes(g, sym, gx, gy, baseFs, rowIdx);
+      // 左上角編號（同寫字帖模式一 label，採淡灰文字，不做藍色圓點）
+      g.font = `800 ${Math.max(9, Math.round(bh * 0.12))}px "Noto Sans TC",sans-serif`;
+      g.textAlign = 'left'; g.textBaseline = 'top';
+      g.fillStyle = '#94a3b8';
+      g.fillText(String(rowIdx), bx + 4, by + 3);
     } else {
-      g.font = `600 10px "Noto Sans TC",sans-serif`;
-      g.fillStyle = '#cbd5e1';
-      g.textAlign = 'left';
-      g.textBaseline = 'top';
-      g.fillText(sym, bx + 4, by + 3);
+      // 筆順完成後的空白練習格：末格保留小字標註，其餘給極淺灰全字 ghost 供描寫
+      const isLastBlank = (rowIdx === totalRows - 1 && totalRows >= 7);
+      if(isLastBlank){
+        g.font = `600 10px "Noto Sans TC",sans-serif`;
+        g.fillStyle = '#cbd5e1';
+        g.textAlign = 'left';
+        g.textBaseline = 'top';
+        g.fillText(sym, bx + 4, by + 3);
+      }else{
+        g.font = `600 ${Math.round(baseFs)}px ${fontFam}`;
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.save();
+        g.globalAlpha = 0.16;
+        g.fillStyle = '#64748b';
+        g.fillText(sym, gx, gy);
+        g.restore();
+      }
     }
 
     return cv;
