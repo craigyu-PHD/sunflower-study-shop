@@ -171,7 +171,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-q .qbox.word{width:var(--zh-box-word,3.2em)}
 .preschool-a4 .pre-a4-hd{position:absolute;left:24px;right:24px;top:14px;height:64px;border-bottom:2px solid #f59e0b;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
 .preschool-a4 .pre-a4-title{min-width:0;flex:1}
-.preschool-a4 .pre-a4-title b{display:block;font-size:1.05rem;color:#7a3b00;line-height:1.25}
+.preschool-a4 .pre-a4-title b{display:block;font-size:1.05rem;color:#7a3b00;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .preschool-a4 .pre-a4-title span{display:block;font-size:.75rem;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .preschool-a4 .pre-a4-info{display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
 .preschool-a4 .pre-name-box{display:inline-block;width:232px;height:36px;border:2px solid #d97706;border-radius:8px;background:#fffdf7;vertical-align:middle;margin-left:3px}
@@ -440,18 +440,18 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .batch-progress-fill{height:100%;background:linear-gradient(90deg,#ff7a1a,#ffb347);width:0%;transition:width .35s ease;border-radius:5px}
 .batch-progress-text{font-weight:700;color:#d85a00;white-space:nowrap;min-width:140px}
 /* 左側快選導覽（minimap）：fullPage.js 風格垂直圓點導航——小平滑縮放＋tooltip 淡入，不再凸起成膠囊 */
-.batch-minimap{position:fixed;left:12px;top:50%;transform:translateY(-50%);width:34px;height:64vh;z-index:70;display:none;padding:0;background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,246,235,.86));border:1px solid rgba(240,206,160,.9);border-radius:999px;box-shadow:0 8px 24px rgba(122,59,0,.12),0 1px 0 #fff inset;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.batch-minimap{position:fixed;left:12px;top:50%;transform:translateY(-50%);width:16px;height:64vh;z-index:70;display:none;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 .batch-minimap.show{display:block;animation:bmFadeIn .26s ease-out}
 @keyframes bmFadeIn{from{opacity:0;transform:translateY(-50%) translateX(-8px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
-.batch-minimap-track{position:absolute;left:50%;top:10px;bottom:10px;width:2px;transform:translateX(-50%);border-radius:2px;background:linear-gradient(180deg,#ffe7c9,#f7d3a7,#ffe7c9);opacity:.9}
-.batch-minimap-rail{position:absolute;left:0;top:10px;bottom:10px;width:100%;cursor:pointer;touch-action:none}
-.batch-minimap-tick{position:absolute;left:0;width:34px;height:18px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;pointer-events:none}
-.batch-minimap-tick::before{content:'';width:5px;height:5px;border-radius:50%;background:#e8c9a4;box-shadow:0 0 0 1.5px rgba(255,255,255,.95);transition:width .18s ease,height .18s ease,background .18s ease,box-shadow .18s ease;will-change:width,height}
+.batch-minimap-track{position:absolute;left:50%;top:8px;bottom:8px;width:1px;transform:translateX(-50%);border-radius:1px;background:linear-gradient(180deg,#e2e8f0,#cbd5e1,#e2e8f0);opacity:.9}
+.batch-minimap-rail{position:absolute;left:0;top:8px;bottom:8px;width:100%;cursor:pointer;touch-action:none}
+.batch-minimap-tick{position:absolute;left:0;width:16px;height:14px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;pointer-events:none}
+.batch-minimap-tick::before{content:'';width:4px;height:4px;border-radius:50%;background:#cbd5e1;box-shadow:0 0 0 1px rgba(255,255,255,.9);transition:width .18s ease,height .18s ease,background .18s ease,box-shadow .18s ease;will-change:width,height}
 .batch-minimap-tick.is-blank::before{background:#cbd5e1}
 /* 圓點導航：hover/active 等比放大（4→10→12px），不横拉、不外溢陰影 */
-.batch-minimap-tick.hover::before{width:10px;height:10px;background:#ff8b2c;box-shadow:0 0 0 3px rgba(255,122,26,.16)}
-.batch-minimap-tick.active::before{width:12px;height:12px;background:linear-gradient(135deg,#ff9d42,#f4600a);box-shadow:0 0 0 3px rgba(244,96,10,.18),0 2px 6px rgba(244,96,10,.3)}
-.batch-minimap-tick.active.hover::before{width:13px;height:13px}
+.batch-minimap-tick.hover::before{width:7px;height:7px;background:#fb923c;box-shadow:0 0 0 2px rgba(251,146,60,.18)}
+.batch-minimap-tick.active::before{width:8px;height:8px;background:linear-gradient(135deg,#ff9d42,#f4600a);box-shadow:0 0 0 2px rgba(244,96,10,.2)}
+.batch-minimap-tick.active.hover::before{width:9px;height:9px}
 .batch-minimap-tip{position:fixed;left:60px;transform:translateY(-50%) scale(.96);transform-origin:left center;background:linear-gradient(135deg,#8a4400,#6d3500);color:#fff;font-size:.72rem;font-weight:700;padding:5px 10px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s ease-in,transform .2s ease-in;z-index:71;box-shadow:0 4px 14px rgba(0,0,0,.28)}
 .batch-minimap-tip.show{opacity:1;transform:translateY(-50%) scale(1)}
 .back-to-top{position:fixed;right:18px;bottom:18px;width:44px;height:44px;border-radius:50%;border:0;background:linear-gradient(160deg,#ff9d42,#ff7a1a);color:#fff;font-size:1.35rem;font-weight:900;cursor:pointer;box-shadow:0 6px 18px rgba(255,122,26,.45);display:none;align-items:center;justify-content:center;z-index:72;transition:transform .15s,box-shadow .15s}
@@ -479,12 +479,12 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .store-preview-pane:has(.store-rail-inline.show) > .pv-fill{padding-left:22px}
 @media(max-width:720px){.store-preview-pane:has(.store-rail-inline.show) > .pv-fill{padding-left:20px}}
 @media(max-width:720px){
-  .batch-minimap{left:5px;width:30px;height:56vh}
-  .batch-minimap-tick{width:30px}
-  .batch-minimap-tick::before{width:5px;height:5px}
+  .batch-minimap{left:5px;width:16px;height:56vh}
+  .batch-minimap-tick{width:16px}
+  .batch-minimap-tick::before{width:4px;height:4px}
   .back-to-top{right:12px;bottom:12px;width:40px;height:40px}
   .batch-preview-layout{grid-template-columns:34px minmax(0,1fr);gap:6px}
-  .batch-rail-inline{width:30px;height:56vh}
+  .batch-rail-inline{width:16px;height:56vh}
   .store-rail-inline{left:5px;width:14px}
   .store-rail-inline .batch-minimap-tick{width:14px}
 }

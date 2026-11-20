@@ -579,6 +579,36 @@
     return n;
   }
 
+  // 模式一「藍色圓點編號」：在每個筆畫起點畫藍色圓點＋白字數字（同寫字帖 drawCell numbers）
+  function drawStrokeNumbers(g, sym, centerX, centerY, baseFs, upto){
+    const authored = getStrokesForSym(g, sym, centerX, centerY, baseFs);
+    const k = (upto == null) ? authored.length : Math.min(Math.max(0, upto|0), authored.length);
+    if(!k) return;
+    const r = Math.max(3.0, Math.min(baseFs * 0.04, 6));
+    let localIdx = 0, prevCh = null;
+    for(let si = 0; si < k; si++){
+      const st = authored[si];
+      const box = st.box, seeds = st.segs;
+      if(!seeds || !seeds.length) continue;
+      const chKey = box && box.ch;
+      if(chKey !== prevCh){ localIdx = 0; prevCh = chKey; }
+      const mapX = (nx) => box.x + nx * box.w;
+      const mapY = (ny) => box.y + ny * box.h;
+      const sp = seeds[0];
+      const px = (sp.length === 2) ? mapX(sp[0]) : mapX(sp[1]);
+      const py = (sp.length === 2) ? mapY(sp[1]) : mapY(sp[2]);
+      g.save();
+      g.fillStyle = '#1976d2';
+      g.beginPath(); g.arc(px, py, r, 0, Math.PI*2); g.fill();
+      g.fillStyle = '#fff';
+      g.font = `bold ${Math.round(r*1.34)}px sans-serif`;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(String(localIdx+1), px, py + 0.4);
+      g.restore();
+      localIdx++;
+    }
+  }
+
   function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId){
     const SCALE = 2;
     const cv = document.createElement('canvas');
@@ -736,8 +766,7 @@
         g.stroke();
       }
 
-      // 下方：模式一「示範格」＝田字格（全實線中線，不用虛線）＋公版黑色實心示範字
-      //   移除舊 drawStrokeOrderOverlay 的藍色圓點／箭頭／虛線引導
+      // 下方：模式一「示範格」＝田字格（紅邊框＋虛線中線，同寫字帖模式一）＋黑字＋藍色圓點編號
       const sym = String(item.sym);
       const gapPx = showIllust ? 2 : 3;
       const modelTop = showIllust ? (by + 2 + topH + gapPx) : (by + 2);
@@ -747,38 +776,29 @@
       const fontFam = (item.kind === 'abc' || item.kind === 'num')
         ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
         : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
-      // 田字格：外框＋實線十字中線（完全無虛線）
-      const tzPad = 2;
-      const zx = bx + tzPad, zyT = modelTop + tzPad;
-      const zw = bw - tzPad * 2, zh = modelH - tzPad * 2;
-      g.save();
-      g.strokeStyle = '#e8a0a0';
-      g.lineWidth = 1;
-      g.strokeRect(zx, zyT, zw, zh);
-      g.strokeStyle = '#f2cdcd';
-      g.lineWidth = 0.8;
-      g.beginPath();
-      g.moveTo(zx + zw / 2, zyT); g.lineTo(zx + zw / 2, zyT + zh);
-      g.moveTo(zx, zyT + zh / 2); g.lineTo(zx + zw, zyT + zh / 2);
-      g.stroke();
-      g.restore();
+      const m = Math.max(2, cw * 0.012);
+      // 田字格：紅邊框＋虛線中線（模式一 style）
+      g.strokeStyle = '#d33'; g.lineWidth = m * 1.2;
+      g.strokeRect(bx + 1, modelTop + 1, bw - 2, modelH - 2);
+      g.lineWidth = Math.max(1, cw * 0.005); g.setLineDash([cw * 0.025, cw * 0.02]); g.strokeStyle = '#e88';
+      g.beginPath(); g.moveTo(bx + bw/2, modelTop + 1); g.lineTo(bx + bw/2, modelTop + modelH - 1);
+      g.moveTo(bx + 1, modelTop + modelH/2); g.lineTo(bx + bw - 1, modelTop + modelH/2);
+      g.stroke(); g.setLineDash([]);
       g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
       const gx = bx + bw / 2, gy = modelTop + modelH * 0.52;
       g.save();
-      g.fillStyle = '#0f172a';
-      g.strokeStyle = '#0f172a';
-      g.lineJoin = 'round';
-      g.lineWidth = Math.max(1.4, baseFs * 0.045);
-      g.strokeText(sym, gx, gy);
-      g.fillText(sym, gx, gy);
+      g.fillStyle = '#0f172a'; g.strokeStyle = '#0f172a';
+      g.lineJoin = 'round'; g.lineWidth = Math.max(1.4, baseFs * 0.045);
+      g.strokeText(sym, gx, gy); g.fillText(sym, gx, gy);
       g.restore();
+      // 藍色圓點編號（模式一 numbers）
+      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
+      drawStrokeNumbers(g, sym, gx, gy, baseFs, null);
       return cv;
     }
 
-    // 模式一「逐筆累積」練習格：田字格（全實線）＋前 k-1 筆深灰、第 k 筆紅色＋左上角編號
-    //   完全不使用虛線、藍色圓點或收筆箭頭；筆順與寫字帖工作台模式一一致（STROKE_PATHS 中線）
+    // 模式一「逐筆累積」練習格：田字格（紅邊框＋虛線中線）＋前 k-1 筆深灰、第 k 筆紅色＋藍色圓點編號
     const sym = String(item.sym);
     const len = sym.length;
     const totalStrokes = getStrokeCountForSym(sym);
@@ -786,29 +806,24 @@
     const fontFam = (item.kind === 'abc' || item.kind === 'num')
       ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
       : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
-    const borderColor = item.kind === 'zy' ? '#f59e0b' : (item.kind === 'num' ? '#22c55e' : '#3b82f6');
+    const m = Math.max(2, cw * 0.012);
 
-    // 田字格外框＋實線十字中線
-    g.strokeStyle = borderColor;
-    g.lineWidth = 1.4;
-    g.strokeRect(bx, by, bw, bh);
-    g.strokeStyle = '#f0cccc';
-    g.lineWidth = 0.8;
-    g.beginPath();
-    g.moveTo(bx + bw/2, by); g.lineTo(bx + bw/2, by + bh);
-    g.moveTo(bx, by + bh/2); g.lineTo(bx + bw, by + bh/2);
-    g.stroke();
+    // 田字格：紅邊框＋虛線中線（模式一 style）
+    g.strokeStyle = '#d33'; g.lineWidth = m * 1.2;
+    g.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+    g.lineWidth = Math.max(1, cw * 0.005); g.setLineDash([cw * 0.025, cw * 0.02]); g.strokeStyle = '#e88';
+    g.beginPath(); g.moveTo(bx + bw/2, by + 1); g.lineTo(bx + bw/2, by + bh - 1);
+    g.moveTo(bx + 1, by + bh/2); g.lineTo(bx + bw - 1, by + bh/2);
+    g.stroke(); g.setLineDash([]);
 
     const gx = bx + bw / 2, gy = by + bh * 0.53;
     if(rowIdx >= 1 && rowIdx <= totalStrokes){
       // 逐筆累積：前 rowIdx-1 筆深灰、第 rowIdx 筆紅色
       g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
       drawProgressiveStrokes(g, sym, gx, gy, baseFs, rowIdx);
-      // 左上角編號（同寫字帖模式一 label，採淡灰文字，不做藍色圓點）
-      g.font = `800 ${Math.max(9, Math.round(bh * 0.12))}px "Noto Sans TC",sans-serif`;
-      g.textAlign = 'left'; g.textBaseline = 'top';
-      g.fillStyle = '#94a3b8';
-      g.fillText(String(rowIdx), bx + 4, by + 3);
+      // 藍色圓點編號（模式一 numbers，僅已畫出的筆畫）
+      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
+      drawStrokeNumbers(g, sym, gx, gy, baseFs, rowIdx);
     } else {
       // 筆順完成後的空白練習格：末格保留小字標註，其餘給極淺灰全字 ghost 供描寫
       const isLastBlank = (rowIdx === totalRows - 1 && totalRows >= 7);
