@@ -337,30 +337,9 @@
     g.restore();
   }
 
-  // ── 虛線字圖層（兩層疊加）：外層＝原尺寸極淺實字，內層＝同一字型縮小 0.92 倍的「原字虛線」。
-  //    直接用字型輪廓描邊，筆畫寬度、轉折、弧度與原本文字完全一致，不會出現骨架抖動的歪斜感。
-  function drawDashedGlyphLayer(g, sym, cx, cy, baseFs, compact, darkBg){
-    const latin = /^[0-9A-Za-z]+$/.test(sym);
-    const fam = latin
-      ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
-      : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
-    const fs = baseFs * (compact ? 0.9 : 0.92);
-    g.save();
-    g.font = `600 ${Math.round(fs)}px ${fam}`;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.strokeStyle = darkBg ? '#93c5fd' : '#1d4ed8';
-    g.lineWidth = Math.max(1, Math.min(1.5, fs * 0.011));
-    g.lineJoin = 'round';
-    g.lineCap = 'round';
-    g.setLineDash([Math.max(3, fs * 0.05), Math.max(2.2, fs * 0.038)]);
-    g.strokeText(sym, cx, cy);
-    g.setLineDash([]);
-    g.restore();
-  }
-
+  // ── 筆順引導：只畫「單條引導筆劃」虛線（沿每一筆的中心線），不再描整個字的字框輪廓。
+  //    字框虛線會讓幼兒誤以為要描字的外輪廓；單條中心線才能看出每一筆從哪裡起筆、往哪裡走。
   function drawStrokeOrderOverlay(g, sym, centerX, glyphY, baseFs, clampBox, compact=false, darkBg=false){
-    drawDashedGlyphLayer(g, sym, centerX, glyphY, baseFs, compact, darkBg);
     const strokes = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
     if(!strokes.length) return;
     const palette = darkBg
@@ -381,11 +360,12 @@
 
       g.save();
       g.strokeStyle = col;
-      g.globalAlpha = darkBg ? 0.94 : 0.85;
-      g.lineWidth = compact ? 1.2 : 1.5;
+      g.globalAlpha = darkBg ? 0.94 : 0.9;
+      const lw = Math.max(1.8, Math.min(4.6, baseFs * 0.048));
+      g.lineWidth = lw;
       g.lineCap = 'round';
       g.lineJoin = 'round';
-      g.setLineDash([2.8, 2.2]);
+      g.setLineDash([lw * 2.3, lw * 1.45]);
       g.beginPath();
       g.moveTo(p0[0], p0[1]);
 
@@ -417,6 +397,7 @@
           curX = ex; curY = ey;
         }
       }
+      g.stroke();
       g.setLineDash([]);
 
       const ang = Math.atan2(tanY, tanX);
@@ -755,7 +736,10 @@
 
     const previewIdx = cfg.sampleLimit ? Math.max(0, +(cfg.previewPageIdx || 0)) : -1;
     let pageIndices = Array.from({length: wantPages}, (_,i)=>i);
-    if(previewIdx >= 0){
+    if(Array.isArray(cfg.onlyPages) && cfg.onlyPages.length){
+      pageIndices = cfg.onlyPages.filter(i => i >= 0 && i < wantPages);
+      if(!pageIndices.length) pageIndices = [0];
+    }else if(previewIdx >= 0){
       const pStart = previewIdx * 2;
       pageIndices = [pStart, pStart + 1].filter(idx => idx < wantPages);
       if(!pageIndices.length) pageIndices = [0];

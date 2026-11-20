@@ -78,18 +78,44 @@ function renderPreschoolWorkbench(){
   const sheets = Math.max(1, +($('wbPreSheets')?.value || 5));
   const illust = $('wbPreIllust') ? $('wbPreIllust').checked : true;
   const wm = typeof window.getWmText === 'function' ? window.getWmText() : '';
-  const res = window.PRESCHOOL_BANK.buildPages({ level, topic, sheets, illust, wmText: wm });
-  if($('wbPreInfo') && res.level){
-    $('wbPreInfo').textContent = `📐 ${res.level.name}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列＝${res.level.cols*res.level.rows} 格置頂到底全滿）｜${res.level.desc}（共 ${res.pages.length} 面 A4）`;
+  const cfg = { level, topic, sheets, illust, wmText: wm };
+
+  __uiProgressReset('preProgress', '正在準備版面…');
+  let first = null;
+  try{
+    first = window.PRESCHOOL_BANK.buildPages({ ...cfg, onlyPages: [0] });
+  }catch(e){
+    __uiProgressDone('preProgress', '產生失敗');
+    return;
+  }
+  if($('wbPreInfo') && first.level){
+    $('wbPreInfo').textContent = `📐 ${first.level.name}（每頁 ${first.level.cols} 欄 × ${first.level.rows} 列＝${first.level.cols*first.level.rows} 格置頂到底全滿）｜${first.level.desc}（共 ${first.totalPages} 面 A4）`;
   }
   sheet.innerHTML = '';
-  res.pages.forEach((pg, idx) => {
+
+  const total = first.totalPages;
+  const paint = (pgIdx, res)=>{
+    const pg = res.pages && res.pages[0];
+    if(!pg) return;
     const cap = document.createElement('div');
     cap.className = 'pcap';
-    cap.textContent = `A4 直式幼兒園寫字帖（${res.level.cols}欄×${res.level.rows}列）　第 ${idx+1} / ${res.pages.length} 頁`;
+    cap.textContent = `A4 直式幼兒園寫字帖（${res.level.cols}欄×${res.level.rows}列）　第 ${pgIdx+1} / ${total} 頁`;
     sheet.appendChild(cap);
     sheet.appendChild(pg);
-  });
+  };
+
+  const run = async ()=>{
+    paint(0, first);
+    __uiProgress('preProgress', 100 / total, `繪製第 1 / ${total} 面…`);
+    for(let i = 1; i < total; i++){
+      await __uiYield();
+      const res = window.PRESCHOOL_BANK.buildPages({ ...cfg, onlyPages: [i] });
+      paint(i, res);
+      __uiProgress('preProgress', ((i + 1) / total) * 100, `繪製第 ${i+1} / ${total} 面…`);
+    }
+    __uiProgressDone('preProgress', `完成 ${total} 面 A4`);
+  };
+  run();
 }
 window.renderPreschoolWorkbench = renderPreschoolWorkbench;
 
@@ -108,14 +134,16 @@ function switchTab(tabName){
   if($('viewBatch')) $('viewBatch').style.display = tabName === 'batch' ? '' : 'none';
   if($('wmBar')) $('wmBar').style.display = (isAdminUnlocked && tabName !== 'store') ? '' : 'none';
 
+  // 分頁先切換、先完成繪製，再於下一個影格後才開始產製，避免切頁瞬間卡住
+  const deferHeavy = (fn) => setTimeout(fn, 24);
   if(tabName === 'preschool'){
     const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
-    renderPreschoolWorkbench();
+    deferHeavy(()=>renderPreschoolWorkbench());
   } else if(tabName === 'stroke'){
     const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
-    if(typeof window.generate === 'function') window.generate();
+    deferHeavy(()=>{ if(typeof window.generate === 'function') window.generate(); });
   } else if(tabName === 'exam'){
-    const genBtn = $('btnExGen'); if(genBtn) genBtn.click();
+    deferHeavy(()=>{ const genBtn = $('btnExGen'); if(genBtn) genBtn.click(); });
   } else if(tabName === 'batch'){
     const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
     if(typeof window.refreshBatchSysClock === 'function') window.refreshBatchSysClock();
@@ -1032,19 +1060,33 @@ async function submitStoreOrder(){
     msgEl.textContent = `⚠️ 本系統每張 5 元、累計滿 20 張（NT$ 100 元）才出貨；目前僅 ${totalSheets} 張（NT$ ${totalAmt} 元），請還差 ${20 - totalSheets} 張！`;
     return;
   }
-  const parent_label = ($('stParentLabel').value || '').trim();
-  const contact = ($('stContact').value || '').trim();
-  const remit_last5 = ($('stRemitLast5').value || '').trim();
+  const parentName = ($('stParentName')?.value || '').trim();
+  const phoneLast4 = ($('stPhoneLast4')?.value || '').replace(/\D/g, '').trim();
+  const phoneNo = ($('stPhone')?.value || '').replace(/[\s\-()]/g, '').trim();
+  const emailAddr = ($('stEmail')?.value || '').trim();
+  const parent_label = phoneLast4 ? `${parentName}#${phoneLast4}` : parentName;
+  const contact = [phoneNo, emailAddr].filter(Boolean).join(' ／ ');
+  const remit_last5 = ($('stRemitLast5').value || '').replace(/\D/g, '').trim();
   const agreed = $('stAgreeTerms').checked;
 
-  if(!parent_label || parent_label.length < 2){
-    msgEl.textContent = '⚠️ 請填寫「家長稱呼＋手機末四碼」（例如：王媽媽#8821），作為警衛室取貨核對依據！';
-    $('stParentLabel').focus();
+  if(!parentName || parentName.length < 2){
+    msgEl.textContent = '⚠️ 請填寫「家長稱呼」（例如：王媽媽），作為警衛室取貨核對依據！';
+    $('stParentName').focus();
     return;
   }
-  if(!contact){
-    msgEl.textContent = '⚠️ 請填寫聯絡手機或 Email，以便帳務核對或取貨通知！';
-    $('stContact').focus();
+  if(!/^\d{4}$/.test(phoneLast4)){
+    msgEl.textContent = '⚠️ 請填寫手機末四碼（4 位數字），取貨時警衛室會核對稱呼與末四碼！';
+    $('stPhoneLast4').focus();
+    return;
+  }
+  if(!/^09\d{8}$/.test(phoneNo)){
+    msgEl.textContent = '⚠️ 請填寫正確的手機號碼（09 開頭共 10 碼），以利取貨與帳務通知！';
+    $('stPhone').focus();
+    return;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddr)){
+    msgEl.textContent = '⚠️ 請填寫正確的 Email（例如 name@example.com），訂購憑證與通知會寄到這裡！';
+    $('stEmail').focus();
     return;
   }
   if(!/^\d{5}$/.test(remit_last5)){
@@ -1146,7 +1188,7 @@ async function submitStoreOrder(){
       <h3 style="margin:0 0 8px;font-size:1.25rem;color:#0d5220">🎉 訂購單已成功送出！（請截圖保存此取貨與取件時間憑證）</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;background:#fff;padding:12px 16px;border-radius:10px;border:1.5px solid #9fd8b2;font-size:.94rem;color:#222">
         <div><b>📦 取貨核對編號：</b><span style="font-size:1.2rem;font-weight:900;color:#c85000">${esc(pickupBase)}</span>（共 ${totalSheets} 張／${orderRows.length} 項）</div>
-        <div><b>👨‍👩‍👧 取貨人稱呼：</b><b>${esc(parent_label)}</b></div>
+        <div><b>👨‍👩‍👧 取貨人稱呼：</b><b>${esc(parent_label)}</b><br><span style="font-size:.84rem;color:#555">📞 ${esc(contact)}</span></div>
         <div><b>📅 所屬梯次與截單：</b>${esc(sched.batchLabel)}（截單：${esc(sched.cutoffStr)}）</div>
         <div><b>💳 匯款後五碼／總額：</b>末五碼 <b>${esc(remit_last5)}</b> ／ 共 <b>NT$ ${totalAmt} 元</b></div>
         <div style="grid-column:1/-1;background:#fff8eb;border:1.5px solid #ff9d42;border-radius:8px;padding:10px 12px;color:#7a3b00;line-height:1.6">
@@ -1497,11 +1539,25 @@ function initStore(){
   }
   if($('btnCopyAcc')){
     $('btnCopyAcc').onclick = () => {
-      const acc = ($('stBankAcc')?.textContent || '').trim();
+      const acc = (($('stBankAcc')?.textContent || '').replace(/\D/g, '').trim()) || '';
       if(navigator.clipboard) navigator.clipboard.writeText(acc).catch(()=>{});
       $('btnCopyAcc').textContent = '✅ 已複製';
       setTimeout(() => { $('btnCopyAcc').textContent = '📋 複製'; }, 2000);
     };
+  }
+  // 數字欄位只接受數字，避免家長多打符號或井字號
+  [['stPhoneLast4',4],['stRemitLast5',5]].forEach(([id,max])=>{
+    const el = $(id); if(!el) return;
+    el.addEventListener('input', ()=>{
+      const v = el.value.replace(/\D/g, '').slice(0, max);
+      if(v !== el.value) el.value = v;
+    });
+  });
+  if($('stPhone')){
+    $('stPhone').addEventListener('input', ()=>{
+      const v = $('stPhone').value.replace(/\D/g, '').slice(0, 10);
+      if(v !== $('stPhone').value) $('stPhone').value = v;
+    });
   }
   if($('btnStSubmit')) $('btnStSubmit').onclick = submitStoreOrder;
 

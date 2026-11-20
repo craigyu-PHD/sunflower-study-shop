@@ -4798,6 +4798,48 @@ function updateCapInfo(pagesCount, ansPagesCount=null){
     el.className=cls; el.textContent=msg;
   });
 }
+// 雙面列印用「錯題訂正＆家長複習筆記頁」：試卷＋解答合計為奇數頁時補上，確保正反面成雙。
+function buildParentNotePage(subj, wmText, capText, landscape){
+  const pg=document.createElement('div');
+  pg.className='a4 exam-a4'+(landscape?' ex-land':'');
+  pg.dataset.parentNote='1';
+  pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+  const inner=document.createElement('div');
+  inner.style.cssText='width:100%;height:100%;box-sizing:border-box;padding:22px 26px;display:flex;flex-direction:column';
+  inner.innerHTML=`<div style="border-bottom:2.5px solid #222;padding-bottom:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+      <b style="font-size:1.2rem;color:#7a3b00">✏️ 錯題訂正 ＆ 家長複習筆記頁（${esc(subj||'評量')}）</b>
+      <span style="font-size:.84rem;color:#64748b;white-space:nowrap">訂正日期：____ 年 ____ 月 ____ 日｜家長簽章：____________</span>
+    </div>
+    <div style="flex:1;border:1.5px dashed #cbd5e1;border-radius:10px;padding:14px 18px;background:repeating-linear-gradient(to bottom, transparent 0px, transparent 35px, #e2e8f0 36px)">
+      <div style="font-size:.9rem;color:#64748b;background:#fff;display:inline-block;padding:0 6px;margin-bottom:8px">把本次訂正不會的題目寫下來再練習一次，進步最快喔！</div>
+    </div>`;
+  pg.appendChild(inner);
+  if(window.createWatermarkLayer) pg.appendChild(window.createWatermarkLayer(landscape?1122:794, landscape?794:1122, wmText||''));
+  const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌';
+  pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:capText||`${cpr}　｜　錯題訂正與家長簽名頁`}));
+  return pg;
+}
+
+// 工作台預覽／列印：題目＋解答頁數為奇數時，尾端補第 N 頁家長筆記表格並重編頁碼
+function appendParentNotePageIfOdd(){
+  const box=$('examSheet');
+  if(!box) return false;
+  if(!(curExam && curExam.meta && curExam.meta.withAns)) return false;
+  const pages=[...box.querySelectorAll('.a4')].filter(p=>!p.dataset.parentNote);
+  if(!pages.length || pages.length%2===0) return false;
+  const landscape = !!(curExam.meta && curExam.meta.subject==='國語');
+  const wm = typeof window.getWmText==='function' ? window.getWmText() : '';
+  const total=pages.length+1;
+  const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌';
+  const note=buildParentNotePage(curExam.meta.subject, wm, `${cpr}　｜　第 ${total} / ${total} 頁・錯題訂正與家長筆記`, landscape);
+  box.appendChild(note);
+  [...box.querySelectorAll('.a4')].forEach((p,i)=>{
+    const cap=p.querySelector('.cap');
+    if(cap && !p.dataset.parentNote) cap.textContent=(cap.textContent||'').replace(/第\s*\d+\s*\/\s*\d+\s*頁/, `第 ${i+1} / ${total} 頁`);
+  });
+  return true;
+}
+
 // 題目高度快取：同一題目物件在不同密度下的實測高度只量一次，
 // 排版微調（增減題）時可跳過 90% 以上的 DOM 建構與量測。
 const __qHCache=new WeakMap();
@@ -5662,7 +5704,7 @@ async function exportExamXlsx(){
   const diffName={easy:'基礎熟練',mid:'標準評量',hard:'素養挑戰',mix:'混合難度'}[meta.diff];
   const isZh=meta.subject==='國語';
 
-  const allDomPages=[...document.querySelectorAll('#examSheet .a4')];
+  const allDomPages=[...document.querySelectorAll('#examSheet .a4')].filter(p=>!p.dataset.parentNote);
   const qDomPages=meta.withAns&&allDomPages.length>1 ? allDomPages.slice(0,-1) : allDomPages;
   const ansDomPage=meta.withAns&&allDomPages.length>1 ? allDomPages[allDomPages.length-1] : null;
 
@@ -5802,7 +5844,7 @@ function clampInput(id){
   if(+e.value>mx)e.value=mx; if(+e.value<mn)e.value=mn;
 }
 // 兩階段版面滿版均衡引擎（第一優先：renderExam 行距／欄距伸展；第二優先：僅當仍不滿或超頁時才微調題數＆題型）
-function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
+async function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false, onStep=null, shouldStop=null){
   if(!curExam) return;
   const KIND_TITLES={
     mc: getExamSectionTitle(baseCfg.subject,'mc'),
@@ -5879,7 +5921,7 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
 
   // 1. 若超過目標頁數，依佔空間順序適量精簡題數
   const trimKinds=['word','calc','match','fill','mc','tf'];
-  for(let step=0; step<24 && curExam._lastPageCount>targetPages; step++){
+  for(let step=0; step<24 && curExam && curExam._lastPageCount>targetPages; step++){
     let trimmed=false;
     for(const k of trimKinds){
       const sec=curExam.sections.find(s=>s.kind===k);
@@ -5894,6 +5936,9 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
       }
     }
     if(!trimmed) break;
+    if(onStep) onStep(`精簡超出頁數的題目…（第 ${step+1} 次調整）`);
+    await __batchYieldToUI();
+    if(shouldStop && shouldStop()) return;
   }
 
   // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或第2頁／末欄仍留白時，啟動第二優先補題（先批次快速逼近，再微調，最後一次完整繪製）
@@ -5908,10 +5953,10 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   });
   const growCycle=['mc','fill','tf','calc','word','match'].filter(k=>enabledSet.has(k));
   const blockedKinds=new Set();
-  const needsMore=()=> curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.955 || (curExam._lastTailFill||0)<0.95 || (curExam._pageFills||[]).some(f=>f<0.95)));
+  const needsMore=()=> !!curExam && (curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.955 || (curExam._lastTailFill||0)<0.95 || (curExam._pageFills||[]).some(f=>f<0.95))));
   let gStep=0, stalled=0;
   // 若目前仍只有 1 頁且目標為 2 頁，或最後一頁填充率低於 86%，先批量補題再量測，大幅節省 DOM reflow 時間
-  for(let round=0; round<4 && (curExam._lastPageCount < targetPages || ((curExam._lastPageFill||0)<0.86 || (curExam._lastTailFill||0)<0.86)) && totalQCount()<maxTotal && growCycle.length; round++){
+  for(let round=0; round<4 && curExam && (curExam._lastPageCount < targetPages || ((curExam._lastPageFill||0)<0.86 || (curExam._lastTailFill||0)<0.86)) && totalQCount()<maxTotal && growCycle.length; round++){
     let batchAdded = 0;
     const stepBatch = curExam._lastPageCount < targetPages ? 4 : 3;
     for(let b=0; b<stepBatch && totalQCount()<maxTotal; b++){
@@ -5928,6 +5973,9 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
       else break;
     }
     if(curExam._lastPageCount > targetPages) break;
+    if(onStep) onStep(`補足題數並量測版面…（第 ${round+1} 輪）`);
+    await __batchYieldToUI();
+    if(shouldStop && shouldStop()) return;
   }
   while(needsMore() && totalQCount()<maxTotal && growCycle.length && gStep<60 && blockedKinds.size<growCycle.length && stalled<growCycle.length*2){
     const k=growCycle[gStep % growCycle.length];
@@ -5946,6 +5994,9 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
     }else{
       stalled=0;
     }
+    if(onStep) onStep(`微調版面與題距…（第 ${gStep} 步）`);
+    await __batchYieldToUI();
+    if(shouldStop && shouldStop()) return;
   }
 
   renderExam(false);
@@ -5958,7 +6009,11 @@ function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=false){
   }
 }
 
-function generateFromUI(arg){
+// 連續觸發（例如調整題數輸入框）時，只讓最後一次產製結果寫回畫面，避免舊的非同步流程覆蓋新結果
+let __exGenToken = 0;
+async function generateFromUI(arg){
+  const token = ++__exGenToken;
+  const stale = () => token !== __exGenToken;
   const skipAutoBalance = arg === true;
   ['numMc','numTf','numFill','numMatch','numCalc','numWord'].forEach(clampInput);
   const allChks=[...document.querySelectorAll('#exUnits input')];
@@ -5977,16 +6032,31 @@ function generateFromUI(arg){
     nWord:$('chkWord').checked?+$('numWord').value:0
   };
   $('exMsg').textContent='';
+  __uiProgressReset('exProgress', '整理單元與題型設定…');
+  await __uiYield();
+  if(stale()) return;
   curExam=generateExamQuestions(cfg);
   const willBalance = !skipAutoBalance && $('exTwoPage') && $('exTwoPage').checked && $('exLayout').value==='2col';
+  __uiProgress('exProgress', 30, '產生題目並繪製…');
+  await __uiYield();
+  if(stale()) return;
   renderExam(willBalance);
   if(willBalance){
     const isZh=cfg.subject==='國語';
-    autoBalanceExamToTarget(2, isZh?80:60, cfg, true);
+    let steps = 0;
+    await autoBalanceExamToTarget(2, isZh?80:60, cfg, true, (label)=>{
+      steps++;
+      const pct = Math.min(92, 40 + steps * 4);
+      __uiProgress('exProgress', pct, label || '調整版面…');
+    }, stale);
+    if(stale()) return;
   }
+  const __noteAdded = appendParentNotePageIfOdd();
+  __uiProgressDone('exProgress', `完成・${curExam && curExam._lastPageCount ? curExam._lastPageCount + ' 頁題目' : '已產生'}${__noteAdded ? '＋家長筆記頁' : ''}`);
+  return curExam;
 }
 let lastDiceSig='';
-function rollMixedDice(){
+async function rollMixedDice(){
   const diffs=['easy','mid','hard','mix'];
   const curD=$('exDiff').value;
   $('exDiff').value=pick(diffs.filter(d=>d!==curD));
@@ -6007,7 +6077,7 @@ function rollMixedDice(){
     $('chk'+k).checked=true;
     $('num'+k).value=counts[k];
   });
-  generateFromUI(false);
+  await generateFromUI(false);
   lastDiceSig=['Mc','Tf','Fill','Match','Calc','Word'].map(k=>$('num'+k).value).join('-');
 }
 
@@ -7115,7 +7185,7 @@ function buildBatchAnswerPagesA4(records, order, wmText){
 
 // 依單筆訂單設定產生測驗卷 DOM 頁面陣列（支援 1 份自訂單張、及 10/20 張完全不重複綜合包）
 const __batchYieldToUI = () => new Promise(r => setTimeout(r, 0));
-async function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false, onProgress=null){
+async function __buildExamPagesForOrderCore(order, withAns, wmText, keepLandscapeRaw=false, onProgress=null){
   const prevRuby = $('exRuby').checked;
   const prevTwo = $('exTwoPage').checked;
   const prevExam = curExam;
@@ -7193,11 +7263,11 @@ async function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=f
       nMatch: prof.nMatch, nCalc: prof.nCalc, nWord: prof.nWord
     };
 
-    curExam = generateExamQuestions(cfg);
+      curExam = generateExamQuestions(cfg);
     if(typeof autoBalanceExamToTarget==='function'){
       renderExam(true);
       // 每張測驗卷正反兩面共 2 頁，先依行距／欄距伸展，不足或溢頁再微調題數，確保正反兩面皆 90%~100% 飽滿無空白
-      autoBalanceExamToTarget(2, isZh?80:70, cfg, false);
+      await autoBalanceExamToTarget(2, isZh?80:70, cfg, false);
     } else {
       renderExam(false);
     }
@@ -7260,24 +7330,30 @@ async function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=f
   const qCount = Math.max(0, allPages.length - ansCount);
   // 雙數頁（正反面）規範：若單份含解答恰為奇數頁（如 2 頁試卷＋1 頁解答＝3 頁），補 1 頁「錯題訂正與複習筆記」保持 4 頁雙數正反面
   if(!order.sampleLimit && allPages.length > 0 && allPages.length % 2 === 1){
-    const notePg = document.createElement('div');
-    notePg.className = 'a4';
-    notePg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-    notePg.innerHTML += `<div class="ex-inner" style="padding:18px 26px;display:flex;flex-direction:column;height:1005px;box-sizing:border-box">
-      <div style="border-bottom:2.5px solid #222;padding-bottom:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:baseline">
-        <b style="font-size:1.15rem;color:#7a3b00">✏️ 錯題訂正 ＆ 家長複習筆記頁（${esc(order.subj||'評量')}）</b>
-        <span style="font-size:.82rem;color:#64748b">訂正日期：____ 年 ____ 月 ____ 日｜家長簽章：____________</span>
-      </div>
-      <div style="flex:1;border:1.5px dashed #cbd5e1;border-radius:10px;padding:14px 18px;background:repeating-linear-gradient(to bottom, transparent 0px, transparent 35px, #e2e8f0 36px)">
-        <div style="font-size:.88rem;color:#64748b;background:#fff;display:inline-block;padding:0 6px;margin-bottom:8px">把本次訂正不會的題目寫下來再練習一次，進步最快喔！</div>
-      </div>
-    </div>`;
-    if(window.createWatermarkLayer) notePg.appendChild(window.createWatermarkLayer(794,1122,wmText||''));
-    notePg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌'}　｜　錯題訂正與家長簽名頁`}));
+    const notePg = buildParentNotePage(
+      order.subj||'評量',
+      wmText,
+      `${window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌'}　｜　錯題訂正與家長簽名頁`,
+      false
+    );
     allPages.push(notePg);
     if(ansCount > 0) ansCount++;
   }
   return { pages: allPages, qPages: qCount, ansPages: ansCount };
+}
+
+// 產製測驗卷是「共用 curExam 全域狀態」的重流程；加入序列鎖，避免前端即時預覽連續觸發時互相覆蓋。
+let __examBuildQueue = Promise.resolve();
+async function buildExamPagesForOrder(order, withAns, wmText, keepLandscapeRaw=false, onProgress=null){
+  const prev = __examBuildQueue;
+  let release;
+  __examBuildQueue = new Promise(r => { release = r; });
+  try{
+    await prev.catch(()=>{});
+    return await __buildExamPagesForOrderCore(order, withAns, wmText, keepLandscapeRaw, onProgress);
+  } finally {
+    release();
+  }
 }
 
 // 供家長前台即時預覽呼叫：同時回傳指定張次之正面＋背面雙面 DOM 陣列，以及單頁相容函式
@@ -7587,24 +7663,55 @@ window.renderBatchMinimap = function(allSheetPairs){
   }
   let tipEl = document.getElementById('batchMinimapTip');
   if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchMinimapTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
-  box.innerHTML = '<div class="batch-minimap-track"></div>';
+  box.innerHTML = '<div class="batch-minimap-track"></div><div class="batch-minimap-rail"></div>';
+  const rail = box.querySelector('.batch-minimap-rail');
   const n = allSheetPairs.length;
-  const span = n>1 ? 92 : 0;
+  const ticks = [];
   allSheetPairs.forEach((it, i)=>{
     const t = document.createElement('div');
     t.className = 'batch-minimap-tick' + (/空白|防串頁/.test(String(it.label||'')) ? ' is-blank' : '');
-    t.style.top = `${4 + (n>1 ? (i/(n-1))*span : 46)}%`;
+    t.style.top = n > 1 ? `${(i / (n - 1)) * 100}%` : '50%';
     t.dataset.sheet = String(it.sheetIdx);
     const range = it.p2 > it.p1 ? `第${it.p1}-${it.p2}頁` : `第${it.p1}頁`;
     t.dataset.tip = `第 ${it.sheetIdx+1} 張・${range}`;
-    t.onmouseenter = ()=>{ tipEl.textContent = t.dataset.tip; const r=t.getBoundingClientRect(); tipEl.style.top=(r.top+r.height/2)+'px'; tipEl.classList.add('show'); };
-    t.onmouseleave = ()=> tipEl.classList.remove('show');
-    t.onclick = ()=>{
-      const target = document.querySelector(`#batchSheet .a4[data-batch-sheet="${t.dataset.sheet}"]`);
-      if(target && target.scrollIntoView) target.scrollIntoView({behavior:'smooth', block:'start'});
-    };
-    box.appendChild(t);
+    rail.appendChild(t);
+    ticks.push(t);
   });
+
+  // 整條軌道都是感應區：滑鼠只要落在時間軸上，就自動吸附到最近節點並顯示該張資訊。
+  const idxAt = (clientY)=>{
+    const r = rail.getBoundingClientRect();
+    if(n <= 1) return 0;
+    const ratio = (clientY - r.top) / Math.max(1, r.height);
+    return Math.max(0, Math.min(n - 1, Math.round(ratio * (n - 1))));
+  };
+  let hoverIdx = -1;
+  const setHover = (idx)=>{
+    if(idx === hoverIdx) return;
+    if(ticks[hoverIdx]) ticks[hoverIdx].classList.remove('hover');
+    hoverIdx = idx;
+    if(idx >= 0 && ticks[idx]){
+      const t = ticks[idx];
+      t.classList.add('hover');
+      tipEl.textContent = t.dataset.tip;
+      const r = t.getBoundingClientRect();
+      tipEl.style.top = (r.top + r.height / 2) + 'px';
+      tipEl.classList.add('show');
+    } else {
+      tipEl.classList.remove('show');
+    }
+  };
+  rail.addEventListener('pointermove', ev => setHover(idxAt(ev.clientY)));
+  rail.addEventListener('pointerleave', () => setHover(-1));
+  rail.addEventListener('pointerdown', ev => {
+    const idx = idxAt(ev.clientY);
+    setHover(idx);
+    const t = ticks[idx];
+    if(!t) return;
+    const target = document.querySelector(`#batchSheet .a4[data-batch-sheet="${t.dataset.sheet}"]`);
+    if(target && target.scrollIntoView) target.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
   box.classList.add('show');
   if(!__batchMinimapBound){
     __batchMinimapBound = true;
@@ -7735,7 +7842,7 @@ function initExamUI(){
 
   const refreshWatermarks=()=>{
     if($('viewStroke')&&$('viewStroke').style.display!=='none'&&typeof render==='function') render();
-    if($('viewExam')&&$('viewExam').style.display!=='none'&&curExam) renderExam();
+    if($('viewExam')&&$('viewExam').style.display!=='none'&&curExam){ renderExam(); appendParentNotePageIfOdd(); }
     if($('batchSheet')){
       $('batchSheet').querySelectorAll('.wm-layer').forEach(oldWm=>{
         const w=+oldWm.dataset.wmW||794, h=+oldWm.dataset.wmH||1122;

@@ -403,7 +403,7 @@
         <div class="bank-card">
           <h4>🏦 第一步：請先完成轉帳匯款</h4>
           <div class="bank-line"><span>銀行代碼：</span><b id="stBankCode">806（元大銀行桃興分行）</b></div>
-          <div class="bank-line"><span>匯款帳號：</span><b id="stBankAcc" style="font-size:1.15rem;color:#c85000;letter-spacing:.05em">2094-2000-157493</b>
+          <div class="bank-line"><span>匯款帳號：</span><b id="stBankAcc" style="font-size:1.12rem;color:#c85000;letter-spacing:.02em">20942000157493</b>
             <button type="button" class="btn" id="btnCopyAcc" style="padding:2px 8px;font-size:.8rem">📋 複製</button>
           </div>
           <div class="bank-line"><span>應匯總額：</span><b id="stRemitTotal" style="font-size:1.35rem;color:#d93025">NT$ 0 元</b></div>
@@ -414,23 +414,35 @@
 
         <div class="buyer-form">
           <h4>📝 第二步：填寫取貨核對與匯款後五碼</h4>
-          <div class="form-row">
-            <label>👨‍👩‍👧 家長稱呼＋手機末四碼 <span class="req">*必填（警衛室取貨核對用）</span></label>
-            <input type="text" id="stParentLabel" placeholder="例如：王媽媽#8821 或 林先生#3094">
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>👨‍👩‍👧 家長稱呼 <span class="req">*必填（例：王媽媽）</span></label>
+              <input type="text" id="stParentName" placeholder="王媽媽">
+            </div>
+            <div class="form-row">
+              <label>🔢 手機末四碼 <span class="req">*必填（警衛室核對）</span></label>
+              <input type="text" id="stPhoneLast4" maxlength="4" inputmode="numeric" placeholder="8821">
+            </div>
           </div>
-          <div class="form-row">
-            <label>📞 聯絡手機或 Email <span class="req">*必填（帳務問題聯繫用）</span></label>
-            <input type="text" id="stContact" placeholder="例如：0912-345-678">
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>📞 手機 <span class="req">*必填</span></label>
+              <input type="tel" id="stPhone" inputmode="numeric" placeholder="0912345678">
+            </div>
+            <div class="form-row">
+              <label>📧 Email <span class="req">*必填</span></label>
+              <input type="email" id="stEmail" placeholder="name@example.com">
+            </div>
           </div>
           <div class="form-row">
             <label>💳 匯款帳號後五碼 <span class="req">*必填（請填轉出存摺／卡號末 5 碼數字）</span></label>
-            <input type="text" id="stRemitLast5" maxlength="5" placeholder="例如：12345">
+            <input type="text" id="stRemitLast5" maxlength="5" inputmode="numeric" placeholder="12345">
           </div>
           <label class="chk legal-chk">
             <input type="checkbox" id="stAgreeTerms">
             <span>我已詳閱並同意：本客製化教材依<b>《消費者保護法》第19條但書規定不適用 7 日鑑賞期</b>；採先匯款後印製（<b>當週三 21:00 前匯款當週取，21:00 後順延次週</b>），並遵守統一取件時段<b>「每週五中午 12:00 以後至每週日晚上 21:00 以前」</b>親至桃園區「豪情世家」警衛室領取完畢。</span>
           </label>
-          <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <button id="btnStSubmit" type="button" class="btn ok big" style="flex:1">✅ 確認已匯款・送出訂購單</button>
           </div>
           <div id="stSubmitMsg" class="msg"></div>
@@ -542,6 +554,10 @@
     <button id="btnWbPreGen" type="button" class="btn pri big">🐣 產生幼兒園寫字帖預覽</button>
     <button id="btnWbPrePrint" type="button" class="btn ok big">🖨️ 直接列印 A4</button>
   </div>
+  <div id="preProgress" class="batch-progress-bar noprint" style="display:none">
+    <div class="batch-progress-track"><div class="batch-progress-fill"></div></div>
+    <span class="batch-progress-text">準備中…</span>
+  </div>
 </section>
 <section id="preSheet"></section>
 </div>
@@ -606,6 +622,10 @@
     <button id="btnSave" class="btn">儲存設定</button>
     <button id="btnLoad" class="btn">載入上次</button>
   </div>
+  <div id="strokeProgress" class="batch-progress-bar noprint" style="display:none">
+    <div class="batch-progress-track"><div class="batch-progress-fill"></div></div>
+    <span class="batch-progress-text">準備中…</span>
+  </div>
   <div id="msg" class="msg"></div>
   <p class="hint">下方預覽即為 A4 直式（210×297 mm）實際輸出範圍；Excel 開啟後會以「分頁預覽」顯示 A4 範圍。筆順資料為內建開源字形資料，個別字與教育部標準筆順可能略有差異。</p>
 </section>
@@ -660,6 +680,10 @@
     <span class="duplex-tip">列印：國語橫式＝短邊翻頁（書本式）；其餘直式＝長邊翻頁。</span>
     <button id="btnExXlsx" class="btn ok big" type="button">📊 匯出 Excel（A4 直式）</button>
     <button id="btnExPrint" class="btn big" type="button">🖨️ 直接列印預覽</button>
+  </div>
+  <div id="exProgress" class="batch-progress-bar noprint" style="display:none">
+    <div class="batch-progress-track"><div class="batch-progress-fill"></div></div>
+    <span class="batch-progress-text">準備中…</span>
   </div>
   <div id="exCapInfo2" class="cap-banner"></div>
   <div id="exMsg2" class="msg"></div>

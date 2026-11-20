@@ -1,5 +1,38 @@
 'use strict';
 const $=id=>document.getElementById(id);
+
+// ---------- 通用產製進度條（幼兒園寫字帖／寫字帖工作台／測驗卷工作台共用）----------
+// 用法：__uiProgress('preProgress', 35, '正在繪製第 3 / 10 頁…')
+function __uiProgress(hostId, pct, text){
+  const bar = $(hostId);
+  if(!bar) return;
+  const fill = bar.querySelector('.batch-progress-fill');
+  const label = bar.querySelector('.batch-progress-text');
+  const p = Math.max(0, Math.min(100, isFinite(pct) ? pct : 0));
+  if(p > 0) bar.style.display = 'flex';
+  if(fill) fill.style.width = p + '%';
+  if(label && text != null) label.textContent = text;
+}
+function __uiProgressDone(hostId, text){
+  const bar = $(hostId);
+  if(!bar) return;
+  __uiProgress(hostId, 100, text || '完成');
+  clearTimeout(bar.__hideTimer);
+  bar.__hideTimer = setTimeout(()=>{ bar.style.display = 'none'; }, 800);
+}
+function __uiProgressReset(hostId, text){
+  const bar = $(hostId);
+  if(!bar) return;
+  clearTimeout(bar.__hideTimer);
+  __uiProgress(hostId, 0.5, text || '準備中…');
+}
+// 讓瀏覽器有機會重繪進度條（同步計算若鎖住主執行緒，進度條會完全不會動）
+const __uiYield = () => new Promise(r => setTimeout(r, 0));
+window.__uiProgress = __uiProgress;
+window.__uiProgressDone = __uiProgressDone;
+window.__uiProgressReset = __uiProgressReset;
+window.__uiYield = __uiYield;
+
 window.HZ_LOADED={};
 // ---------- 資料載入（依 Unicode 區段分片，離線 file:// 可用）----------
 function loadShard(k){
@@ -418,17 +451,19 @@ async function generate(){
   const text=[...$('input').value].filter(c=>/[\u3400-\u9fff\uf900-\ufaff]|[\u{20000}-\u{2fa1f}]/u.test(c));
   $('msg').style.color='#7a3b00';
   $('msg').textContent=text.length?'⏳ 正在載入筆順資料並繪製寫字帖...':'';
+  if(text.length) __uiProgressReset('strokeProgress', '載入筆順資料…');
   const ok=await loadChars([...new Set(text)]);
   const miss=[...new Set(text)].filter(c=>!ok.includes(c));
   if(miss.length)$('msg').textContent='查無筆順資料，已略過：'+miss.join(' ');
   else $('msg').textContent='';
   curChars=text.filter(c=>ok.includes(c));
-  render();
+  __uiProgress('strokeProgress', 30, '排版並繪製格子…');
+  await render();
   return curChars.length>0;
 }
 function render(){
   const sheet=$('sheet');sheet.innerHTML='';
-  if(!curChars.length)return;
+  if(!curChars.length){ __uiProgressDone('strokeProgress','沒有可產生之生字'); return Promise.resolve(); }
   const L=buildLayout();
   if($('msg')){
     if(L.exceedsTwoPages){
@@ -439,28 +474,43 @@ function render(){
       $('msg').textContent=`✅ 已自動彈性排版調整為 ${L.pages.length} 頁（正反雙面），確保同字不跨頁且無多出零星單頁！`;
     }
   }
-  L.pages.forEach((pgData,p)=>{
-    const pCols=pgData.cols||L.cols;
-    const pCwMax=pgData.cwMax||L.cwMax;
-    const left=Math.round((A4W-pCols*pCwMax)/2);
-    const cap=document.createElement('div');cap.className='pcap';
-    cap.textContent=`A4 直式（210×297 mm・本頁 ${pCols} 欄）　第 ${p+1} / ${L.pages.length} 頁`;sheet.appendChild(cap);
-    const pg=document.createElement('div');pg.className='a4';
-    const edge=document.createElement('div');edge.className='edge';pg.appendChild(edge);
-    const colPad=Math.round((pCwMax-pgData.cw)/2);
-    pgData.items.forEach(it=>{
-      const im=new Image();im.src=cachedDataUrl(it,pgData);
-      im.style.left=(left+it.col*pCwMax+colPad)+'px';
-      im.style.top=(MARGIN+it.row*pgData.chh)+'px';
-      im.style.width=pgData.cw+'px';im.style.height=(pgData.chh*it.span)+'px';
-      pg.appendChild(im);
-    });
-    pg.appendChild(window.createWatermarkLayer(A4W,A4H));
-    const c2=document.createElement('div');c2.className='cap';
-    c2.textContent=`${window.COPYRIGHT_STATEMENT}　｜　第 ${p+1} / ${L.pages.length} 頁`;
-    pg.appendChild(c2);
-    sheet.appendChild(pg);
-  });
+  const totalCells = L.pages.reduce((a,p)=>a+(p.items?p.items.length:0),0) || 1;
+  let doneCells = 0;
+  return (async ()=>{
+    for(let p=0;p<L.pages.length;p++){
+      const pgData=L.pages[p];
+      const pCols=pgData.cols||L.cols;
+      const pCwMax=pgData.cwMax||L.cwMax;
+      const left=Math.round((A4W-pCols*pCwMax)/2);
+      const cap=document.createElement('div');cap.className='pcap';
+      cap.textContent=`A4 直式（210×297 mm・本頁 ${pCols} 欄）　第 ${p+1} / ${L.pages.length} 頁`;sheet.appendChild(cap);
+      const pg=document.createElement('div');pg.className='a4';
+      const edge=document.createElement('div');edge.className='edge';pg.appendChild(edge);
+      const colPad=Math.round((pCwMax-pgData.cw)/2);
+      const items=pgData.items||[];
+      for(let i=0;i<items.length;i++){
+        const it=items[i];
+        const im=new Image();im.src=cachedDataUrl(it,pgData);
+        im.style.left=(left+it.col*pCwMax+colPad)+'px';
+        im.style.top=(MARGIN+it.row*pgData.chh)+'px';
+        im.style.width=pgData.cw+'px';im.style.height=(pgData.chh*it.span)+'px';
+        pg.appendChild(im);
+        doneCells++;
+        if(doneCells % 24 === 0){
+          __uiProgress('strokeProgress', 30 + (doneCells/totalCells)*70, `繪製第 ${p+1}/${L.pages.length} 頁（${doneCells}/${totalCells} 格）…`);
+          await __uiYield();
+        }
+      }
+      pg.appendChild(window.createWatermarkLayer(A4W,A4H));
+      const c2=document.createElement('div');c2.className='cap';
+      c2.textContent=`${window.COPYRIGHT_STATEMENT}　｜　第 ${p+1} / ${L.pages.length} 頁`;
+      pg.appendChild(c2);
+      sheet.appendChild(pg);
+      __uiProgress('strokeProgress', 30 + (doneCells/totalCells)*70, `第 ${p+1} / ${L.pages.length} 頁完成…`);
+      await __uiYield();
+    }
+    __uiProgressDone('strokeProgress', `完成 ${L.pages.length} 面 A4`);
+  })();
 }
 // ---------- 供批次訂單匯入與前台即時預覽呼叫：產生指定訂單之寫字帖 A4 頁面陣列（嚴格依課次順序全字列出＋循環補齊、不隨機）----------
 window.buildStrokePagesForOrder=async function(order, wmTextOverride=''){
