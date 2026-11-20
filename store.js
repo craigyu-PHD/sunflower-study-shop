@@ -359,6 +359,7 @@ function fillStoreSubjects(){
   if($('stSpCols')) $('stSpCols').value = isLow ? '7' : '8';
   fillStoreLessons();
   fillStoreUnits();
+  if(typeof syncZhLayoutUI==='function') syncZhLayoutUI($('stExamSubj') ? $('stExamSubj').value : '');
 }
 
 function getStoreTwLessons(){
@@ -1083,7 +1084,7 @@ function buildCurrentSelectionsAsCartItems(){
         layout,
         custom_words: '',
         custom_units: checkedUnits.join('、'),
-        spec_note: `單張客製｜${layout==='1col'?'單欄大字':'雙欄標準'} / ${diffName} / ${ruby?'附注音':'無注音'}`,
+        spec_note: `單張客製｜${subj==='國語'?'緊湊省紙':(layout==='1col'?'單欄大字':'雙欄標準')} / ${diffName} / ${ruby?'附注音':'無注音'}`,
         qty: sheets,
         sheets,
         amount
@@ -1613,6 +1614,7 @@ function initStore(){
   });
   if($('stExamSubj')){
     $('stExamSubj').onchange = () => {
+      if(typeof syncZhLayoutUI==='function') syncZhLayoutUI($('stExamSubj').value);
       fillStoreUnits();
       scheduleStorePreview();
     };

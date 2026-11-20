@@ -617,23 +617,24 @@
     const g = cv.getContext('2d');
     g.scale(SCALE, SCALE);
 
-    g.fillStyle = '#fff';
+    // 完全淡灰描寫版：整格淡灰底，不用紅框、田字格中線、筆順數字或逐筆累積
+    g.fillStyle = '#eef1f5';
     g.fillRect(0, 0, cw, chh);
 
     const pad = levelId === 'large' ? 2.5 : 3;
     const bx = pad, by = pad, bw = cw - pad*2, bh = chh - pad*2;
 
     if(rowIdx === 0){
-      // 頂格：上方可愛插圖徽章＋1~10點點提示，下方放大加粗之標準公版黑色實心示範字
-      g.fillStyle = item.kind === 'zy' ? '#fff7ed' : (item.kind === 'num' ? '#f0fdf4' : '#eff6ff');
+      // 頂格：保留插圖徽章＋點點提示；示範字改淡灰底上的深灰字，移除彩色／紅色外框
+      g.fillStyle = '#e9edf3';
       g.fillRect(bx, by, bw, bh);
-      g.strokeStyle = item.kind === 'zy' ? '#fb923c' : (item.kind === 'num' ? '#4ade80' : '#60a5fa');
-      g.lineWidth = 1.8;
-      g.strokeRect(bx, by, bw, bh);
+      g.strokeStyle = '#cfd6e0';
+      g.lineWidth = 1;
+      g.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
 
       const topH = showIllust ? Math.round(bh * 0.36) : 0;
       if(showIllust){
-        g.fillStyle = 'rgba(255,255,255,0.92)';
+        g.fillStyle = 'rgba(255,255,255,0.62)';
         g.fillRect(bx+2, by+2, bw-4, topH);
 
         const circleR = Math.max(11, Math.round(topH * 0.41));
@@ -758,7 +759,7 @@
           g.fillText(item.hint || '', bx + bw - 6, by + 2 + topH * 0.52);
         }
 
-        g.strokeStyle = item.kind === 'zy' ? '#fed7aa' : (item.kind === 'num' ? '#bbf7d0' : '#bfdbfe');
+        g.strokeStyle = '#cbd5e1';
         g.lineWidth = 1;
         g.beginPath();
         g.moveTo(bx + 4, by + 2 + topH);
@@ -766,7 +767,7 @@
         g.stroke();
       }
 
-      // 下方：模式一「示範格」＝田字格（紅邊框＋虛線中線，同寫字帖模式一）＋黑字＋藍色圓點編號
+      // 示範格：淡灰底上的深灰示範字（保留插圖與提示；移除紅框、田字格中線、筆順圓點編號）
       const sym = String(item.sym);
       const gapPx = showIllust ? 2 : 3;
       const modelTop = showIllust ? (by + 2 + topH + gapPx) : (by + 2);
@@ -776,73 +777,32 @@
       const fontFam = (item.kind === 'abc' || item.kind === 'num')
         ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
         : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
-      const m = Math.max(2, cw * 0.012);
-      // 田字格：紅邊框＋虛線中線（模式一 style）
-      g.strokeStyle = '#d33'; g.lineWidth = m * 1.2;
-      g.strokeRect(bx + 1, modelTop + 1, bw - 2, modelH - 2);
-      g.lineWidth = Math.max(1, cw * 0.005); g.setLineDash([cw * 0.025, cw * 0.02]); g.strokeStyle = '#e88';
-      g.beginPath(); g.moveTo(bx + bw/2, modelTop + 1); g.lineTo(bx + bw/2, modelTop + modelH - 1);
-      g.moveTo(bx + 1, modelTop + modelH/2); g.lineTo(bx + bw - 1, modelTop + modelH/2);
-      g.stroke(); g.setLineDash([]);
-      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
+      g.font = `700 ${Math.round(baseFs)}px ${fontFam}`;
       g.textAlign = 'center'; g.textBaseline = 'middle';
       const gx = bx + bw / 2, gy = modelTop + modelH * 0.52;
       g.save();
-      g.fillStyle = '#0f172a'; g.strokeStyle = '#0f172a';
-      g.lineJoin = 'round'; g.lineWidth = Math.max(1.4, baseFs * 0.045);
-      g.strokeText(sym, gx, gy); g.fillText(sym, gx, gy);
+      g.fillStyle = '#475569';
+      g.fillText(sym, gx, gy);
       g.restore();
-      // 藍色圓點編號（模式一 numbers）
-      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
-      drawStrokeNumbers(g, sym, gx, gy, baseFs, null);
       return cv;
     }
 
-    // 模式一「逐筆累積」練習格：田字格（紅邊框＋虛線中線）＋前 k-1 筆深灰、第 k 筆紅色＋藍色圓點編號
+    // 淡灰描寫練習格：每格皆為淡灰底上的淡灰全字，供幼兒直接描寫；
+    // 不使用紅框、田字格中線、筆順圓點編號或逐筆累積（還原為寫字帖淡灰版）
     const sym = String(item.sym);
     const len = sym.length;
-    const totalStrokes = getStrokeCountForSym(sym);
     const baseFs = len >= 3 ? bh * 0.44 : (len === 2 ? bh * 0.56 : bh * 0.72);
     const fontFam = (item.kind === 'abc' || item.kind === 'num')
       ? '"Arial Rounded MT Bold","PingFang TC","Microsoft JhengHei",sans-serif'
       : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
-    const m = Math.max(2, cw * 0.012);
-
-    // 田字格：紅邊框＋虛線中線（模式一 style）
-    g.strokeStyle = '#d33'; g.lineWidth = m * 1.2;
-    g.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
-    g.lineWidth = Math.max(1, cw * 0.005); g.setLineDash([cw * 0.025, cw * 0.02]); g.strokeStyle = '#e88';
-    g.beginPath(); g.moveTo(bx + bw/2, by + 1); g.lineTo(bx + bw/2, by + bh - 1);
-    g.moveTo(bx + 1, by + bh/2); g.lineTo(bx + bw - 1, by + bh/2);
-    g.stroke(); g.setLineDash([]);
-
     const gx = bx + bw / 2, gy = by + bh * 0.53;
-    if(rowIdx >= 1 && rowIdx <= totalStrokes){
-      // 逐筆累積：前 rowIdx-1 筆深灰、第 rowIdx 筆紅色
-      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
-      drawProgressiveStrokes(g, sym, gx, gy, baseFs, rowIdx);
-      // 藍色圓點編號（模式一 numbers，僅已畫出的筆畫）
-      g.font = `900 ${Math.round(baseFs)}px ${fontFam}`;
-      drawStrokeNumbers(g, sym, gx, gy, baseFs, rowIdx);
-    } else {
-      // 筆順完成後的空白練習格：末格保留小字標註，其餘給極淺灰全字 ghost 供描寫
-      const isLastBlank = (rowIdx === totalRows - 1 && totalRows >= 7);
-      if(isLastBlank){
-        g.font = `600 10px "Noto Sans TC",sans-serif`;
-        g.fillStyle = '#cbd5e1';
-        g.textAlign = 'left';
-        g.textBaseline = 'top';
-        g.fillText(sym, bx + 4, by + 3);
-      }else{
-        g.font = `600 ${Math.round(baseFs)}px ${fontFam}`;
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.save();
-        g.globalAlpha = 0.16;
-        g.fillStyle = '#64748b';
-        g.fillText(sym, gx, gy);
-        g.restore();
-      }
-    }
+    g.save();
+    g.globalAlpha = 0.55;
+    g.fillStyle = '#8c99a8';
+    g.font = `600 ${Math.round(baseFs)}px ${fontFam}`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(sym, gx, gy);
+    g.restore();
 
     return cv;
   }
