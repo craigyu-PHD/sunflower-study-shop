@@ -1207,8 +1207,8 @@ async function submitStoreOrder(){
     return;
   }
   const parentName = ($('stParentName')?.value || '').trim();
-  const phoneLast4 = ($('stPhoneLast4')?.value || '').replace(/\D/g, '').trim();
   const phoneNo = ($('stPhone')?.value || '').replace(/[\s\-()]/g, '').trim();
+  const phoneLast4 = phoneNo.slice(-4); // 警衛室核對用末四碼，直接由家長填寫的手機號碼帶入
   const emailAddr = ($('stEmail')?.value || '').trim();
   const parent_label = phoneLast4 ? `${parentName}#${phoneLast4}` : parentName;
   const contact = [phoneNo, emailAddr].filter(Boolean).join(' ／ ');
@@ -1218,11 +1218,6 @@ async function submitStoreOrder(){
   if(!parentName || parentName.length < 2){
     msgEl.textContent = '⚠️ 請填寫「家長稱呼」（例如：王媽媽），作為警衛室取貨核對依據！';
     $('stParentName').focus();
-    return;
-  }
-  if(!/^\d{4}$/.test(phoneLast4)){
-    msgEl.textContent = '⚠️ 請填寫手機末四碼（4 位數字），取貨時警衛室會核對稱呼與末四碼！';
-    $('stPhoneLast4').focus();
     return;
   }
   if(!/^09\d{8}$/.test(phoneNo)){
@@ -1693,7 +1688,7 @@ function initStore(){
     };
   }
   // 數字欄位只接受數字，避免家長多打符號或井字號
-  [['stPhoneLast4',4],['stRemitLast5',5]].forEach(([id,max])=>{
+  [['stRemitLast5',5]].forEach(([id,max])=>{
     const el = $(id); if(!el) return;
     el.addEventListener('input', ()=>{
       const v = el.value.replace(/\D/g, '').slice(0, max);
