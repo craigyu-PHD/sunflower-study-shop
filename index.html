@@ -80,6 +80,7 @@
       <div class="price-highlight">每張 <b>NT$ 5 元</b> <small>｜累計滿 <b>20 張（NT$ 100 元）</b>出貨（評量卷免費附贈解答）</small></div>
     </div>
 
+    <div class="rules-four-grid">
     <div class="rules-grid">
       <div class="rule-box">
         <div class="rule-title">📍 專屬取貨地點</div>
@@ -112,12 +113,13 @@
     </div>
 
     <div class="legal-notice">
-      <div class="legal-title">⚖️ 《消費者保護法》客製化商品法令聲明與退換貨規範（訂購前請詳閱）</div>
+      <div class="legal-title">⚖️ 消費者保護法・退換貨與著作權聲明</div>
       <ul>
-        <li><b>法規依據與排除 7 日鑑賞期</b>：本伴學誌教材係依每位家長個別指定之「年級、學期、版本、單元範圍、字數版面規格及專屬防偽浮水印」即時量身印製。依據<b>《消費者保護法》第 19 條第 1 項但書</b>及行政院發布之<b>《通訊交易解除權合理例外情事適用準則》第 2 條第 2 款</b>規定，本商品屬於<b>「依消費者要求所為之客製化給付」</b>，經事先告知消費者後，<b>依法不適用 7 日猶豫期（鑑賞期）無條件解除契約及退款之規定</b>。</li>
-        <li><b>印製排程與瑕疵保障</b>：訂單一經核帳排印後，恕不接受取消訂單、更換年級科目或退換貨；惟若因賣方印製缺頁、模糊不清或內容與訂購單設定不符，請於取貨後 3 日內聯繫我們，將免費為您重新印製補發。</li>
-        <li><b>著作權與防轉售聲明</b>：依 108 課綱原創編製，每頁均印有專屬防偽浮水印，僅供個人練習使用，嚴禁翻印或轉售。</li>
+        <li><b>不適用 7 日鑑賞期</b>：依《消費者保護法》第 19 條但書及《通訊交易解除權合理例外情事適用準則》，本商品為客製化給付，經事先告知後依法不適用 7 日猶豫期。</li>
+        <li><b>瑕疵保障</b>：核帳排印後恕不接受取消或退換；若印製模糊、缺頁或與設定不符，請於取貨後 3 日內聯繫，免費重印補發。</li>
+        <li><b>防轉售</b>：108 課綱原創編製，每頁有防偽浮水印，僅供個人練習，嚴禁翻印或轉售。</li>
       </ul>
+    </div>
     </div>
   </section>
 
@@ -398,22 +400,10 @@
       <div id="stCartSummary" class="cart-summary-bar"></div>
       <div id="stThresholdBanner" class="cap-banner warn" style="display:none;margin:8px 0"></div>
 
-      <!-- 匯款資訊與訂購人資料表單 -->
+      <!-- 先填取貨資料再完成匯款；同意核定欄獨立置於最下方 -->
       <div class="checkout-grid">
-        <div class="bank-card">
-          <h4>🏦 第一步：請先完成轉帳匯款</h4>
-          <div class="bank-line"><span>銀行代碼：</span><b id="stBankCode">806（元大銀行桃興分行）</b></div>
-          <div class="bank-line"><span>匯款帳號：</span><b id="stBankAcc" style="font-size:1.12rem;color:#c85000;letter-spacing:.02em">20942000157493</b>
-            <button type="button" class="btn" id="btnCopyAcc" style="padding:2px 8px;font-size:.8rem">📋 複製</button>
-          </div>
-          <div class="bank-line"><span>應匯總額：</span><b id="stRemitTotal" style="font-size:1.35rem;color:#d93025">NT$ 0 元</b></div>
-          <div id="stRemitScheduleNote" style="margin-top:8px;padding:8px 10px;background:#fff5e0;border:1px solid #ffb86c;border-radius:8px;font-size:.85rem;color:#7a3b00;line-height:1.5">
-            ⏰ <b>取件時段明確規定：</b>當週三 <b>21:00（9點）前</b>完成匯款 → <b>當週五中午 12:00 以後 ～ 週日晚上 21:00 以前</b>至警衛室取件；<b>21:00 之後</b>匯款／下單 → 自動順延至<b>次週五中午 12:00 以後 ～ 次週日晚上 21:00 以前</b>取件！
-          </div>
-        </div>
-
         <div class="buyer-form">
-          <h4>📝 第二步：填寫取貨核對與匯款後五碼</h4>
+          <h4>📝 第一步：填寫取貨核對與匯款後五碼</h4>
           <div class="form-grid-2">
             <div class="form-row">
               <label>👨‍👩‍👧 家長稱呼 <span class="req">*必填（例：王媽媽）</span></label>
@@ -438,16 +428,28 @@
             <label>💳 匯款帳號後五碼 <span class="req">*必填（請填轉出存摺／卡號末 5 碼數字）</span></label>
             <input type="text" id="stRemitLast5" maxlength="5" inputmode="numeric" placeholder="12345">
           </div>
-          <label class="chk legal-chk">
-            <input type="checkbox" id="stAgreeTerms">
-            <span>我已詳閱並同意：本客製化教材依<b>《消費者保護法》第19條但書規定不適用 7 日鑑賞期</b>；採先匯款後印製（<b>當週三 21:00 前匯款當週取，21:00 後順延次週</b>），並遵守統一取件時段<b>「每週五中午 12:00 以後至每週日晚上 21:00 以前」</b>親至桃園區「豪情世家」警衛室領取完畢。</span>
-          </label>
-          <div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <button id="btnStSubmit" type="button" class="btn ok big" style="flex:1">✅ 確認已匯款・送出訂購單</button>
+        </div>
+
+        <div class="bank-card">
+          <h4>🏦 第二步：完成匯款</h4>
+          <div class="bank-line"><span>銀行代碼：</span><b id="stBankCode">806（元大銀行桃興分行）</b></div>
+          <div class="bank-line"><span>匯款帳號：</span><b id="stBankAcc" style="font-size:1.12rem;color:#c85000;letter-spacing:.02em">20942000157493</b>
+            <button type="button" class="btn" id="btnCopyAcc" style="padding:2px 8px;font-size:.8rem">📋 複製</button>
           </div>
-          <div id="stSubmitMsg" class="msg"></div>
+          <div class="bank-line"><span>應匯總額：</span><b id="stRemitTotal" style="font-size:1.35rem;color:#d93025">NT$ 0 元</b></div>
+          <div id="stRemitScheduleNote" style="margin-top:8px;padding:8px 10px;background:#fff5e0;border:1px solid #ffb86c;border-radius:8px;font-size:.85rem;color:#7a3b00;line-height:1.5">
+            ⏰ <b>取件時段明確規定：</b>當週三 <b>21:00（9點）前</b>完成匯款 → <b>當週五中午 12:00 以後 ～ 週日晚上 21:00 以前</b>至警衛室取件；<b>21:00 之後</b>匯款／下單 → 自動順延至<b>次週五中午 12:00 以後 ～ 次週日晚上 21:00 以前</b>取件！
+          </div>
         </div>
       </div>
+      <div class="legal-submit-bar">
+        <label class="chk legal-chk">
+          <input type="checkbox" id="stAgreeTerms">
+          <span><b>我已詳閱並同意：</b>本客製化教材依《消費者保護法》第 19 條但書不適用 7 日鑑賞期；採先匯款後印製，並遵守「每週五中午 12:00 以後 ～ 週日晚上 21:00 以前」至豪情世家警衛室取貨規範。</span>
+        </label>
+        <button id="btnStSubmit" type="button" class="btn ok big">✅ 確認已匯款・送出訂購單</button>
+      </div>
+      <div id="stSubmitMsg" class="msg"></div>
     </div>
 
     <!-- 訂購完成憑證卡片 -->

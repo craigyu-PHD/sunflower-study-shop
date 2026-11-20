@@ -119,6 +119,133 @@ function renderPreschoolWorkbench(){
 }
 window.renderPreschoolWorkbench = renderPreschoolWorkbench;
 
+/* =========================================================================
+   通用左側滑桿：幼兒園／寫字帖／試卷／前台預覽共用同一條 minimap
+   - 重用 exam.js 批次滑桿的 #batchMinimap 與 .batch-minimap* 樣式（含側向凸起動畫）
+   - 以 dataset.rail 區分 'batch'（exam.js）與 'generic'（此處），互不覆蓋 active 狀態
+   ========================================================================= */
+let __sideRailNodes = [];
+let __sideRailMode = 'scroll';
+
+window.hideSideRail = function(){
+  const box = $('batchMinimap');
+  if(box){ box.classList.remove('show'); box.innerHTML=''; box.dataset.rail=''; }
+  const tip = document.getElementById('batchMinimapTip');
+  if(tip) tip.classList.remove('show');
+  __sideRailNodes = [];
+};
+
+window.__sideRailSync = function(){
+  const box = $('batchMinimap');
+  if(!box || box.dataset.rail !== 'generic') return;
+  const ticks = box.querySelectorAll('.batch-minimap-tick');
+  if(!ticks.length) return;
+  let activeIdx = -1;
+  if(__sideRailMode === 'select'){
+    const sel = $('stPreviewSheetSel');
+    if(sel) activeIdx = +sel.value || 0;
+  } else {
+    const mid = window.innerHeight * 0.5;
+    __sideRailNodes.forEach((node, i)=>{
+      const el = node && node.el;
+      if(!el) return;
+      const r = el.getBoundingClientRect();
+      if(r.top <= mid && r.bottom >= 0) activeIdx = i;
+    });
+  }
+  ticks.forEach((t, i)=>t.classList.toggle('active', i === activeIdx));
+};
+
+window.renderSideRail = function(nodes, opts){
+  const box = $('batchMinimap');
+  if(!box) return;
+  if(!Array.isArray(nodes) || !nodes.length){ window.hideSideRail(); return; }
+  opts = opts || {};
+  __sideRailNodes = nodes;
+  __sideRailMode = opts.mode === 'select' ? 'select' : 'scroll';
+  let tipEl = document.getElementById('batchMinimapTip');
+  if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchMinimapTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
+  box.dataset.rail = 'generic';
+  box.innerHTML = '<div class="batch-minimap-track"></div><div class="batch-minimap-rail"></div>';
+  const rail = box.querySelector('.batch-minimap-rail');
+  const n = nodes.length;
+  const ticks = [];
+  nodes.forEach((node, i)=>{
+    const t = document.createElement('div');
+    t.className = 'batch-minimap-tick' + (/空白|防串頁/.test(String(node.label||'')) ? ' is-blank' : '');
+    t.style.top = n > 1 ? `${(i / (n - 1)) * 100}%` : '50%';
+    t.dataset.tip = node.label || `第 ${i + 1} 面`;
+    rail.appendChild(t);
+    ticks.push(t);
+  });
+
+  // 整條軌道都是感應區：吸附最近節點、顯示資訊、點擊跳頁
+  const idxAt = (clientY)=>{
+    const r = rail.getBoundingClientRect();
+    if(n <= 1) return 0;
+    const ratio = (clientY - r.top) / Math.max(1, r.height);
+    return Math.max(0, Math.min(n - 1, Math.round(ratio * (n - 1))));
+  };
+  let hoverIdx = -1;
+  const setHover = (idx)=>{
+    if(idx === hoverIdx) return;
+    if(ticks[hoverIdx]) ticks[hoverIdx].classList.remove('hover');
+    hoverIdx = idx;
+    if(idx >= 0 && ticks[idx]){
+      const t = ticks[idx];
+      t.classList.add('hover');
+      tipEl.textContent = t.dataset.tip;
+      const r = t.getBoundingClientRect();
+      tipEl.style.top = (r.top + r.height / 2) + 'px';
+      tipEl.classList.add('show');
+    } else {
+      tipEl.classList.remove('show');
+    }
+  };
+  rail.addEventListener('pointermove', ev => setHover(idxAt(ev.clientY)));
+  rail.addEventListener('pointerleave', () => setHover(-1));
+  rail.addEventListener('pointerdown', ev => {
+    const idx = idxAt(ev.clientY);
+    setHover(idx);
+    const node = __sideRailNodes[idx];
+    if(!node) return;
+    if(__sideRailMode === 'select'){
+      const sel = $('stPreviewSheetSel');
+      if(sel){ sel.value = String(node.value); sel.dispatchEvent(new Event('change', {bubbles:true})); }
+    } else if(node.el && node.el.scrollIntoView){
+      node.el.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  });
+
+  box.classList.add('show');
+  window.__sideRailSync();
+};
+
+function refreshGenericRail(){
+  const vis = id => { const el = $(id); return el && el.style.display !== 'none'; };
+  if(vis('viewBatch')) return; // 批次由 exam.js 的 minimap 接管
+  if(vis('viewPreschool') || vis('viewStroke') || vis('viewExam')){
+    const containerId = vis('viewPreschool') ? 'preSheet' : (vis('viewStroke') ? 'sheet' : 'examSheet');
+    const c = $(containerId);
+    const els = c ? [...c.querySelectorAll('.a4')] : [];
+    if(!els.length){ window.hideSideRail(); return; }
+    const nodes = els.map((el, i)=>({
+      el,
+      label: el.dataset.sheetLabel || (/空白|防串頁/.test((el.textContent||'').slice(0, 500)) ? '空白背面' : `第 ${i + 1} 面`)
+    }));
+    window.renderSideRail(nodes);
+    return;
+  }
+  if(vis('viewStore')){
+    const sel = $('stPreviewSheetSel');
+    if(!sel || !sel.options.length){ window.hideSideRail(); return; }
+    const nodes = [...sel.options].map(o=>({value:o.value, label:o.textContent}));
+    window.renderSideRail(nodes, {mode:'select'});
+    return;
+  }
+  window.hideSideRail();
+}
+
 function switchTab(tabName){
   if(tabName !== 'store' && !isAdminUnlocked){
     openAdminModal();
@@ -134,8 +261,16 @@ function switchTab(tabName){
   if($('viewBatch')) $('viewBatch').style.display = tabName === 'batch' ? '' : 'none';
   if($('wmBar')) $('wmBar').style.display = (isAdminUnlocked && tabName !== 'store') ? '' : 'none';
 
+  // 左側滑桿：批次由 exam.js 接管，其餘工作台由通用側邊滑桿接管
+  if(tabName === 'batch'){
+    if(typeof window.hideSideRail === 'function') window.hideSideRail();
+  } else {
+    if(typeof window.hideBatchMinimap === 'function') window.hideBatchMinimap();
+    refreshGenericRail();
+  }
+
   // 分頁先切換、先完成繪製，再於下一個影格後才開始產製，避免切頁瞬間卡住
-  const deferHeavy = (fn) => setTimeout(fn, 24);
+  const deferHeavy = (fn) => { setTimeout(()=>{ fn(); refreshGenericRail(); }, 24); };
   if(tabName === 'preschool'){
     const st = $('examPrintStyle'); if(st) st.textContent = '@media print{@page{size:A4 portrait;margin:0}}';
     deferHeavy(()=>renderPreschoolWorkbench());
@@ -149,7 +284,6 @@ function switchTab(tabName){
     if(typeof window.refreshBatchSysClock === 'function') window.refreshBatchSysClock();
     if(typeof window.showBatchMinimap === 'function') window.showBatchMinimap();
   }
-  if(tabName !== 'batch' && typeof window.hideBatchMinimap === 'function') window.hideBatchMinimap();
 }
 
 function openAdminModal(){
@@ -1576,7 +1710,30 @@ function initStore(){
   window.addEventListener('resize', () => {
     if($('viewStore') && $('viewStore').style.display !== 'none') scheduleStorePreview();
   });
-  setTimeout(updateStorePreview, 150);
+  // 通用滑桿：捲動同步 active（批次滑桿的 scroll 監聽器會自動轉委派給 __sideRailSync）
+  window.addEventListener('scroll', () => {
+    const box = $('batchMinimap');
+    if(box && box.dataset.rail === 'generic') window.__sideRailSync();
+  }, {passive:true});
+  // 非同步產製完成後自動重建通用滑桿節點
+  if(typeof MutationObserver !== 'undefined'){
+    ['preSheet','sheet','examSheet'].forEach(id=>{
+      const c = $(id); if(!c) return;
+      let lastCount = -1;
+      new MutationObserver(()=>{
+        const cnt = c.querySelectorAll('.a4').length;
+        if(cnt !== lastCount){ lastCount = cnt; refreshGenericRail(); }
+      }).observe(c, {childList:true, subtree:true});
+    });
+    const sel = $('stPreviewSheetSel');
+    if(sel){
+      let lastOpts = -1;
+      new MutationObserver(()=>{
+        if(sel.options.length !== lastOpts){ lastOpts = sel.options.length; refreshGenericRail(); }
+      }).observe(sel, {childList:true, subtree:true, characterData:true});
+    }
+  }
+  setTimeout(()=>{ updateStorePreview(); refreshGenericRail(); }, 150);
 }
 
 initStore();

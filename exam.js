@@ -264,9 +264,9 @@ function gCellHan(ch,zy,mainX=14){
   const dot=zy&&zy.startsWith('˙'), tone=zy&&/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
   const ph=zy?zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split(''):[];
   const ys=ph.length===1?[14]:(ph.length===2?[9,19]:[7,14,21]);
-  const fs=ph.length===1?10.5:(ph.length===2?9.2:7.8);
+  const fs=ph.length===1?11.5:(ph.length===2?10.2:8.8);
   if(dot)ys.forEach((_,i)=>{ys[i]+=2;});
-  const chEl=`<text x="${x}" y="14" dominant-baseline="central" text-anchor="middle" font-size="21.5" font-family="BiauKai,DFKai-SB,標楷體,Kaiti TC,serif" fill="#111">${esc(ch)}</text>`;
+  const chEl=`<text x="${x}" y="14" dominant-baseline="central" text-anchor="middle" font-size="23.5" font-family="BiauKai,DFKai-SB,標楷體,Kaiti TC,serif" fill="#111">${esc(ch)}</text>`;
   const phEls=ph.map((p,i)=>`<text x="30" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#222">${esc(p)}</text>`).join('');
   const dotEl=dot?`<text x="30" y="3.5" dominant-baseline="central" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#222">˙</text>`:'';
   const toneEl=tone?`<text x="38" y="${ys[ph.length-1]}" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#222">${esc(tone)}</text>`:'';
@@ -276,7 +276,7 @@ function gCellZy(zy,mainX=14){
   const dot=zy.startsWith('˙'), tone=/[ˊˇˋ]$/.test(zy)?zy.slice(-1):'';
   const ph=zy.replace(/^˙/,'').replace(/[ˊˇˋ]$/,'').split('');
   const ys=ph.length===1?[16]:(ph.length===2?[10.5,21.5]:[8,16,24]);
-  const fs=ph.length===1?14:(ph.length===2?12:10);
+  const fs=ph.length===1?15.5:(ph.length===2?13.5:11.5);
   if(dot)ys.forEach((_,i)=>{ys[i]+=2.2;});
   const phEls=ph.map((p,i)=>`<text x="${mainX}" y="${ys[i]}" dominant-baseline="central" text-anchor="middle" font-size="${fs}" font-family="Noto Sans TC,PingFang TC,sans-serif" font-weight="600" fill="#111">${esc(p)}</text>`).join('');
   const dotEl=dot?`<text x="${mainX}" y="4" dominant-baseline="central" text-anchor="middle" font-size="10" font-weight="bold" fill="#111">˙</text>`:'';
@@ -321,7 +321,7 @@ function gCellPunc(p,mainX=14){
   }else if(p==='→'||p==='↓'){
     inner=`<line x1="${mainX}" y1="3.2" x2="${mainX}" y2="17.8" stroke="#111" stroke-width="1.8" stroke-linecap="round"/><polyline points="${mainX-3.8},14 ${mainX},18.2 ${mainX+3.8},14" fill="none" stroke="#111" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
   }else{
-    inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="18" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="#111">${esc(vp)}</text>`;
+    inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="20" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="#111">${esc(vp)}</text>`;
   }
   return {h:22, isClosePunc, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`};
 }
@@ -4916,7 +4916,8 @@ function renderExam(measureOnly=false){
     // 國語科：改採真實國小考卷「上下雙排直書」欄流（由大至小嘗試字級，讓 2 頁剛好填滿無半欄留白）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
     const mainX=useZy?14:21;
-    const zhCandFs=($('exTwoPage')&&$('exTwoPage').checked)?[15.2, 14.4, 13.6, 12.8, 12.0]:[14.4, 13.6, 12.8];
+    // 國語字級放大 1～2 級並縮緊字距（SVG 主軸 x 不變，文字與標點仍精準對齊）
+    const zhCandFs=($('exTwoPage')&&$('exTwoPage').checked)?[16.8, 16.0, 15.2, 14.4, 13.6]:[16.0, 15.2, 14.4];
     let zhFs=zhCandFs[0], zhPages=[], zhPageFills=[], maxW=860;
     for(const _candFs of zhCandFs){
       zhFs=_candFs;
@@ -5120,8 +5121,8 @@ function renderExam(measureOnly=false){
         const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
         const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
         if(spareW>14 && items.length>=2){
-          const qGap=Math.min(8, 2+(spareW*0.3)/qCount);
-          const colGap=Math.min(5, 2+(spareW*0.2)/itemCnt);
+          const qGap=Math.min(6, 1.4+(spareW*0.18)/qCount);
+          const colGap=Math.min(3.6, 1.2+(spareW*0.12)/itemCnt);
           tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
           tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
           if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>45){
@@ -7280,14 +7281,14 @@ async function __buildExamPagesForOrderCore(order, withAns, wmText, keepLandscap
       const isTrailingSingleAns = wantSingleExamAns && pIdx >= qCountThisExam;
       if(!isTrailingSingleAns && (examSheetsTarget > 1 || isPreviewLazy)){
         const subEl = p.querySelector('.ex-sub');
-        const sideLabel = pIdx===0 ? '正面第1頁' : '背面第2頁';
-        const labelNo = isPreviewLazy ? `樣本第 ${profIdx+1} 張（${sideLabel}）` : `第 ${s+1}/${examSheetsTarget} 份（${sideLabel}）`;
+        // 不出現「第 x/20 份」「正面第 1 頁」：直接顯示範圍與難度說明
+        const infoText = `難度：${diffZh}　｜　範圍：${unitsLabel}`;
         if(subEl){
-          subEl.textContent = `${labelNo}・${prof.name}　｜　難度：${diffZh}　｜　範圍：${unitsLabel}`;
+          subEl.textContent = infoText;
         }
         const capEl = p.querySelector('.cap');
         if(capEl){
-          capEl.textContent = `${window.COPYRIGHT_STATEMENT||''}　｜　${labelNo}`;
+          capEl.textContent = `${window.COPYRIGHT_STATEMENT||''}　｜　${prof.name}　｜　${infoText}`;
         }
       }
     });
@@ -7512,11 +7513,11 @@ async function generateBatchAll(overrideOrders=null){
       await new Promise(r => requestAnimationFrame(r));
     }
 
-    const makeDuplexBlank = (hintTxt) => {
+    // 空白背面頁保持完全空白：任何說明文字都不得印在顧客紙本上（說明只留在螢幕頁籤）
+    const makeDuplexBlank = () => {
       const blank = document.createElement('div');
       blank.className = 'a4';
       blank.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-      blank.innerHTML += `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:13px">${esc(hintTxt)}</div>`;
       return blank;
     };
 
@@ -7529,8 +7530,8 @@ async function generateBatchAll(overrideOrders=null){
         contentPages: covPagesCount, paddedBlank: (covPagesCount % 2 === 1), totalPages: covPagesCount + (covPagesCount % 2 === 1 ? 1 : 0)
       };
       orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】A4 取貨封面頁`, el: buildCoverPageA4(ord, i, selectedOrders.length, statsTmp, wmText)});
-      // 訂單首頁第 2 頁預設空白頁，雙面列印時確保直接接續下一張才開始印考卷／寫字帖
-      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】取貨封面空白背面（雙面防串頁）`, el: makeDuplexBlank('（訂單封面背面預設空白頁 — 下一張第 3 頁起開始印製教材）')});
+      // 訂單首頁第 2 頁為完全空白背面頁（頁面上不放任何說明文字）
+      orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】取貨封面空白背面（雙面防串頁）`, el: makeDuplexBlank()});
     }
     strokeRes.pages.forEach((p,idx)=>{
       const sKind = ord.plan==='preschool' ? '幼兒園運筆寫字帖' : '筆畫練習寫字帖';
@@ -7546,7 +7547,7 @@ async function generateBatchAll(overrideOrders=null){
     });
     // 若此筆訂單（含多筆訂單或解答結尾）為奇數頁，末尾自動補 1 張空白背面頁維持雙數張對印
     if(duplexPad && orderPages.length % 2 === 1){
-      orderPages.push({label:`【訂單 ${ord.order_id}】雙面列印結尾空白背面`, el: makeDuplexBlank('（雙面列印防串頁空白背面 — 確保整數張雙面列印不印錯）')});
+      orderPages.push({label:`【訂單 ${ord.order_id}】雙面列印結尾空白背面`, el: makeDuplexBlank()});
     }
 
     const sheetPairs = [];
@@ -7641,6 +7642,12 @@ async function generateBatchAll(overrideOrders=null){
 
 let __batchMinimapBound = false;
 function __batchMinimapScrollSync(){
+  const box = $('batchMinimap');
+  // 通用側邊滑桿（其他工作台）由 store.js 接管同步，避免與批次滑桿互相覆蓋 active 狀態
+  if(box && box.dataset.rail === 'generic'){
+    if(typeof window.__sideRailSync === 'function') window.__sideRailSync();
+    return;
+  }
   const ticks = document.querySelectorAll('.batch-minimap-tick');
   if(!ticks.length) return;
   const sheet = $('batchSheet');
@@ -7657,12 +7664,13 @@ window.renderBatchMinimap = function(allSheetPairs){
   const box = $('batchMinimap');
   if(!box) return;
   if(!Array.isArray(allSheetPairs) || !allSheetPairs.length){
-    box.classList.remove('show'); box.innerHTML='';
+    box.classList.remove('show'); box.innerHTML=''; box.dataset.rail='';
     const tip0 = document.getElementById('batchMinimapTip'); if(tip0) tip0.classList.remove('show');
     return;
   }
   let tipEl = document.getElementById('batchMinimapTip');
   if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchMinimapTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
+  box.dataset.rail = 'batch';
   box.innerHTML = '<div class="batch-minimap-track"></div><div class="batch-minimap-rail"></div>';
   const rail = box.querySelector('.batch-minimap-rail');
   const n = allSheetPairs.length;

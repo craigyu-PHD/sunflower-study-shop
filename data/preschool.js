@@ -239,15 +239,35 @@
     return out;
   }
 
-  // ── 骨架圖層：以同一字型渲染實字 → Zhang-Suen 細線化 → 取得 1px 中心線（快取），
-  //    再以虛線疊在粗體實字正中央；直線必直、曲線必彎、轉折自然，完全不靠手繪座標。
+  // ── 中心線骨架：以同一字型、同一字級、同一中心點渲染實字 → Zhang-Suen 細線化 → 沿骨架走訪成折線。
+  //    虛線因此直接落在字身正中線上：轉角不會偏移、直線段不會長出多餘彎折，並與實字 100% 對齊。
   const _skelCache = new Map();
+  function _skelRDP(pts, eps){
+    if(pts.length < 3) return pts.slice();
+    let maxD = -1, idx = 0;
+    const ax = pts[0][0], ay = pts[0][1];
+    const bx = pts[pts.length - 1][0], by = pts[pts.length - 1][1];
+    const vx = bx - ax, vy = by - ay, vLen = Math.hypot(vx, vy);
+    for(let i = 1; i < pts.length - 1; i++){
+      const px = pts[i][0], py = pts[i][1];
+      const d = vLen < 1e-6
+        ? Math.hypot(px - ax, py - ay)
+        : Math.abs(vx * (py - ay) - vy * (px - ax)) / vLen;
+      if(d > maxD){ maxD = d; idx = i; }
+    }
+    if(maxD <= eps) return [pts[0], pts[pts.length - 1]];
+    const left = _skelRDP(pts.slice(0, idx + 1), eps);
+    const right = _skelRDP(pts.slice(idx), eps);
+    return left.slice(0, -1).concat(right);
+  }
+
   function getSkeleton(sym){
     if(_skelCache.has(sym)) return _skelCache.get(sym);
-    let out = null;
+    const out = { FS: 160, lines: [] };
     try{
       const W = 420, H = 220, FS = 160;
-      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
       const c = cv.getContext('2d', { willReadFrequently: true });
       c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
       const latin = /^[0-9A-Za-z]+$/.test(sym);
@@ -256,14 +276,19 @@
         : '"BiauKai","DFKai-SB","標楷體","Noto Sans TC",sans-serif';
       c.font = `900 ${FS}px ${fam}`;
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillStyle = '#000'; c.strokeStyle = '#000'; c.lineJoin = 'round';
-      c.lineWidth = Math.max(1.4, FS * 0.045);
-      c.strokeText(sym, W / 2, H / 2); c.fillText(sym, W / 2, H / 2);
-      const d = c.getImageData(0, 0, W, H).data;
+      c.fillStyle = '#000'; c.strokeStyle = '#000';
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      c.lineWidth = Math.max(1.6, FS * 0.05);
+      c.strokeText(sym, W / 2, H / 2);
+      c.fillText(sym, W / 2, H / 2);
+
+      const px = c.getImageData(0, 0, W, H).data;
       const img = new Uint8Array(W * H);
-      for(let i = 0; i < W * H; i++) img[i] = d[i * 4] < 140 ? 1 : 0;
+      for(let i = 0; i < W * H; i++) img[i] = px[i * 4] < 150 ? 1 : 0;
+
+      // Zhang-Suen 細線化：反覆剝除邊界，收斂成 1px 寬中心線
       let changed = true, guard = 0;
-      while(changed && guard++ < 60){
+      while(changed && guard++ < 40){
         changed = false;
         for(let step = 0; step < 2; step++){
           const del = [];
@@ -275,7 +300,8 @@
                     p6 = img[i + W], p7 = img[i + W - 1], p8 = img[i - 1], p9 = img[i - W - 1];
               const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
               if(B < 2 || B > 6) continue;
-              const A = (!p2 && p3) + (!p3 && p4) + (!p4 && p5) + (!p5 && p6) + (!p6 && p7) + (!p7 && p8) + (!p8 && p9) + (!p9 && p2);
+              const A = (!p2 && p3) + (!p3 && p4) + (!p4 && p5) + (!p5 && p6) +
+                        (!p6 && p7) + (!p7 && p8) + (!p8 && p9) + (!p9 && p2);
               if(A !== 1) continue;
               if(step === 0){ if(p2 * p4 * p6 || p4 * p6 * p8) continue; }
               else { if(p2 * p4 * p8 || p2 * p6 * p8) continue; }
@@ -285,162 +311,263 @@
           if(del.length){ changed = true; del.forEach(i => { img[i] = 0; }); }
         }
       }
-      // 沿骨架走訪給每個像素一個序號，供虛線節奏使用
-      const nb = (i) => {
-        const r = [];
-        for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
-          if(!dx && !dy) continue;
-          const j = i + dy * W + dx;
-          if(j >= 0 && j < W * H && img[j]) r.push(j);
+
+      const nbrs = (i) => {
+        const x = i % W, y = (i - x) / W, o = [];
+        if(y > 0){
+          if(x > 0 && img[i - W - 1]) o.push(i - W - 1);
+          if(img[i - W]) o.push(i - W);
+          if(x < W - 1 && img[i - W + 1]) o.push(i - W + 1);
         }
-        return r;
+        if(x > 0 && img[i - 1]) o.push(i - 1);
+        if(x < W - 1 && img[i + 1]) o.push(i + 1);
+        if(y < H - 1){
+          if(x > 0 && img[i + W - 1]) o.push(i + W - 1);
+          if(img[i + W]) o.push(i + W);
+          if(x < W - 1 && img[i + W + 1]) o.push(i + W + 1);
+        }
+        return o;
       };
-      const seen = new Uint8Array(W * H);
-      const pts = [];
-      let seq = 0;
-      const starts = [];
-      for(let i = 0; i < W * H; i++) if(img[i] && nb(i).length === 1) starts.push(i);
-      for(let i = 0; i < W * H; i++) if(img[i]) starts.push(i);
-      for(const s of starts){
-        if(seen[s]) continue;
-        const stack = [s];
+      const deg = new Uint8Array(W * H);
+      for(let i = 0; i < W * H; i++) if(img[i]) deg[i] = nbrs(i).length;
+
+      // 依連通元件逐一走訪，確保多字元（如 Aa）不會被串成一條線
+      const comp = new Int32Array(W * H).fill(-1);
+      const comps = [];
+      for(let i = 0; i < W * H; i++){
+        if(!img[i] || comp[i] >= 0) continue;
+        const cid = comps.length, list = [], stack = [i];
+        comp[i] = cid;
         while(stack.length){
-          const i = stack.pop();
-          if(seen[i]) continue;
-          seen[i] = 1;
-          pts.push([(i % W) - W / 2, Math.floor(i / W) - H / 2, seq++]);
-          nb(i).forEach(j => { if(!seen[j]) stack.push(j); });
+          const k = stack.pop();
+          list.push(k);
+          const ns = nbrs(k);
+          for(let q = 0; q < ns.length; q++){
+            const j = ns[q];
+            if(comp[j] < 0){ comp[j] = cid; stack.push(j); }
+          }
         }
+        comps.push(list);
       }
-      out = { pts, FS };
-    }catch(e){ out = null; }
+
+      comps.forEach(list => {
+        const seen = new Set();
+        const starts = list.filter(i => deg[i] === 1).concat(list);
+        for(let s = 0; s < starts.length; s++){
+          const s0 = starts[s];
+          if(seen.has(s0)) continue;
+          const pts = [s0];
+          seen.add(s0);
+          let cur = s0, dx = 0, dy = 0, hasDir = false;
+          for(;;){
+            const ns = nbrs(cur);
+            let best = -1, bestScore = -1e9;
+            for(let q = 0; q < ns.length; q++){
+              const j = ns[q];
+              if(seen.has(j)) continue;
+              let sc = 0;
+              if(hasDir){
+                const jx = (j % W) - (cur % W), jy = ((j / W) | 0) - ((cur / W) | 0);
+                const L = Math.hypot(jx, jy) || 1;
+                sc = (jx * dx + jy * dy) / L;
+              }
+              sc -= deg[j] * 0.25;   // 直行優先，避免在交叉點亂轉
+              if(sc > bestScore){ bestScore = sc; best = j; }
+            }
+            if(best < 0) break;
+            const jx = (best % W) - (cur % W), jy = ((best / W) | 0) - ((cur / W) | 0);
+            const L = Math.hypot(jx, jy) || 1;
+            dx = jx / L; dy = jy / L; hasDir = true;
+            cur = best; seen.add(best); pts.push(best);
+          }
+          if(pts.length === 1){
+            const i = pts[0];
+            out.lines.push({ pts: [[(i % W) - W / 2, ((i / W) | 0) - H / 2]], dot: true });
+          } else if(pts.length >= 2){
+            let line = pts.map(i => [(i % W) - W / 2, ((i / W) | 0) - H / 2]);
+            // 移動平均去掉階梯狀鋸齒（端點固定，避免線頭縮短）
+            for(let k = 0; k < 2; k++){
+              const next = line.map((p, idx) => (idx === 0 || idx === line.length - 1)
+                ? p
+                : [(line[idx - 1][0] + 2 * p[0] + line[idx + 1][0]) / 4,
+                   (line[idx - 1][1] + 2 * p[1] + line[idx + 1][1]) / 4]);
+              line = next;
+            }
+            out.lines.push({ pts: _skelRDP(line, 0.55), dot: false });
+          }
+        }
+      });
+    }catch(e){ /* 骨架失敗時退回手寫筆順折線 */ }
     _skelCache.set(sym, out);
     return out;
   }
 
-  function drawSkeletonGuide(g, sym, cx, cy, baseFs, compact, darkBg){
-    const sk = getSkeleton(sym);
-    if(!sk) return;
-    const s = baseFs / sk.FS;
-    g.save();
-    g.fillStyle = darkBg ? '#93c5fd' : '#1d4ed8';
-    g.globalAlpha = 0.9;
-    const dot = compact ? 0.8 : 1.0;
-    const period = 5.2;
-    sk.pts.forEach(([px, py, n]) => {
-      if(((n * s) % period) < period * 0.5){
-        g.beginPath();
-        g.arc(cx + px * s, cy + py * s, dot, 0, Math.PI * 2);
-        g.fill();
-      }
-    });
-    g.restore();
-  }
-
-  // ── 筆順引導：只畫「單條引導筆劃」虛線（沿每一筆的中心線），不再描整個字的字框輪廓。
-  //    字框虛線會讓幼兒誤以為要描字的外輪廓；單條中心線才能看出每一筆從哪裡起筆、往哪裡走。
+  // ── 筆順引導：幾何用「字身中心線」，顏色／編號／箭頭方向仍依手寫筆順資料；
+  //    線更細、斷點更密（短虛線＋小間隔），孩子描寫時看得見自己的筆跡。
   function drawStrokeOrderOverlay(g, sym, centerX, glyphY, baseFs, clampBox, compact=false, darkBg=false){
-    const strokes = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
-    if(!strokes.length) return;
     const palette = darkBg
-      ? ['#60a5fa', '#fb923c', '#4ade80', '#c084fc']
+      ? ['#7dd3fc', '#fdba74', '#86efac', '#d8b4fe']
       : ['#2563eb', '#e67e22', '#16a34a', '#9333ea'];
-    const placedBadges = [];
-    const r = Math.max(compact ? 3.9 : 4.8, Math.min(compact ? 5.2 : 6.5, clampBox.w * 0.055));
+    const sk = getSkeleton(sym);
+    const authored = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
 
-    strokes.forEach((st, idx) => {
-      const segs = st.segs;
-      if(!segs || segs.length < 2) return;
-      const col = palette[idx % palette.length];
-      const mapXY = (nx, ny) => [
-        st.box.x + nx * st.box.w,
-        st.box.y + ny * st.box.h
-      ];
-      const p0 = mapXY(segs[0][0], segs[0][1]);
+    // 手寫筆順取樣成密集點雲：只用來判斷「這條中心線屬於第幾筆」
+    const refs = [];
+    authored.forEach((st, si) => {
+      const box = st.box, seeds = st.segs;
+      if(!seeds || seeds.length < 2) return;
+      const mapX = (nx) => box.x + nx * box.w;
+      const mapY = (ny) => box.y + ny * box.h;
+      let curX = mapX(seeds[0][1]), curY = mapY(seeds[0][2]);
+      const pts = [[curX, curY]];
+      for(let i = 1; i < seeds.length; i++){
+        const s = seeds[i];
+        if(s[0] === 'L'){
+          curX = mapX(s[1]); curY = mapY(s[2]);
+          pts.push([curX, curY]);
+        } else if(s[0] === 'Q'){
+          const cx0 = mapX(s[1]), cy0 = mapY(s[2]);
+          const ex = mapX(s[3]), ey = mapY(s[4]);
+          for(let t = 0.12; t <= 1.001; t += 0.12){
+            const mt = 1 - t;
+            pts.push([mt * mt * curX + 2 * mt * t * cx0 + t * t * ex,
+                      mt * mt * curY + 2 * mt * t * cy0 + t * t * ey]);
+          }
+          curX = ex; curY = ey;
+        } else if(s[0] === 'C'){
+          const c1x = mapX(s[1]), c1y = mapY(s[2]);
+          const c2x = mapX(s[3]), c2y = mapY(s[4]);
+          const ex = mapX(s[5]), ey = mapY(s[6]);
+          for(let t = 0.12; t <= 1.001; t += 0.12){
+            const mt = 1 - t;
+            pts.push([mt * mt * mt * curX + 3 * mt * mt * t * c1x + 3 * mt * t * t * c2x + t * t * t * ex,
+                      mt * mt * mt * curY + 3 * mt * mt * t * c1y + 3 * mt * t * t * c2y + t * t * t * ey]);
+          }
+          curX = ex; curY = ey;
+        }
+      }
+      refs.push({ si, start: pts[0], end: pts[pts.length - 1], pts });
+    });
+
+    const scale = baseFs / (sk.FS || 160);
+    let lines = sk.lines.map((ln, li) => ({
+      li,
+      dot: !!ln.dot,
+      pts: ln.pts.map(p => [centerX + p[0] * scale, glyphY + p[1] * scale])
+    }));
+    if(!lines.length){   // 骨架取不到時退回手寫筆順折線
+      lines = refs.map(r => ({ li: r.si, dot: false, pts: r.pts }));
+    }
+
+    const sqD = (a, b) => (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]);
+    if(refs.length){
+      lines.forEach(ln => {
+        let bestSi = 0, bestD = Infinity;
+        refs.forEach(r => {
+          let sum = 0, n = 0;
+          for(let i = 0; i < ln.pts.length; i += 2){
+            let m = Infinity;
+            for(let q = 0; q < r.pts.length; q++){
+              const d = sqD(ln.pts[i], r.pts[q]);
+              if(d < m) m = d;
+            }
+            sum += Math.sqrt(m); n++;
+          }
+          const avg = n ? sum / n : Infinity;
+          if(avg < bestD){ bestD = avg; bestSi = r.si; }
+        });
+        ln.si = bestSi;
+        const r = refs[bestSi];
+        const dFwd = sqD(ln.pts[0], r.start) + sqD(ln.pts[ln.pts.length - 1], r.end);
+        const dRev = sqD(ln.pts[0], r.end) + sqD(ln.pts[ln.pts.length - 1], r.start);
+        if(dRev < dFwd) ln.pts.reverse();
+      });
+    } else {
+      lines.forEach((ln, i) => { ln.si = i; });
+    }
+    lines.sort((a, b) => (a.si - b.si) || (b.pts.length - a.pts.length));
+
+    const lw = Math.max(0.85, Math.min(compact ? 1.5 : 1.9, baseFs * (compact ? 0.017 : 0.019)));
+    const r = Math.max(3.0, Math.min(compact ? 4.4 : 5.0, clampBox.w * 0.042));
+    const minX = clampBox.x + r + 1.2, maxX = clampBox.x + clampBox.w - r - 1.2;
+    const minY = clampBox.y + r + 1.2, maxY = clampBox.y + clampBox.h - r - 1.2;
+    const badges = [];
+
+    lines.forEach(ln => {
+      const pts = ln.pts;
+      if(!pts.length) return;
+      const col = palette[ln.si % palette.length];
 
       g.save();
       g.strokeStyle = col;
-      g.globalAlpha = darkBg ? 0.94 : 0.9;
-      const lw = Math.max(1.8, Math.min(4.6, baseFs * 0.048));
-      g.lineWidth = lw;
+      g.fillStyle = col;
+      g.globalAlpha = darkBg ? 0.95 : 0.88;
       g.lineCap = 'round';
       g.lineJoin = 'round';
-      g.setLineDash([lw * 2.3, lw * 1.45]);
-      g.beginPath();
-      g.moveTo(p0[0], p0[1]);
 
-      let curX = p0[0], curY = p0[1];
-      let tanX = 0, tanY = 0;
-      for(let i = 1; i < segs.length; i++){
-        const seg = segs[i];
-        const cmd = seg[0];
-        if(cmd === 'L'){
-          const [ex, ey] = mapXY(seg[1], seg[2]);
-          g.lineTo(ex, ey);
-          tanX = ex - curX; tanY = ey - curY;
-          curX = ex; curY = ey;
-        } else if(cmd === 'Q'){
-          const [cx, cy] = mapXY(seg[1], seg[2]);
-          const [ex, ey] = mapXY(seg[3], seg[4]);
-          g.quadraticCurveTo(cx, cy, ex, ey);
-          tanX = ex - cx; tanY = ey - cy;
-          if(Math.hypot(tanX, tanY) < 0.5){ tanX = ex - curX; tanY = ey - curY; }
-          curX = ex; curY = ey;
-        } else if(cmd === 'C'){
-          const [c1x, c1y] = mapXY(seg[1], seg[2]);
-          const [c2x, c2y] = mapXY(seg[3], seg[4]);
-          const [ex, ey] = mapXY(seg[5], seg[6]);
-          g.bezierCurveTo(c1x, c1y, c2x, c2y, ex, ey);
-          tanX = ex - c2x; tanY = ey - c2y;
-          if(Math.hypot(tanX, tanY) < 0.5){ tanX = ex - c1x; tanY = ey - c1y; }
-          if(Math.hypot(tanX, tanY) < 0.5){ tanX = ex - curX; tanY = ey - curY; }
-          curX = ex; curY = ey;
-        }
+      if(ln.dot || pts.length < 2){
+        g.beginPath();
+        g.arc(pts[0][0], pts[0][1], Math.max(1.1, lw * 1.15), 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+        return;
       }
+
+      g.lineWidth = lw;
+      g.setLineDash([lw * 2.2, lw * 1.9]);
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for(let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
       g.stroke();
       g.setLineDash([]);
 
-      const ang = Math.atan2(tanY, tanX);
-      const aLen = compact ? 4.4 : 5.5;
-      g.fillStyle = col;
+      // 每種筆畫只標一次起筆編號，避免同一筆被切段後重複編號
+      if(!badges.some(b => b.si === ln.si)){
+        let bx = Math.max(minX, Math.min(maxX, pts[0][0] - r * 0.7));
+        let by = Math.max(minY, Math.min(maxY, pts[0][1] - r * 0.7));
+        const offsets = [[0,0],[r*2.1,0],[-r*2.1,0],[0,-r*2.1],[0,r*2.1],[r*1.8,r*1.8],[-r*1.8,r*1.8]];
+        for(let i = 0; i < offsets.length; i++){
+          const cxp = Math.max(minX, Math.min(maxX, bx + offsets[i][0]));
+          const cyp = Math.max(minY, Math.min(maxY, by + offsets[i][1]));
+          let ok = true;
+          for(let q = 0; q < badges.length; q++){
+            if(Math.hypot(cxp - badges[q].x, cyp - badges[q].y) < r * 2.05){ ok = false; break; }
+          }
+          if(ok){ bx = cxp; by = cyp; break; }
+        }
+        badges.push({ si: ln.si, x: bx, y: by });
+        g.globalAlpha = 0.97;
+        g.beginPath();
+        g.arc(bx, by, r, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = '#fff';
+        g.lineWidth = 1;
+        g.stroke();
+        g.globalAlpha = 1;
+        g.fillStyle = '#fff';
+        g.font = `800 ${Math.round(r * 1.34)}px "Noto Sans TC",sans-serif`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(String(ln.si + 1), bx, by + 0.4);
+        g.fillStyle = col;
+        g.globalAlpha = darkBg ? 0.95 : 0.9;
+      }
+
+      // 收筆方向箭頭
+      const last = pts[pts.length - 1];
+      const prev = pts[Math.max(0, pts.length - 3)];
+      let ax = last[0] - prev[0], ay = last[1] - prev[1];
+      const aL = Math.hypot(ax, ay) || 1;
+      ax /= aL; ay /= aL;
+      const ang = Math.atan2(ay, ax);
+      const aLen = compact ? 4.0 : 5.0;
       g.beginPath();
-      g.moveTo(curX + Math.cos(ang) * 1.8, curY + Math.sin(ang) * 1.8);
-      g.lineTo(curX - aLen * Math.cos(ang - 0.52), curY - aLen * Math.sin(ang - 0.52));
-      g.lineTo(curX - aLen * Math.cos(ang + 0.52), curY - aLen * Math.sin(ang + 0.52));
+      g.moveTo(last[0] + ax * 1.3, last[1] + ay * 1.3);
+      g.lineTo(last[0] - aLen * Math.cos(ang - 0.5), last[1] - aLen * Math.sin(ang - 0.5));
+      g.lineTo(last[0] - aLen * Math.cos(ang + 0.5), last[1] - aLen * Math.sin(ang + 0.5));
       g.closePath();
       g.fill();
 
-      let bx0 = p0[0] - r * 0.72;
-      let by0 = p0[1] - r * 0.72;
-      const minX = clampBox.x + r + 1.5, maxX = clampBox.x + clampBox.w - r - 1.5;
-      const minY = clampBox.y + r + 1.5, maxY = clampBox.y + clampBox.h - r - 1.5;
-      bx0 = Math.max(minX, Math.min(maxX, bx0));
-      by0 = Math.max(minY, Math.min(maxY, by0));
-      const offsets = [[0,0],[r*2.15,0],[-r*2.15,0],[0,-r*2.15],[0,r*2.15],[r*1.8,r*1.8]];
-      for(const [ox, oy] of offsets){
-        const candX = Math.max(minX, Math.min(maxX, bx0 + ox));
-        const candY = Math.max(minY, Math.min(maxY, by0 + oy));
-        if(placedBadges.every(([px, py]) => Math.hypot(candX - px, candY - py) >= r * 2.08)){
-          bx0 = candX; by0 = candY;
-          break;
-        }
-      }
-      placedBadges.push([bx0, by0]);
-
-      g.globalAlpha = 0.96;
-      g.fillStyle = col;
-      g.beginPath();
-      g.arc(bx0, by0, r, 0, Math.PI * 2);
-      g.fill();
-      g.strokeStyle = '#fff';
-      g.lineWidth = 1.1;
-      g.stroke();
-
-      g.fillStyle = '#fff';
-      g.font = `800 ${Math.round(r * 1.32)}px "Noto Sans TC",sans-serif`;
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      g.fillText(String(idx + 1), bx0, by0 + 0.4);
       g.restore();
     });
   }
