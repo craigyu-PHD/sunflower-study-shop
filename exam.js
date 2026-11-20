@@ -7642,13 +7642,13 @@ async function generateBatchAll(overrideOrders=null){
 
 let __batchMinimapBound = false;
 function __batchMinimapScrollSync(){
-  const box = $('batchMinimap');
+  const box = $('batchRail');
   // 通用側邊滑桿（其他工作台）由 store.js 接管同步，避免與批次滑桿互相覆蓋 active 狀態
   if(box && box.dataset.rail === 'generic'){
     if(typeof window.__sideRailSync === 'function') window.__sideRailSync();
     return;
   }
-  const ticks = document.querySelectorAll('.batch-minimap-tick');
+  const ticks = box ? box.querySelectorAll('.batch-minimap-tick') : [];
   if(!ticks.length) return;
   const sheet = $('batchSheet');
   if(!sheet) return;
@@ -7661,15 +7661,15 @@ function __batchMinimapScrollSync(){
   ticks.forEach(t=>t.classList.toggle('active', t.dataset.sheet===String(activeSheet)));
 }
 window.renderBatchMinimap = function(allSheetPairs){
-  const box = $('batchMinimap');
+  const box = $('batchRail');
   if(!box) return;
   if(!Array.isArray(allSheetPairs) || !allSheetPairs.length){
     box.classList.remove('show'); box.innerHTML=''; box.dataset.rail='';
-    const tip0 = document.getElementById('batchMinimapTip'); if(tip0) tip0.classList.remove('show');
+    const tip0 = document.getElementById('batchRailTip'); if(tip0) tip0.classList.remove('show');
     return;
   }
-  let tipEl = document.getElementById('batchMinimapTip');
-  if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchMinimapTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
+  let tipEl = document.getElementById('batchRailTip');
+  if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchRailTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
   box.dataset.rail = 'batch';
   box.innerHTML = '<div class="batch-minimap-track"></div><div class="batch-minimap-rail"></div>';
   const rail = box.querySelector('.batch-minimap-rail');
@@ -7703,7 +7703,9 @@ window.renderBatchMinimap = function(allSheetPairs){
       t.classList.add('hover');
       tipEl.textContent = t.dataset.tip;
       const r = t.getBoundingClientRect();
+      const hostR = box.getBoundingClientRect();
       tipEl.style.top = (r.top + r.height / 2) + 'px';
+      tipEl.style.left = (hostR.right + 10) + 'px';
       tipEl.classList.add('show');
     } else {
       tipEl.classList.remove('show');
@@ -7724,7 +7726,7 @@ window.renderBatchMinimap = function(allSheetPairs){
   if(!__batchMinimapBound){
     __batchMinimapBound = true;
     window.addEventListener('scroll', ()=>{
-      const b = document.getElementById('batchMinimap');
+      const b = document.getElementById('batchRail');
       if(b && b.classList.contains('show')) __batchMinimapScrollSync();
     }, {passive:true});
   }
@@ -7737,8 +7739,8 @@ window.showBatchMinimap = function(){
   if(typeof window.renderBatchMinimap==='function') window.renderBatchMinimap(window._batchSinglePgMeta);
 };
 window.hideBatchMinimap = function(){
-  const b=$('batchMinimap'); if(b){ b.classList.remove('show'); b.innerHTML=''; }
-  const tip=document.getElementById('batchMinimapTip'); if(tip) tip.classList.remove('show');
+  const b=$('batchRail'); if(b){ b.classList.remove('show'); b.innerHTML=''; b.dataset.rail=''; }
+  const tip=document.getElementById('batchRailTip'); if(tip) tip.classList.remove('show');
 };
 
 function regenBatchExamSheet(orderId, exSheet, btn){

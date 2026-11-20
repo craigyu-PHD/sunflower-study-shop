@@ -405,17 +405,21 @@
   // ── 筆順引導：幾何用「字身中心線」，顏色／編號／箭頭方向仍依手寫筆順資料；
   //    線更細、斷點更密（短虛線＋小間隔），孩子描寫時看得見自己的筆跡。
   function drawStrokeOrderOverlay(g, sym, centerX, glyphY, baseFs, clampBox, compact=false, darkBg=false){
-    const palette = darkBg
-      ? ['#7dd3fc', '#fdba74', '#86efac', '#d8b4fe']
-      : ['#2563eb', '#e67e22', '#16a34a', '#9333ea'];
-    const sk = getSkeleton(sym);
+    // 與寫字帖工作台一致：單一藍色標記＋白字編號＋收筆箭頭。
+    // 引導線直接用 STROKE_PATHS 每筆中線控制點取樣，不再讓骨架細線化決定編號或方向，
+    // 保證每筆都有 1,2,3… 連續編號、箭頭方向永遠跟著中線終點（詳見下方 refs）。
+    const strokeCol = darkBg ? '#7dd3fc' : '#1976d2';
     const authored = getStrokesForSym(g, sym, centerX, glyphY, baseFs);
 
-    // 手寫筆順取樣成密集點雲：只用來判斷「這條中心線屬於第幾筆」
+    // 手寫筆順中線取樣成密集點：直接作為引導線，si 即筆畫順序（0-based）。
+    // localIdx 讓每個字元的編號各自從 1 開始（Aa / 30~100 等多字元不會接續上一個字）
     const refs = [];
+    let localIdx = 0, prevCh = null;
     authored.forEach((st, si) => {
       const box = st.box, seeds = st.segs;
       if(!seeds || seeds.length < 2) return;
+      const chKey = box && box.ch;
+      if(chKey !== prevCh){ localIdx = 0; prevCh = chKey; }
       const mapX = (nx) => box.x + nx * box.w;
       const mapY = (ny) => box.y + ny * box.h;
       let curX = mapX(seeds[0][1]), curY = mapY(seeds[0][2]);
@@ -446,46 +450,13 @@
           curX = ex; curY = ey;
         }
       }
-      refs.push({ si, start: pts[0], end: pts[pts.length - 1], pts });
+      refs.push({ si, localIdx, start: pts[0], end: pts[pts.length - 1], pts });
+      localIdx++;
     });
 
-    const scale = baseFs / (sk.FS || 160);
-    let lines = sk.lines.map((ln, li) => ({
-      li,
-      dot: !!ln.dot,
-      pts: ln.pts.map(p => [centerX + p[0] * scale, glyphY + p[1] * scale])
-    }));
-    if(!lines.length){   // 骨架取不到時退回手寫筆順折線
-      lines = refs.map(r => ({ li: r.si, dot: false, pts: r.pts }));
-    }
-
-    const sqD = (a, b) => (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]);
-    if(refs.length){
-      lines.forEach(ln => {
-        let bestSi = 0, bestD = Infinity;
-        refs.forEach(r => {
-          let sum = 0, n = 0;
-          for(let i = 0; i < ln.pts.length; i += 2){
-            let m = Infinity;
-            for(let q = 0; q < r.pts.length; q++){
-              const d = sqD(ln.pts[i], r.pts[q]);
-              if(d < m) m = d;
-            }
-            sum += Math.sqrt(m); n++;
-          }
-          const avg = n ? sum / n : Infinity;
-          if(avg < bestD){ bestD = avg; bestSi = r.si; }
-        });
-        ln.si = bestSi;
-        const r = refs[bestSi];
-        const dFwd = sqD(ln.pts[0], r.start) + sqD(ln.pts[ln.pts.length - 1], r.end);
-        const dRev = sqD(ln.pts[0], r.end) + sqD(ln.pts[ln.pts.length - 1], r.start);
-        if(dRev < dFwd) ln.pts.reverse();
-      });
-    } else {
-      lines.forEach((ln, i) => { ln.si = i; });
-    }
-    lines.sort((a, b) => (a.si - b.si) || (b.pts.length - a.pts.length));
+    // 直接用中線 refs 當引導線：si 由 getStrokesForSym 迴圈保證 0..n-1 連續，
+    // 不再經過骨架細化＋最近距離猜測，故不可能漏號、重號或方向反轉。
+    const lines = refs.map(r => ({ si: r.si, localIdx: r.localIdx, dot: false, pts: r.pts }));
 
     const lw = Math.max(0.85, Math.min(compact ? 1.5 : 1.9, baseFs * (compact ? 0.017 : 0.019)));
     const r = Math.max(3.0, Math.min(compact ? 4.4 : 5.0, clampBox.w * 0.042));
@@ -496,7 +467,7 @@
     lines.forEach(ln => {
       const pts = ln.pts;
       if(!pts.length) return;
-      const col = palette[ln.si % palette.length];
+      const col = strokeCol;
 
       g.save();
       g.strokeStyle = col;
@@ -505,23 +476,21 @@
       g.lineCap = 'round';
       g.lineJoin = 'round';
 
-      if(ln.dot || pts.length < 2){
+      // 極短筆（如 i、j 的點）仍畫成一個小圓點並照樣編號，不再早退漏號
+      if(pts.length < 2){
         g.beginPath();
         g.arc(pts[0][0], pts[0][1], Math.max(1.1, lw * 1.15), 0, Math.PI * 2);
         g.fill();
-        g.restore();
-        return;
+      } else {
+        // 實線中線引導（移除虛線），直接貼合字形與筆順方向
+        g.lineWidth = lw;
+        g.beginPath();
+        g.moveTo(pts[0][0], pts[0][1]);
+        for(let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.stroke();
       }
 
-      g.lineWidth = lw;
-      g.setLineDash([lw * 2.2, lw * 1.9]);
-      g.beginPath();
-      g.moveTo(pts[0][0], pts[0][1]);
-      for(let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
-      g.stroke();
-      g.setLineDash([]);
-
-      // 每種筆畫只標一次起筆編號，避免同一筆被切段後重複編號
+      // 每筆只標一次起筆編號；localIdx 讓每個字元各自從 1 開始
       if(!badges.some(b => b.si === ln.si)){
         let bx = Math.max(minX, Math.min(maxX, pts[0][0] - r * 0.7));
         let by = Math.max(minY, Math.min(maxY, pts[0][1] - r * 0.7));
@@ -548,12 +517,13 @@
         g.font = `800 ${Math.round(r * 1.34)}px "Noto Sans TC",sans-serif`;
         g.textAlign = 'center';
         g.textBaseline = 'middle';
-        g.fillText(String(ln.si + 1), bx, by + 0.4);
+        g.fillText(String(ln.localIdx + 1), bx, by + 0.4);
         g.fillStyle = col;
         g.globalAlpha = darkBg ? 0.95 : 0.9;
       }
 
-      // 收筆方向箭頭
+      // 收筆方向箭頭：中線端點天然反映真實收筆方向，不再依赖骨架走訪
+      if(pts.length < 2){ g.restore(); return; }
       const last = pts[pts.length - 1];
       const prev = pts[Math.max(0, pts.length - 3)];
       let ax = last[0] - prev[0], ay = last[1] - prev[1];
@@ -752,9 +722,8 @@
       g.fillText(sym, gx, gy);
       g.restore();
 
-      if(len === 1){
-        drawStrokeOrderOverlay(g, sym, gx, gy, baseFs, {x: bx + 2, y: modelTop, w: bw - 4, h: modelH}, true, true);
-      }
+      // multi-char（Aa、30~100）也畫引導：getStrokesForSym 已逐字拆分、localIdx 逐字重置編號
+      drawStrokeOrderOverlay(g, sym, gx, gy, baseFs, {x: bx + 2, y: modelTop, w: bw - 4, h: modelH}, true, true);
       return cv;
     }
 

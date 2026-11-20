@@ -120,23 +120,31 @@ function renderPreschoolWorkbench(){
 window.renderPreschoolWorkbench = renderPreschoolWorkbench;
 
 /* =========================================================================
-   通用左側滑桿：幼兒園／寫字帖／試卷／前台預覽共用同一條 minimap
-   - 重用 exam.js 批次滑桿的 #batchMinimap 與 .batch-minimap* 樣式（含側向凸起動畫）
+   通用左側滑桿：幼兒園／寫字帖／試卷共用 body 的 #batchMinimap；
+   前台訂購頁預覽改用預覽框內的 #stPreviewRail（依附預覽畫面、不浮在全站）。
+   - 重用 .batch-minimap* 樣式（改為圓點漸層動畫，見 style.css）
    - 以 dataset.rail 區分 'batch'（exam.js）與 'generic'（此處），互不覆蓋 active 狀態
    ========================================================================= */
 let __sideRailNodes = [];
 let __sideRailMode = 'scroll';
+// select 模式（訂購頁）用預覽框內 rail；scroll 模式（其他工作台）用 body rail
+const __railBox = () => $(__sideRailMode === 'select' ? 'stPreviewRail' : 'batchMinimap');
+const __railTipId = () => __sideRailMode === 'select' ? 'stPreviewRailTip' : 'batchMinimapTip';
 
 window.hideSideRail = function(){
-  const box = $('batchMinimap');
-  if(box){ box.classList.remove('show'); box.innerHTML=''; box.dataset.rail=''; }
-  const tip = document.getElementById('batchMinimapTip');
-  if(tip) tip.classList.remove('show');
+  ['batchMinimap','stPreviewRail'].forEach(id=>{
+    const box = $(id);
+    if(box){ box.classList.remove('show'); box.innerHTML=''; box.dataset.rail=''; }
+  });
+  ['batchMinimapTip','stPreviewRailTip'].forEach(id=>{
+    const tip = document.getElementById(id);
+    if(tip) tip.classList.remove('show');
+  });
   __sideRailNodes = [];
 };
 
 window.__sideRailSync = function(){
-  const box = $('batchMinimap');
+  const box = __railBox();
   if(!box || box.dataset.rail !== 'generic') return;
   const ticks = box.querySelectorAll('.batch-minimap-tick');
   if(!ticks.length) return;
@@ -157,14 +165,14 @@ window.__sideRailSync = function(){
 };
 
 window.renderSideRail = function(nodes, opts){
-  const box = $('batchMinimap');
-  if(!box) return;
   if(!Array.isArray(nodes) || !nodes.length){ window.hideSideRail(); return; }
   opts = opts || {};
-  __sideRailNodes = nodes;
   __sideRailMode = opts.mode === 'select' ? 'select' : 'scroll';
-  let tipEl = document.getElementById('batchMinimapTip');
-  if(!tipEl){ tipEl = document.createElement('div'); tipEl.id='batchMinimapTip'; tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
+  const box = __railBox();
+  if(!box) return;
+  __sideRailNodes = nodes;
+  let tipEl = document.getElementById(__railTipId());
+  if(!tipEl){ tipEl = document.createElement('div'); tipEl.id=__railTipId(); tipEl.className='batch-minimap-tip'; document.body.appendChild(tipEl); }
   box.dataset.rail = 'generic';
   box.innerHTML = '<div class="batch-minimap-track"></div><div class="batch-minimap-rail"></div>';
   const rail = box.querySelector('.batch-minimap-rail');
@@ -196,7 +204,10 @@ window.renderSideRail = function(nodes, opts){
       t.classList.add('hover');
       tipEl.textContent = t.dataset.tip;
       const r = t.getBoundingClientRect();
+      const hostR = box.getBoundingClientRect();
       tipEl.style.top = (r.top + r.height / 2) + 'px';
+      // tip 貼齊当前 rail 右側（Fixed 模式為 body rail、訂購頁為預覽框內 rail）
+      tipEl.style.left = (hostR.right + 10) + 'px';
       tipEl.classList.add('show');
     } else {
       tipEl.classList.remove('show');
@@ -1711,6 +1722,7 @@ function initStore(){
     if($('viewStore') && $('viewStore').style.display !== 'none') scheduleStorePreview();
   });
   // 通用滑桿：捲動同步 active（批次滑桿的 scroll 監聽器會自動轉委派給 __sideRailSync）
+  // select 模式（訂購頁）由下拉選單同步，不依賴 window scroll；scroll 模式用 body rail。
   window.addEventListener('scroll', () => {
     const box = $('batchMinimap');
     if(box && box.dataset.rail === 'generic') window.__sideRailSync();
