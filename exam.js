@@ -6885,7 +6885,7 @@ function renderBatchTable(orders){
       </label>
     </td>
     <td>
-      <div class="ord-id-line"><span class="ord-id-pill">${esc(o.order_id)}</span> <b class="ord-parent">${esc(o.parent_label||'(未填)')}</b></div>
+      <div class="ord-id-line"><span class="ord-id-pill">${esc(o.order_id)}</span> <b class="ord-parent">${esc(o.parent_label||'(未填)')}</b>${/測試/.test(o.parent_label||'')?' <span class="test-order-badge">🧪 測試</span>':''}</div>
       ${o.contact?`<div style="font-size:.77rem;color:#475569;margin-top:2px">📞 ${esc(o.contact)}</div>`:''}
       <div style="font-size:.74rem;color:#64748b;margin-top:2px">${o.created_at?`🕒 ${esc(o.created_at)}`:'🕒 未填時間'}</div>
       <div style="margin-top:3px"><span class="week-pill">${esc(o.batch_week||curWeek)}</span></div>

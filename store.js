@@ -1211,6 +1211,9 @@ async function submitStoreOrder(){
   const phoneLast4 = phoneNo.slice(-4); // 警衛室核對用末四碼，直接由家長填寫的手機號碼帶入
   const emailAddr = ($('stEmail')?.value || '').trim();
   const parent_label = phoneLast4 ? `${parentName}#${phoneLast4}` : parentName;
+  // 測試單標記：勾選「這是測試單」或稱呼含「測試／test」者，後台一律標示「測試」以免與真實訂單混淆
+  const isTestOrder = !!($('stTestOrder') && $('stTestOrder').checked) || /測試|test/i.test(parentName);
+  const finalParentLabel = isTestOrder ? `測試｜${parent_label}` : parent_label;
   const contact = [phoneNo, emailAddr].filter(Boolean).join(' ／ ');
   const remit_last5 = ($('stRemitLast5').value || '').replace(/\D/g, '').trim();
   const agreed = $('stAgreeTerms').checked;
@@ -1262,7 +1265,7 @@ async function submitStoreOrder(){
     created_at: timeStr,
     created_ts: now.getTime(),
     batch_week: sched.batchLabel,
-    parent_label,
+    parent_label: finalParentLabel,
     contact,
     remit_last5,
     packType: it.packType,
@@ -1286,7 +1289,7 @@ async function submitStoreOrder(){
     sheets: it.sheets,
     paid_status: '待核帳',
     reconcile_status: '待核帳',
-    reconcile_note: '',
+    reconcile_note: isTestOrder ? '🧪 測試單（請勿出貨）' : '',
     print_status: '未列印',
     isPrinted: false,
     print_count: 0,
@@ -1310,7 +1313,7 @@ async function submitStoreOrder(){
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: 'submitOrder',
-            parent_label,
+            parent_label: finalParentLabel,
             contact,
             remit_last5,
             items: orderRows
@@ -1329,14 +1332,14 @@ async function submitStoreOrder(){
       <h3 style="margin:0 0 8px;font-size:1.25rem;color:#0d5220">🎉 訂購單已成功送出！（請截圖保存此取貨與取件時間憑證）</h3>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;background:#fff;padding:12px 16px;border-radius:10px;border:1.5px solid #9fd8b2;font-size:.94rem;color:#222">
         <div><b>📦 取貨核對編號：</b><span style="font-size:1.2rem;font-weight:900;color:#c85000">${esc(pickupBase)}</span>（共 ${totalSheets} 張／${orderRows.length} 項）</div>
-        <div><b>👨‍👩‍👧 取貨人稱呼：</b><b>${esc(parent_label)}</b><br><span style="font-size:.84rem;color:#555">📞 ${esc(contact)}</span></div>
+        <div><b>👨‍👩‍👧 取貨人稱呼：</b><b>${esc(finalParentLabel)}</b>${isTestOrder?' <span style="color:#a71d2a;font-weight:900">🧪 測試單（不會出貨）</span>':''}<br><span style="font-size:.84rem;color:#555">📞 ${esc(contact)}</span></div>
         <div><b>📅 所屬梯次與截單：</b>${esc(sched.batchLabel)}（截單：${esc(sched.cutoffStr)}）</div>
         <div><b>💳 匯款後五碼／總額：</b>末五碼 <b>${esc(remit_last5)}</b> ／ 共 <b>NT$ ${totalAmt} 元</b></div>
         <div style="grid-column:1/-1;background:#fff8eb;border:1.5px solid #ff9d42;border-radius:8px;padding:10px 12px;color:#7a3b00;line-height:1.6">
           <b>⏰ 統一律定取件時段與遊戲規則（請務必準時配合）：</b><br>
           • <b>若於 ${esc(sched.cutoffStr)} 前完成匯款：</b>統一於 <b style="color:#0d5220">${esc(sched.deliveryStr)}</b> 至「桃園市桃園區豪情世家警衛室（同德七街46號）」取貨！<br>
           • <b>若於當週三晚上 21:00（9點）之後才完成匯款／下單：</b>順延至下一梯次 <b style="color:#b33a00">${esc(sched.nextDeliveryStr)}</b> 開放取件。<br>
-          • <b>取件時間明確規定：</b>固定為<b>每週五中午 12:00 以後 ～ 每週日晚上 21:00（9點）以前</b>。週五中午 12:00 前尚未配送到位恕不接受提前領取；逾週日晚上 21:00 本梯次結束，請務必於規定時段內憑<b>「取貨編號 ${esc(pickupBase)}」＋「${esc(parent_label)}」</b>向警衛室領取。
+          • <b>取件時間明確規定：</b>固定為<b>每週五中午 12:00 以後 ～ 每週日晚上 21:00（9點）以前</b>。週五中午 12:00 前尚未配送到位恕不接受提前領取；逾週日晚上 21:00 本梯次結束，請務必於規定時段內憑<b>「取貨編號 ${esc(pickupBase)}」＋「${esc(finalParentLabel)}」</b>向警衛室領取。
         </div>
       </div>
       <p style="margin:8px 0 0;font-size:.86rem;color:#136529">✅ 系統已將您的訂單即時傳送至管理員後台對帳清單，核對匯款後五碼無誤即排入印製裝袋！</p>
