@@ -27,6 +27,7 @@ const POLY_PHRASE_RAW = {
   '年長':'_ ㄓㄤˇ','區長':'_ ㄓㄤˇ','鄉長':'_ ㄓㄤˇ','鎮長':'_ ㄓㄤˇ','部長':'_ ㄓㄤˇ','院長':'_ ㄓㄤˇ',
   '議長':'_ ㄓㄤˇ','組長':'_ ㄓㄤˇ','隊長':'_ ㄓㄤˇ','廠長':'_ ㄓㄤˇ','站長':'_ ㄓㄤˇ','長進':'ㄓㄤˇ _',
   '長相':'ㄓㄤˇ ㄒㄧㄤˋ','助長':'_ ㄓㄤˇ','苗長':'_ ㄓㄤˇ','長幼':'ㄓㄤˇ _','長官':'ㄓㄤˇ _','長子':'ㄓㄤˇ _',
+  '排長':'_ ㄓㄤˇ','連長':'_ ㄓㄤˇ','營長':'_ ㄓㄤˇ','社長':'_ ㄓㄤˇ',
   // 2. 行（預設 ㄒㄧㄥˊ；覆寫 ㄏㄤˊ／ㄏㄤˋ）
   '銀行':'_ ㄏㄤˊ','行列':'ㄏㄤˊ _','一行':'_ ㄏㄤˊ','兩行':'_ ㄏㄤˊ','幾行':'_ ㄏㄤˊ','同行':'_ ㄏㄤˊ',
   '行業':'ㄏㄤˊ _','行號':'ㄏㄤˊ _','車行':'_ ㄏㄤˊ','商行':'_ ㄏㄤˊ','分行':'_ ㄏㄤˊ','外行':'_ ㄏㄤˊ',
@@ -165,6 +166,46 @@ for(const [w, zStr] of Object.entries(POLY_PHRASE_RAW)){
   POLY_PHRASE_MAP.set(w, zStr.split(' '));
 }
 
+// ===== 0a-2. 「一」「不」變調（臺灣國小課本標音慣例）=====
+// 一 + 四聲／輕聲 → 陽平（ㄧˊ）；一 + 一／二／三聲 → 去聲（ㄧˋ）
+// 不 + 四聲 → 陽平（ㄅㄨˊ）
+// 例外：詞尾、逐位數字（一零一班）、第一／統一／唯一、看一看／想一想（V一V）
+const TONE_OF_ZY = z => {
+  if(!z) return 0;
+  if(z.startsWith('˙')) return 5;
+  const m = /[ˊˇˋ]$/.exec(z);
+  if(!m) return 1;
+  return m[0]==='ˊ'?2:(m[0]==='ˇ'?3:4);
+};
+const NUMERAL_DIGITS = '零一二三四五六七八九';
+const YI_KEEP_PREV = new Set(['第','初','期','統','唯','專','單','獨','正','十']);
+function isNumeralDigitRun(list, i){
+  let s=i, e=i;
+  while(s>0 && NUMERAL_DIGITS.includes(list[s-1].ch)) s--;
+  while(e<list.length-1 && NUMERAL_DIGITS.includes(list[e+1].ch)) e++;
+  return (e-s)>=1;
+}
+function applyYiBuSandhi(list){
+  for(let i=0;i<list.length;i++){
+    const cur=list[i];
+    if(!cur || !cur.zy) continue;
+    const prev=list[i-1], next=list[i+1];
+    const pch=prev?prev.ch:'', nch=next?next.ch:'';
+    if(cur.ch==='一' && cur.zy==='ㄧ'){
+      // 詞尾、標點、英文數字後不加變調（如「十一」「星期一」）
+      if(!nch || !/[\u3400-\u9fff]/.test(nch)) continue;
+      if(pch && pch===nch) continue;            // 看一看、想一想、數一數
+      if(pch && YI_KEEP_PREV.has(pch)) continue; // 第一、統一、唯一
+      if(isNumeralDigitRun(list, i)) continue;   // 一零一班、一九九
+      const t=TONE_OF_ZY(next.zy);
+      cur.zy = (t===4||t===5) ? 'ㄧˊ' : 'ㄧˋ';
+    } else if(cur.ch==='不' && cur.zy==='ㄅㄨˋ'){
+      if(TONE_OF_ZY(next&&next.zy)===4) cur.zy='ㄅㄨˊ'; // 不是、不要、不會
+    }
+  }
+  return list;
+}
+
 // 依詞語脈絡解析整段文字之正確注音（最長詞優先匹配 4→3→2 字，再處理「了/著/得」語境）
 function resolveTextZhuyin(str){
   const chars=[...String(str)];
@@ -191,7 +232,7 @@ function resolveTextZhuyin(str){
       i++;
     }
   }
-  return out;
+  return applyYiBuSandhi(out);
 }
 window.resolveTextZhuyin = resolveTextZhuyin;
 
