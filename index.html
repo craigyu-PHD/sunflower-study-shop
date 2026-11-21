@@ -146,6 +146,11 @@
             <b>🐣 幼兒園寫字帖 <em class="pack-badge pre">幼教適齡</em></b>
             <span>小／中／大班 5/10/20 張：整合ㄅㄆㄇ、123、ABC 大格描紅＋彩色可愛插畫。</span>
           </label>
+          <label class="pack-tab" id="lblPackMaze">
+            <input type="radio" name="stPackMode" value="maze_pack">
+            <b>🌀 迷宮遊戲本 <em class="pack-badge mz">全新多元</em></b>
+            <span>幼幼／動腦／創意／進階四級：保證有解的可愛迷宮，附解答頁，每張正反兩面滿版。</span>
+          </label>
           <label class="pack-tab" id="lblPackCustom">
             <input type="radio" name="stPackMode" value="custom">
             <b>🎨 客製自由配 <em class="pack-badge cus">單張$5起</em></b>
@@ -272,6 +277,32 @@
             <label class="chk"><input type="checkbox" id="stPreIllust" checked> 🎨 附可愛彩色小插圖與數數提示</label>
           </div>
           <div id="stPreDesc" class="hint" style="margin-top:4px;color:#7a4b10;line-height:1.5"></div>
+        </div>
+
+        <!-- 迷宮遊戲本專區（幼幼／動腦／創意／進階：保證有解、附解答頁） -->
+        <div id="stMazePanel" class="cfg-panel" style="display:none">
+          <div class="sub">🌀 ② 選擇迷宮難度與張數（每張正反兩面 4 題・保證有解）</div>
+          <div class="row">
+            <label style="flex:1.2;min-width:200px">迷宮難度（依年齡）
+              <select id="stMazeLevel">
+                <option value="baby" selected>🐥 幼幼迷宮（3～5歲・小雞找回家）</option>
+                <option value="brain">🐟 動腦迷宮（5～7歲・小魚找朋友）</option>
+                <option value="creative">🐝 創意迷宮（7～9歲・蜜蜂採花蜜）</option>
+                <option value="challenge">🦁 進階迷宮（9～12歲・勇士尋寶藏）</option>
+              </select>
+            </label>
+            <label style="flex:1;min-width:170px">選擇張數（正反雙面滿版）
+              <select id="stMazeSheets">
+                <option value="5">5 張（$25・20 題・湊滿20張出貨）</option>
+                <option value="10" selected>10 張（$50・40 題）</option>
+                <option value="20">20 張（$100・80 題・達標出貨）</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label class="chk"><input type="checkbox" id="stMazeAns" checked> 🗝️ 附解答頁（家長／老師批改對照用）</label>
+          </div>
+          <div id="stMazeDesc" class="hint" style="margin-top:4px;color:#7a4b10;line-height:1.5"></div>
         </div>
 
         <!-- 客製包專屬設定 -->
@@ -850,6 +881,7 @@
 <script src="data/exam_bank.js"></script>
 <script src="data/proc_bank.js"></script>
 <script src="data/preschool.js"></script>
+<script src="data/maze_bank.js"></script>
 <script src="app.js"></script>
 <script src="exam.js"></script>
 <script src="store.js"></script>

@@ -6240,9 +6240,12 @@ function normalizeOrderRow(raw, idx){
   const order_id = String(raw.order_id || raw['取貨編號'] || raw['訂單編號'] || `A${String(idx+1).padStart(2,'0')}`).trim();
   const parent_label = String(raw.parent_label || raw['家長稱呼'] || raw['家長'] || '').trim();
   const planRaw = String(raw.plan || raw['方案'] || '綜合套組').trim();
+  const isMaze = /maze|迷宮/i.test(planRaw + ' ' + String(raw.packType||'') + ' ' + String(raw.pub||''));
   const isPreschool = /preschool|幼兒|小班|中班|大班/i.test(planRaw + ' ' + String(raw.packType||'') + ' ' + String(raw.grade||'') + ' ' + String(raw.pub||''));
   let plan = 'both', planName = '綜合套組（寫字帖＋測驗卷）';
-  if(isPreschool){
+  if(isMaze){
+    plan='maze'; planName='迷宮遊戲本';
+  }else if(isPreschool){
     plan='preschool'; planName='幼兒園運筆寫字帖';
   }else if(/寫字|筆畫|筆順|生字|stroke/i.test(planRaw) && !/綜合|套組|雙享|both|\+|＋/i.test(planRaw)){
     plan='stroke'; planName='筆畫練習寫字帖';
@@ -6253,11 +6256,15 @@ function normalizeOrderRow(raw, idx){
   const preLevel = raw.preLevel || (/大班/.test(String(raw.grade||raw.diff||''))?'large':(/中班/.test(String(raw.grade||raw.diff||''))?'mid':'small'));
   const preTopic = raw.preTopic || (/注音/.test(String(raw.subj||raw.scope||''))?'zy':(/數字/.test(String(raw.subj||raw.scope||''))?'num':(/ABC/i.test(String(raw.subj||raw.scope||''))?'abc':'all')));
   const preIllust = raw.preIllust !== undefined ? !!raw.preIllust : true;
+  const mazeLevel = String(raw.mazeLevel || (/大班/.test(String(raw.diff||''))?'large':'baby')).trim();
+  const mazeAns = raw.mazeAns !== undefined ? !!raw.mazeAns : true;
 
   const gMatch = String(raw.grade || raw['年級'] || '').match(/[1-6]/);
-  const grade = isPreschool
-    ? (String(raw.grade||'').trim() || `幼兒園${preLevel==='large'?'大班':(preLevel==='mid'?'中班':'小班')}`)
-    : (gMatch ? gMatch[0] : '');
+  const grade = isMaze
+    ? (String(raw.grade||'').trim() || '迷宮遊戲')
+    : (isPreschool
+      ? (String(raw.grade||'').trim() || `幼兒園${preLevel==='large'?'大班':(preLevel==='mid'?'中班':'小班')}`)
+      : (gMatch ? gMatch[0] : ''));
   const semRaw = String(raw.sem || raw['學期'] || '上').trim();
   const sem = isPreschool ? (semRaw || '適齡先修') : (/下|2/.test(semRaw) ? '下' : '上');
 
@@ -7072,7 +7079,13 @@ function buildCoverPageA4(order, idx, totalOrders, stats, wmText){
   const cpr = window.COPYRIGHT_STATEMENT || '🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
 
   const pickCheckItems = [];
-  if(stats.strokePages>0) pickCheckItems.push(`<li>☐ <b>筆畫寫字帖</b>：${stats.strokePages} 頁（收錄 ${stats.strokeChars} 字・${order.strokeMode==='B'?'教育部格':'筆順引導'}）</li>`);
+  if(stats.strokePages>0){
+    if(order.plan==='maze'){
+      pickCheckItems.push(`<li>☐ <b>🌀 迷宮遊戲本</b>：${stats.strokePages} 頁（${stats.strokeChars} 題${order.mazeAns!==false?'・含解答頁':''}）</li>`);
+    }else{
+      pickCheckItems.push(`<li>☐ <b>筆畫寫字帖</b>：${stats.strokePages} 頁（收錄 ${stats.strokeChars} 字・${order.strokeMode==='B'?'教育部格':'筆順引導'}）</li>`);
+    }
+  }
   if(stats.examQPages>0) pickCheckItems.push(`<li>☐ <b>${esc(order.grade)}年級${esc(order.sem)} ${esc(order.subj)}測驗卷</b>：試卷 ${stats.examQPages} 頁</li>`);
   if(stats.examAnsPages>0) pickCheckItems.push(`<li>☐ <b>免費附贈解答</b>：${stats.examAnsPages} 頁</li>`);
   if(stats.paddedBlank) pickCheckItems.push(`<li>☐ <b>雙面防串頁墊頁</b>：1 頁</li>`);
@@ -7587,7 +7600,8 @@ async function generateBatchAll(overrideOrders=null){
       sc: ord.scope, diff: ord.diff, ruby: ord.ruby, ly: ord.layout,
       cols: ord.cols, sm: ord.strokeMode, sh: ord.sheets,
       cw: ord.custom_words, cu: ord.custom_units,
-      pl: ord.preLevel, pt: ord.preTopic, pi: ord.preIllust, withAns
+      pl: ord.preLevel, pt: ord.preTopic, pi: ord.preIllust,
+      mz: ord.mazeLevel, mza: ord.mazeAns, withAns
     });
 
     let strokeRes = {pages:[], charCount:0};
@@ -7597,7 +7611,15 @@ async function generateBatchAll(overrideOrders=null){
       strokeRes = { pages: clonePagesWithWm(cached.strokePages, wmText), charCount: cached.charCount };
       examRes = { pages: clonePagesWithWm(cached.examPages, wmText), qPages: cached.qPages, ansPages: cached.ansPages };
     }else{
-      if(ord.plan==='preschool' && window.PRESCHOOL_BANK){
+      if(ord.plan==='maze' && window.MAZE_BANK){
+        const mRes = window.MAZE_BANK.buildPages({
+          level: ord.mazeLevel || 'baby',
+          sheets: +ord.sheets || 10,
+          withAns: ord.mazeAns !== false,
+          wmText
+        });
+        strokeRes = { pages: mRes.pages || [], charCount: mRes.mazeCount || 0 };
+      }else if(ord.plan==='preschool' && window.PRESCHOOL_BANK){
         const lvlGuess = ord.preLevel || (/大班/.test(ord.grade)?'large':(/中班/.test(ord.grade)?'mid':'small'));
         const topGuess = ord.preTopic || (/注音/.test(ord.subj)?'zy':(/數字/.test(ord.subj)?'num':(/ABC/i.test(ord.subj)?'abc':'all')));
         const preRes = window.PRESCHOOL_BANK.buildPages({
@@ -7651,7 +7673,7 @@ async function generateBatchAll(overrideOrders=null){
       orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】取貨封面空白背面（雙面防串頁）`, el: makeDuplexBlank()});
     }
     strokeRes.pages.forEach((p,idx)=>{
-      const sKind = ord.plan==='preschool' ? '幼兒園運筆寫字帖' : '筆畫練習寫字帖';
+      const sKind = ord.plan==='maze' ? '迷宮遊戲本' : (ord.plan==='preschool' ? '幼兒園運筆寫字帖' : '筆畫練習寫字帖');
       orderPages.push({label:`【訂單 ${ord.order_id}｜${ord.parent_label}】${sKind} 第 ${idx+1}/${strokeRes.pages.length} 頁`, el:p});
     });
     examRes.pages.forEach((p,idx)=>{

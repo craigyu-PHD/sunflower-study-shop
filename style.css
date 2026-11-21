@@ -334,6 +334,22 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .pack-badge.hot{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
 .pack-badge.pre{background:#fefce8;color:#a16207;border-color:#fde047}
 .pack-badge.cus{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.pack-badge.mz{background:#fdf4ff;color:#86198f;border-color:#f5d0fe}
+
+/* ===== 迷宮遊戲本 A4 版面（幼幼／動腦／創意／進階；每面 2 題、解答頁 4 題） ===== */
+.maze-a4 .maze-hd{position:absolute;left:24px;right:24px;top:14px;height:62px;border-bottom:2px solid #a855f7;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
+.maze-a4 .maze-hd-title{min-width:0;flex:1}
+.maze-a4 .maze-hd-title b{display:block;font-size:1.06rem;color:#6b21a8;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.maze-a4 .maze-hd-title span{display:block;font-size:.78rem;color:#555;margin-top:2px}
+.maze-a4 .maze-hd-meta{font-size:.86rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
+.maze-a4 .maze-body{position:absolute;left:24px;right:24px;top:88px;bottom:34px;display:flex;align-items:center;justify-content:center;gap:12px}
+.maze-a4 .maze-body-2{flex-direction:column}
+.maze-a4 .maze-card{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fffdfb;border:1.5px dashed #e9d5ff;border-radius:12px}
+.maze-a4 .maze-card-t,.maze-a4 .maze-ans-t{font-size:.85rem;font-weight:800;color:#7e22ce;background:#faf5ff;border:1px solid #e9d5ff;border-radius:99px;padding:1px 10px}
+.maze-a4 .maze-card svg{max-width:100%;max-height:calc(100% - 24px);width:auto;height:auto}
+.maze-a4 .maze-body-ans{flex-wrap:wrap;align-content:center;gap:10px}
+.maze-a4 .maze-ans-card{flex:0 0 calc(50% - 5px);height:calc(50% - 5px);min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fffdfb;border:1.5px dashed #e9d5ff;border-radius:12px}
+.maze-a4 .maze-ans-card svg{max-width:100%;max-height:calc(100% - 22px);width:auto;height:auto}
 .uchk{padding:3px 6px;border-radius:7px;border:1px solid transparent;transition:.12s}
 .uchk:hover{background:#fff6e8;border-color:#fed7aa}
 .uchk:has(input:checked){background:#fff3de;border-color:#f59e0b;font-weight:700;color:#7c2d12;box-shadow:inset 0 0 0 1px rgba(245,158,11,.25)}
