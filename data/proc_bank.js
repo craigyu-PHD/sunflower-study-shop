@@ -43,7 +43,7 @@ window.PROC_BANK = {
     sentences: {
       1: [
         {q:'"Good (　)!" （早安！）',a:'morning',opts:['morning','night','bye','name']},
-        {q:'"What is your (　)?" "My name is Amy."',a:'name',opts:['name','color','book','age']},
+        {q:'"Hi! I am Amy. What is your (　)?"',a:'name',opts:['name','color','book','age']},
         {q:'"It is (　) apple."',a:'an',opts:['an','a','two','are']},
         {q:'"What color is it?" "It is (　)." （它是紅色的。）',a:'red',opts:['red','bag','cat','one']},
         {q:'"Stand (　), please." （請起立。）',a:'up',opts:['up','down','in','on']},
@@ -79,7 +79,7 @@ window.PROC_BANK = {
         {q:'"Go (　) and turn left." （直走然後左轉。）',a:'straight',opts:['straight','right','back','up']},
         {q:'"Where is the library?" "It is (　) to the park."',a:'next',opts:['next','near','between','in']},
         {q:'"What does he (　) on Sundays?" "He plays basketball."',a:'do',opts:['do','does','doing','did']},
-        {q:'"How many (　) do you need?" "I need two sweaters."',a:'sweaters',opts:['sweaters','sweater','milk','water']}
+        {q:'"How many (　) do you need?" "Two, please."',a:'sweaters',opts:['sweaters','sweater','milk','water']}
       ],
       6: [
         {q:'"What (　) you do yesterday?" "I went to the park."',a:'did',opts:['did','do','does','are']},
@@ -294,11 +294,11 @@ window.PROC_BANK = {
   ]);
   pushS(2, [
     {diff:'easy',q:'"I (　) apples." （我喜歡蘋果。）',a:'like',opts:['like','am','is','are']},
-    {diff:'mid',q:'"How many (　)?" "Five cats."',a:'cats',opts:['cats','cat','dog','book']},
+    {diff:'mid',q:'"How many (　) are there?" "There are five."',a:'cats',opts:['cats','cat','a cat','one cat']},
     {diff:'hard',q:'"It is (　) elephant. It is big."',a:'an',opts:['an','a','am','are']}
   ]);
   pushS(3, [
-    {diff:'easy',q:'"Who is (　)?" "She is my nurse."',a:'she',opts:['she','he','it','you']},
+    {diff:'easy',q:'"Is your aunt a nurse?" "Yes, (　) is."',a:'she',opts:['she','he','it','you']},
     {diff:'mid',q:'"Where is the dog?" "It is (　) the desk." （在書桌下）',a:'under',opts:['under','in','at','to']},
     {diff:'hard',q:'"Does he (　) a blue pen?" "Yes, he does."',a:'have',opts:['have','has','is','are']}
   ]);
@@ -786,8 +786,8 @@ window.PROC_BANK = {
 
   // ===== 各科多元情境與活潑題庫補充（英語／生活／自然／社會／國語）=====
   [
-    [1, {diff:'mid',q:'"What is it?" "It is (　) blue pencil."',a:'a',opts:['a','an','two','am']}, {diff:'hard',q:'"Nice to (　) you!" "Nice to meet you, too."',a:'meet',opts:['meet','eat','see','go']}],
-    [2, {diff:'mid',q:'"How many dogs?" "Three (　)."',a:'dogs',opts:['dogs','dog','cat','pig']}, {diff:'hard',q:'"Is your sister happy?" "Yes, (　) is."',a:'she',opts:['she','he','it','I']}],
+    [1, {diff:'mid',q:'"What is it?" "It is (　) blue pencil."',a:'a',opts:['a','an','two','am']}, {diff:'hard',q:'"Nice to (　) you!" "Hi! I am Ben."',a:'meet',opts:['meet','eat','see','go']}],
+    [2, {diff:'mid',q:'"Do you have any pets?" "Yes. I have three (　)."',a:'dogs',opts:['dogs','dog','a dog','one dog']}, {diff:'hard',q:'"Is your sister happy?" "Yes, (　) is."',a:'she',opts:['she','he','it','I']}],
     [3, {diff:'mid',q:'"Look! The cat is (　) the box." （在盒子上面）',a:'on',opts:['on','under','in','between']}, {diff:'hard',q:'"What can a rabbit do?" "It can (　)."',a:'jump',opts:['jump','fly','swim','sing']}],
     [4, {diff:'mid',q:'"I want some (　), please." （我想要一些牛奶。）',a:'milk',opts:['milk','sunny','Monday','desk']}, {diff:'hard',q:'"It\'s rainy today. Take an (　) with you."',a:'umbrella',opts:['umbrella','apple','eraser','egg']}],
     [5, {diff:'mid',q:'"How often do you go to the library?" "I (　) go there on Saturdays."',a:'usually',opts:['usually','by','next','doing']}, {diff:'hard',q:'"Excuse me, (　) is the post office?" "Go straight and turn right."',a:'where',opts:['where','who','what','how']}],
@@ -882,7 +882,7 @@ window.PROC_BANK = {
   [
     [1, {diff:'easy',q:'"Good (　), class!" （早安，各位同學！）',a:'morning',opts:['morning','apple','pen','two']}, {diff:'mid',q:'"Open (　) book, please." （請打開你的書本。）',a:'your',opts:['your','you','he','am']}],
     [2, {diff:'easy',q:'"Is this a bird?" "Yes, (　) is." （是的，它是。）',a:'it',opts:['it','they','you','am']}, {diff:'hard',q:'"How old is your brother?" "He is (　) years old." （他今年八歲。）',a:'eight',opts:['eight','fine','red','tall']}],
-    [3, {diff:'easy',q:'"What color is the banana?" "It is (　)." （它是黃色的。）',a:'yellow',opts:['yellow','Monday','ten','happy']}, {diff:'hard',q:'"Who is (　)?" "She is my English teacher." （她是我的英文老師。）',a:'she',opts:['she','he','it','my']}],
+    [3, {diff:'easy',q:'"What color is the banana?" "It is (　)." （它是黃色的。）',a:'yellow',opts:['yellow','Monday','ten','happy']}, {diff:'hard',q:'"Is Ms. Lin your English teacher?" "Yes, (　) is." （林老師是女老師。）',a:'she',opts:['she','he','it','my']}],
     [4, {diff:'easy',q:'"It is (　) today. Let\'s fly a kite." （今天天氣晴朗，我們去放風箏吧。）',a:'sunny',opts:['sunny','rainy','thirty','juice']}, {diff:'hard',q:'"What (　) is it?" "It is nine thirty." （現在幾點了？九點半。）',a:'time',opts:['time','day','name','food']}],
     [5, {diff:'easy',q:'"What is your favorite (　)?" "Science!" （你最喜歡哪一個科目？）',a:'subject',opts:['subject','jacket','bread','river']}, {diff:'hard',q:'"Does Amy have a headache?" "Yes, she (　) take a rest." （是的，她應該休息一下。）',a:'should',opts:['should','is','do','was']}],
     [6, {diff:'easy',q:'"Have a (　) weekend!" （祝你週末愉快！）',a:'nice',opts:['nice','yesterday','cleanly','more']}, {diff:'hard',q:'"If we reuse shopping bags, we will make (　) trash." （重複使用購物袋就能減少垃圾。）',a:'less',opts:['less','fewer','many','tallest']}]

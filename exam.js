@@ -6,6 +6,9 @@ const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 const shuffle=arr=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
 const NAMES=['小華','小美','阿明','小晴','柏宇','子涵','宥翔','品妍','冠宇','思妤','宇軒','詠晴','承恩','語彤','定謙','芷瑜','品睿','映竹','秉澄','欣妤','哲維','星辰','廷恩','雨潔','瑞霖','詩涵','奕辰','可晴','子軒','若曦','晨希','采恩','宇恩','樂晴','少祺','語希'];
 const ITEMS=['鉛筆','橡皮擦','故事書','貼紙','蘋果','餅乾','彩色筆','筆記本','蠟筆','果凍','彈珠','書籤','尺','水彩筆','自動筆','色紙','積木','橘子','草莓','銅鑼燒','飯糰','牛奶糖','拼圖','卡片','資料夾','螢光筆','便利貼','麵包','泡芙','布丁','奇異果','水蜜桃'];
+// 物品對應正確量詞（杜絕「10 顆鉛筆」「7 顆便利貼」這類量詞錯誤）；未列入者一律用「個」
+const ITEM_CL={'鉛筆':'枝','橡皮擦':'個','故事書':'本','貼紙':'張','蘋果':'顆','餅乾':'片','彩色筆':'枝','筆記本':'本','蠟筆':'枝','果凍':'個','彈珠':'顆','書籤':'張','尺':'把','水彩筆':'枝','自動筆':'支','色紙':'張','積木':'塊','橘子':'顆','草莓':'顆','銅鑼燒':'個','飯糰':'個','牛奶糖':'顆','拼圖':'片','卡片':'張','資料夾':'個','螢光筆':'支','便利貼':'張','麵包':'個','泡芙':'個','布丁':'個','奇異果':'顆','水蜜桃':'顆'};
+const clOf=it=>ITEM_CL[it]||'個';
 const gcd=(a,b)=>b?gcd(b,a%b):a;
 const lcm=(a,b)=>(a*b)/gcd(a,b);
 
@@ -20,6 +23,11 @@ function uniqueOpts(ans, cand){
 // ===== 0. 國小高頻破音字詞庫覆寫引擎（詞語層級最長優先匹配，杜絕單字直查標錯音）=====
 // 格式：詞語 -> 以空白分隔之各字注音；若某字用 '_' 代表沿用 ZY_DATA 單字預設音
 const POLY_PHRASE_RAW = {
+  // 0. 了（預設 ˙ㄌㄜ；「了解／了不起／受不了」等讀 ㄌㄧㄠˇ）
+  '了解':'ㄌㄧㄠˇ _','了不起':'ㄌㄧㄠˇ _ _','了結':'ㄌㄧㄠˇ _','了得':'ㄌㄧㄠˇ ˙ㄉㄜ','明了':'_ ㄌㄧㄠˇ','一目了然':'_ _ ㄌㄧㄠˇ _',
+  '受不了':'_ _ ㄌㄧㄠˇ','吃不了':'_ _ ㄌㄧㄠˇ','來不了':'_ _ ㄌㄧㄠˇ','去不了':'_ _ ㄌㄧㄠˇ','做不了':'_ _ ㄌㄧㄠˇ',
+  '走不了':'_ _ ㄌㄧㄠˇ','忘不了':'_ _ ㄌㄧㄠˇ','免不了':'_ _ ㄌㄧㄠˇ','少不了':'_ _ ㄌㄧㄠˇ','逃不了':'_ _ ㄌㄧㄠˇ',
+  '躲不了':'_ _ ㄌㄧㄠˇ','離不了':'_ _ ㄌㄧㄠˇ','看不了':'_ _ ㄌㄧㄠˇ',
   // 1. 長（預設 ㄔㄤˊ；覆寫 ㄓㄤˇ）
   '長大':'ㄓㄤˇ _','成長':'_ ㄓㄤˇ','生長':'_ ㄓㄤˇ','長出':'ㄓㄤˇ _','長高':'ㄓㄤˇ _','長得':'ㄓㄤˇ ˙ㄉㄜ',
   '師長':'_ ㄓㄤˇ','校長':'_ ㄓㄤˇ','班長':'_ ㄓㄤˇ','市長':'_ ㄓㄤˇ','縣長':'_ ㄓㄤˇ','村長':'_ ㄓㄤˇ',
@@ -178,13 +186,14 @@ const TONE_OF_ZY = z => {
   return m[0]==='ˊ'?2:(m[0]==='ˇ'?3:4);
 };
 const NUMERAL_DIGITS = '零一二三四五六七八九';
-const YI_KEEP_PREV = new Set(['第','初','期','統','唯','專','單','獨','正','十']);
+const YI_KEEP_PREV = new Set(['第','初','期','統','唯','惟','專','單','獨','正','十','萬','同','之','合','劃','純']);
 function isNumeralDigitRun(list, i){
   let s=i, e=i;
   while(s>0 && NUMERAL_DIGITS.includes(list[s-1].ch)) s--;
   while(e<list.length-1 && NUMERAL_DIGITS.includes(list[e+1].ch)) e++;
   return (e-s)>=1;
 }
+const HAN_RE_SANDHI=/[\u3400-\u9fff]/;
 function applyYiBuSandhi(list){
   for(let i=0;i<list.length;i++){
     const cur=list[i];
@@ -200,7 +209,8 @@ function applyYiBuSandhi(list){
       const t=TONE_OF_ZY(next.zy);
       cur.zy = (t===4||t===5) ? 'ㄧˊ' : 'ㄧˋ';
     } else if(cur.ch==='不' && cur.zy==='ㄅㄨˋ'){
-      if(TONE_OF_ZY(next&&next.zy)===4) cur.zy='ㄅㄨˊ'; // 不是、不要、不會
+      if(prev && next && pch===nch && HAN_RE_SANDHI.test(pch)) cur.zy='˙ㄅㄨ'; // 對不對、好不好、是不是（夾在相同兩字之間讀輕聲）
+      else if(TONE_OF_ZY(next&&next.zy)===4) cur.zy='ㄅㄨˊ'; // 不是、不要、不會
     }
   }
   return list;
@@ -235,6 +245,37 @@ function resolveTextZhuyin(str){
   return applyYiBuSandhi(out);
 }
 window.resolveTextZhuyin = resolveTextZhuyin;
+
+// ===== 0a-3. 考點字注音遮蔽（避免「問讀音／國字，卻在題目上把答案的注音印出來」）=====
+// 規則：題幹在問「讀音／注音」時，被「」『』單獨框起的國字，其所有出現處一律不標注音；
+//       選項若為國字（問讀音相同／注音對應國字），選項不標注音；
+//       配對題若一欄全為注音，另一欄的國字不標注音。
+let NZ_CHARS=null, NZ_ALL=false;
+const HAN_RE=/[㐀-鿿]/;
+const ZY_ONLY_RE=/^[\s「」『』˙ˊˇˋㄅ-ㄩ]+$/;
+function computeNoZy(q){
+  const plan={chars:new Set(), opts:false, left:false, right:false};
+  if(!q) return plan;
+  const stem=String(q.q||'');
+  const askZy=/讀音|注音|讀作|拼音|聲調/.test(stem) && !/看注音寫|注音寫成|寫成正確國字/.test(stem);
+  if(askZy){
+    for(const m of stem.matchAll(/[「『]([㐀-鿿])[」』]/g)) plan.chars.add(m[1]);
+  }
+  if(Array.isArray(q.opts) && q.opts.some(o=>HAN_RE.test(String(o).replace(/[「」『』]/g,'')))){
+    if(askZy || /[ㄅ-ㄩ]{1,3}[ˊˇˋ]?/.test(stem)) plan.opts=true;
+  }
+  if(Array.isArray(q.pairs) && Array.isArray(q.right)){
+    const leftZy=q.pairs.every(p=>ZY_ONLY_RE.test(String(p[0])));
+    const rightZy=q.right.every(r=>ZY_ONLY_RE.test(String(r)));
+    if(rightZy) plan.left=true;
+    if(leftZy) plan.right=true;
+  }
+  return plan;
+}
+function nzHide(ch){ return NZ_ALL || (NZ_CHARS && NZ_CHARS.has(ch)); }
+function nzWith(all,fn){ const o=NZ_ALL; NZ_ALL=!!all; try{ return fn(); } finally{ NZ_ALL=o; } }
+window.computeNoZy = computeNoZy;
+window.__qaSetNoZy=(chars,all)=>{NZ_CHARS=chars;NZ_ALL=!!all;}; // 僅供 qa_verify 驗證用
 
 // ===== 0b. 隱藏式格子系統（直書 gcell 與橫書 hcell）=====
 function zhFormat(html){
@@ -291,7 +332,7 @@ function rubyHtml(str){
     let out='';
     for(const {ch,zy} of resolved){
       if(ch==='\n'){out+='<br>';continue;}
-      out+=zy?hCellHan(ch,zy):esc(ch);
+      out+=(zy&&!nzHide(ch))?hCellHan(ch,zy):esc(ch);
     }
     return out;
   }).join('');
@@ -409,13 +450,14 @@ function tokenizeZhCells(str, useZy, mainX=14){
     const resolved=resolveTextZhuyin(tk);
     for(const {ch,zy} of resolved){
       if(ch===' '||ch==='　')continue;
-      if(zy){cells.push(gCellHan(ch,useZy?zy:'',mainX));}
+      if(zy){cells.push(gCellHan(ch,(useZy&&!nzHide(ch))?zy:'',mainX));}
       else{cells.push(gCellPunc(ch,mainX));}
     }
   }
   return cells;
 }
 
+window.__qaTokenizeZh=tokenizeZhCells; // 僅供 qa_verify 驗證用
 // ===== 1a. 翰林版風格 SVG 圖解產生器 =====
 function svgSplitBox(top,l,r){
   return `<svg width="110" height="54" viewBox="0 0 110 54" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="108" height="26" fill="#fff" stroke="#333" stroke-width="1.5"/><rect x="1" y="27" width="54" height="26" fill="#fff" stroke="#333" stroke-width="1.5"/><rect x="55" y="27" width="54" height="26" fill="#fff" stroke="#333" stroke-width="1.5"/><text x="55" y="19" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">${top}</text><text x="28" y="45" text-anchor="middle" font-size="14" fill="#111">${l}</text><text x="82" y="45" text-anchor="middle" font-size="14" fill="#111">${r}</text></svg>`;
@@ -877,7 +919,7 @@ function genMathForUnit(grade, sem, uIdx, diff, kind, vIdx=0){
         }
         if(kind==='fill') return {q:`看積木圖填算式：${a} ＋ ${b} ＝（　　）。`,svg:svgBlockAdd(a,b),a:String(a+b)};
         if(kind==='calc') return v(2)===0?{q:`${a} ＋ ${b} ＝（　　）`,svg:svgDicePair(a,b),a:String(a+b)}:{q:`${a+b} － ${a} ＝（　　）`,a:String(b)};
-        if(kind==='word') return {q:`盒子裡有 ${a+b} 個${it}，拿走 ${b} 個後，還剩下幾個${it}？`,a:`${a+b} - ${b} = ${a}（個）`};
+        if(kind==='word') return {q:`盒子裡有 ${a+b} ${clOf(it)}${it}，拿走 ${b} ${clOf(it)}後，還剩下幾${clOf(it)}${it}？`,a:`${a+b} - ${b} = ${a}（${clOf(it)}）`};
         if(kind==='match') return {q:'10以內加減配對',pairs:[[`${a} ＋ 2`,String(a+2)],[`9 － 3`,'6'],[`4 ＋ 4`,'8'],[`7 － 2`,'5']]};
         if(sub===0) return {q:`數一數，左邊 ${a} 個積木、右邊 ${b} 個積木，合起來共有幾個？`,svg:svgBlockAdd(a,b),opts:uniqueOpts(`${a+b} 個`,[`${a+b-1} 個`,`${a+b+1} 個`,`${a+b+2} 個`]),a:`${a+b} 個`,exp:`${a}＋${b}＝${a+b} 個。`};
         if(sub===1) return {q:`看骰子圖，${a} 點和 ${b} 點合起來共有幾點？`,svg:svgDicePair(a,b),opts:uniqueOpts(`${a+b} 點`,[`${a+b-1} 點`,`${a+b+1} 點`,`${a+b+2} 點`]),a:`${a+b} 點`,exp:`${a}＋${b}＝${a+b} 點。`};
@@ -1916,8 +1958,18 @@ const MATH_UNIT_FILTER = {
   '6_下_3': { allow:/x|未知數|方程式|雞兔|年齡|總複習|差|倍/, forbid:/圓柱|表面積|速率|時速|扇形/ }
 };
 
+// 題幹已經直接寫出「數字＋單位」形式的答案（例如：「飛走 5 隻後，還剩下幾隻？」答案 5 隻）→ 視為洩題，不採用
+function stemLeaksAnswer(item){
+  if(!item || typeof item.q!=='string') return false;
+  const a=String(item.a==null?'':item.a).trim().replace(/\s+/g,'');
+  if(!/^\d+[\u3400-\u9fff]{1,3}$/.test(a)) return false;
+  const stem=item.q.replace(/\s+/g,'');
+  return stem.includes(a) && /(幾|多少)/.test(stem);
+}
+window.stemLeaksAnswer=stemLeaksAnswer;
 function isMathItemAllowedForUnits(item, g, sem, unitIndices){
   if(!item) return false;
+  if(stemLeaksAnswer(item)) return false;
   if(item.g !== undefined && item.g !== null){
     if(+item.g !== +g) return false;
     if(item.sem && item.sem !== sem) return false;
@@ -1951,7 +2003,7 @@ function genMathUnitSynth(g, sem, uIdx, diff, kind, vIdx=0){
       if(t===0) return {q:`從 ${n1} 開始往後一個一個數，數 3 個數後會停在哪一個數字？`,opts:uniqueOpts(n1+3,[n1+2,n1+4,n1+1]),a:String(n1+3),exp:`${n1}、${n1+1}、${n1+2}、${n1+3}。`};
       if(t===1) return {q:`把數字「${n3}、${n1}、${n2}」從大排到小，排在最前面的數是哪一個？`,opts:uniqueOpts(n3,[n1,n2,n3-1]),a:String(n3),exp:`${n3} 最大，排在最前面。`};
       if(t===2) return {q:`數字「${tot}」可以分成「${a}」和哪一個數合起來？`,opts:uniqueOpts(b,[b+1,Math.max(1,b-1),tot]),a:String(b),exp:`${a} 和 ${b} 合起來是 ${tot}。`};
-      if(t===3) return {q:`${nm}有 ${tot} 顆${it}，分給左右兩隻手握住，左手握了 ${a} 顆，右手握了幾顆？`,opts:uniqueOpts(`${b} 顆`,[`${a} 顆`,`${b+1} 顆`,`${tot} 顆`]),a:`${b} 顆`,exp:`${tot} 分成 ${a} 和 ${b}。`};
+      if(t===3) return {q:`${nm}有 ${tot} ${clOf(it)}${it}，分給左右兩隻手握住，左手握了 ${a} ${clOf(it)}，右手握了幾${clOf(it)}？`,opts:uniqueOpts(`${b} ${clOf(it)}`,[`${a} ${clOf(it)}`,`${b+1} ${clOf(it)}`,`${tot} ${clOf(it)}`]),a:`${b} ${clOf(it)}`,exp:`${tot} 分成 ${a} 和 ${b}。`};
       if(t===4){const k=rnd(2,5),t0=rnd(6,9);return {q:`小朋友排成一列，從前面數過來第 ${k} 個是${nm}，從前面算到她一共有幾個人？`,opts:uniqueOpts(`${k} 個人`,[`${k-1} 個人`,`${k+1} 個人`,`${t0} 個人`]),a:`${k} 個人`,exp:`排在第 ${k} 個表示前面連她共 ${k} 人。`};}
       if(t===5) return {q:`下面哪一組兩個數字「合起來剛好是 10」？`,opts:uniqueOpts(`${a} 和 ${10-a}`,[`${a} 和 ${Math.max(1,9-a)}`,`1 和 8`,`3 和 6`]),a:`${a} 和 ${10-a}`,exp:`${a} 和 ${10-a} 合起來剛好是 10。`};
       if(t===6) return {q:`在「${n1}、${n2}、${n3}、2」這四個數字中，哪一個數字最小？`,opts:uniqueOpts(Math.min(n1,2),[n2,n3,Math.max(n1,3)]),a:String(Math.min(n1,2)),exp:`比較大小可知 ${Math.min(n1,2)} 最小。`};
@@ -2649,7 +2701,7 @@ function genMath(grade, diff, kind, vIdx=0){
     if(kind==='word'){
       const t=v(6);
       if(t===0){const tot=rnd(7,10),dir=pick(['左','右']),k=rnd(2,tot-1);return {q:`★ 看看下面的圓圈，從「${dir}邊」算起第 ${k} 個，如果改從另一邊算起是第幾個？`,svg:svgRowCount(tot),a:`從另一邊數為第 ${tot-k+1} 個`};}
-      if(t===1) return {q:`盒子裡有 ${a+b} 個${it}，拿走 ${b} 個後，還剩下幾個${it}？`,a:`${a+b} - ${b} = ${a}（個）`};
+      if(t===1) return {q:`盒子裡有 ${a+b} ${clOf(it)}${it}，拿走 ${b} ${clOf(it)}後，還剩下幾${clOf(it)}${it}？`,a:`${a+b} - ${b} = ${a}（${clOf(it)}）`};
       if(t===2){const price=rnd(15,45);return {q:`一本小畫冊賣 ${price} 元，${nm}付了 1 個 50 元硬幣，可找回多少元？`,a:`50 - ${price} = ${50-price}（元）`};}
       if(t===3){const big=rnd(11,18),sm=rnd(4,big-2);return {q:`${nm}有 ${big} 張貼紙，${nm2}有 ${sm} 張貼紙，${nm}比${nm2}多幾張貼紙？`,a:`${big} - ${sm} = ${big-sm}（張）`};}
       if(t===4){const f=rnd(3,7),bk=rnd(2,6);return {q:`排隊買門票，${nm}前面有 ${f} 個人，後面有 ${bk} 個人，這一排共有幾個人？`,a:`${f} + 1 + ${bk} = ${f+bk+1}（人）`};}
@@ -2690,7 +2742,7 @@ function genMath(grade, diff, kind, vIdx=0){
     }
     if(kind==='word'){
       const t=v(5);
-      if(t===0){const k=rnd(3,9),each=rnd(4,9),extra=rnd(5,18);return {q:`一盒${it}有 ${each} 個，${nm}買了 ${k} 盒又多送 ${extra} 個，共有幾個？`,a:`${each} × ${k} + ${extra} = ${each*k+extra}（個）`};}
+      if(t===0){const k=rnd(3,9),each=rnd(4,9),extra=rnd(5,18);return {q:`一盒${it}有 ${each} ${clOf(it)}，${nm}買了 ${k} 盒又多送 ${extra} ${clOf(it)}，共有幾${clOf(it)}？`,a:`${each} × ${k} + ${extra} = ${each*k+extra}（${clOf(it)}）`};}
       if(t===1) return {q:`1 袋蘋果有 ${m1} 顆，媽媽買了 ${m2} 袋，總共有幾顆蘋果？`,a:`${m1} × ${m2} = ${m1*m2}（顆）`};
       if(t===2){const total=m1*m2;return {q:`把 ${total} 張貼紙平分給 ${m1} 位小朋友，每人分到幾張？`,a:`${total} ÷ ${m1} = ${m2}（張）`};}
       if(t===3){const a=rnd(150,380),b=rnd(120,260);return {q:`果園昨天採收 ${a} 顆橘子，今天比昨天多採收 ${b} 顆，今天採收了幾顆？`,a:`${a} + ${b} = ${a+b}（顆）`};}
@@ -3688,7 +3740,7 @@ function genEngProc(grade, kind, diff='mid', uIdxs=null, isUnitSubset=false){
   }
   if(kind==='fill'){
     const [en,zh]=pick(vPool);
-    const masked=en.length>2?en[0]+' _ '.repeat(en.length-2)+en[en.length-1]:en;
+    const masked=en.length>2?en[0]+' _ '.repeat(en.length-2)+en[en.length-1]:(en.length===2?en[0]+' _':'_');
     return {q:`依中文提示拼出英文單字：「${zh}」→ ${masked}（　　　）`,a:en};
   }
   if(kind==='match'){
@@ -4287,7 +4339,7 @@ function genCurriculumUnitQuestion(subj, g, sem, uIdx, kindKey, effD, vIdx, allo
         ? {q:`[${uTitle}] 英文 "${en}" 的中文意思是「${shown}」。`,a:isTrue?'○':'✕',exp:`${en} ＝ ${zh}`}
         : {q:`[${uTitle}] 我們可以用 "${en}" 來表達中文裡「${shown}」的意思。`,a:isTrue?'○':'✕',exp:`${en} 代表「${zh}」。`};
     }else if(kindKey==='fill'){
-      const masked=en.length>2?en[0]+' _ '.repeat(en.length-2)+en[en.length-1]:en;
+      const masked=en.length>2?en[0]+' _ '.repeat(en.length-2)+en[en.length-1]:(en.length===2?en[0]+' _':'_');
       item = vIdx%2===0
         ? {q:`[${uTitle}] 依中文提示拼出英文單字：「${zh}」→ ${masked}（　　　）`,a:en}
         : {q:`[${uTitle}] 英文拼寫填空：看到圖片與提示「${zh}」，完整單字寫作（　　　　）。`,a:en};
@@ -4942,6 +4994,7 @@ function renderExam(measureOnly=false){
   const matchLabels='ㄅㄆㄇㄈㄉㄊㄋㄌ';
   const makeQEl=(b,zhMode)=>{
     const kind=b.kind, q=b.item;
+    const NZP=computeNoZy(q); NZ_CHARS=NZP.chars.size?NZP.chars:null; NZ_ALL=false;
     const d=document.createElement('div');d.className=zhMode?'ex-zh-q':'ex-q';
     const brk=zhMode?'︵　　︶':'(　　)';
     const noRaw=zhMode?`<span class="tcy">${b.num}.</span>`:`${b.num}.`;
@@ -4972,9 +5025,9 @@ function renderExam(measureOnly=false){
     if(engZhHint) body+=`<div class="qt-zh-hint">（${esc(engZhHint)}）</div>`;
     if(q.svg) body+=`<div class="ex-svg">${q.svg}</div>`;
     if(kind==='mc'){
-      body+=`<div class="qopts">${q.opts.map((o,i)=>`<span class="qopt"><span class="opt-lbl">${optLabels[i]}</span><span class="opt-txt">${rubyHtml(o)}</span></span>`).join('')}</div>`;
+      body+=`<div class="qopts">${q.opts.map((o,i)=>`<span class="qopt"><span class="opt-lbl">${optLabels[i]}</span><span class="opt-txt">${nzWith(NZP.opts,()=>rubyHtml(o))}</span></span>`).join('')}</div>`;
     }else if(kind==='match'){
-      const rows=q.pairs.map((p,i)=>`<div><b>(${i+1})</b> <span class="h-blank">（　　）</span>${rubyHtml(p[0])}</div><div><b>${matchLabels[i]}</b> ${rubyHtml(q.right[i])}</div>`).join('');
+      const rows=q.pairs.map((p,i)=>`<div><b>(${i+1})</b> <span class="h-blank">（　　）</span>${nzWith(NZP.left,()=>rubyHtml(p[0]))}</div><div><b>${matchLabels[i]}</b> ${nzWith(NZP.right,()=>rubyHtml(q.right[i]))}</div>`).join('');
       body+=`<div class="ex-match">${rows}</div>`;
     }else if(kind==='calc'||kind==='word'){
       body+=`<div class="qbox ${kind}"></div>`;
@@ -5046,6 +5099,7 @@ function renderExam(measureOnly=false){
 
     const buildZhQ=b=>{
       const kind=b.kind, q=b.item;
+      const NZP=computeNoZy(q); NZ_CHARS=NZP.chars.size?NZP.chars:null; NZ_ALL=false;
       const wrap=document.createElement('div');wrap.className='ex-zh-q';
       const headCells=[gCellLabel(`${b.num}.`,true,'#111',15,mainX)];
       if(kind==='mc'||kind==='tf'){
@@ -5061,10 +5115,10 @@ function renderExam(measureOnly=false){
             gCellSpace(12),
             gCellLabel(`(${i+1})`,true,'#111',13.5,mainX),
             gCellBlank(50,mainX),
-            ...tokenizeZhCells(pr[0],useZy,mainX),
+            ...nzWith(NZP.left,()=>tokenizeZhCells(pr[0],useZy,mainX)),
             gCellSpace(14),
             gCellLabel(matchLabels[i],true,'#7a3b00',15,mainX),
-            ...tokenizeZhCells(q.right[i],useZy,mainX)
+            ...nzWith(NZP.right,()=>tokenizeZhCells(q.right[i],useZy,mainX))
           ];
           allCols.push(pCells);
         });
@@ -5083,7 +5137,7 @@ function renderExam(measureOnly=false){
         const optCells=[gCellSpace(indentH)];
         q.opts.forEach((o,i)=>{
           optCells.push(gCellLabel(optLabels[i],true,'#111',15,mainX));
-          optCells.push(...tokenizeZhCells(o,useZy,mainX));
+          optCells.push(...nzWith(NZP.opts,()=>tokenizeZhCells(o,useZy,mainX)));
           if(i<q.opts.length-1)optCells.push(gCellSpace(10));
         });
         qCols.push(...packCols(optCells,indentH));

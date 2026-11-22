@@ -207,7 +207,7 @@ window.EXAM_BANK = {
         { q: '台灣原住民族屬於廣大的（　　　）語族，目前政府官方認定的族群共有 16 族。', a: '南島' },
         { q: '清末擔任台灣首任巡撫，積極興建鐵路、架設電報並推動現代化建設的是（　　　）。', a: '劉銘傳' },
         { q: '我國國民年滿（　　）歲具有公民投票與選舉的權利；《兒童權利公約》保障未滿 18 歲兒少的權益。', a: '20（公投18歲）' },
-        { q: '地球上三大洋分別是太平洋、大西洋和（　　　）；台灣東臨（　　　）。', a: '印度洋；太平洋' }
+        { q: '地球上的三大洋是大西洋、太平洋和（　　　）；位在台灣東邊的是（　　　）。', a: '印度洋；太平洋' }
       ],
       prac: [
         { q: '歷史排序：請將下列台灣歷史時期依「先後順序」排列：\n(A) 戰後中華民國時期  (B) 清帝國時期  (C) 荷西與鄭氏時期  (D) 日治時期', a: '(C) → (B) → (D) → (A)' },
@@ -233,7 +233,7 @@ window.EXAM_BANK = {
       fill: [
         { q: '寫出對應的小寫字母：A→(　)、D→(　)、G→(　)、R→(　)。', a: 'a、d、g、r' },
         { q: '數字拼寫：one, two, (　　　), four, (　　　)。', a: 'three；five' },
-        { q: '句子填空：What is your (　　　)? My name is Tom.', a: 'name' }
+        { q: '句子填空：Hello! I am Tom. What is your (　　　)?', a: 'name' }
       ],
       prac: [
         { q: '英文配對，寫出正確中文意思：\n1. dog (　　)  2. ruler (　　)  3. mom (　　)', a: '1. 狗  2. 尺  3. 媽媽' },
@@ -929,7 +929,7 @@ window.EXAM_BANK = {
 
   add('英語','mid','mc',[
     {diff:'easy',src:'鼎甲',q:'"What day is today?" "It is (　　)." （今天是星期三。）',opts:['Wednesday','Tuesday','Thursday','Sunday'],a:'Wednesday'},
-    {diff:'mid',src:'良品',q:'"Where (　　) my shoes?" "They are under the bed."',opts:['are','is','am','do'],a:'are',exp:'shoes 是複數名詞，be 動詞用 are。'},
+    {diff:'mid',src:'良品',q:'"Where (　　) my shoes?" "Under the bed."',opts:['are','is','am','do'],a:'are',exp:'shoes 是複數名詞，be 動詞用 are。'},
     {diff:'hard',src:'奇鼎',q:'"Does Amy (　　) milk?" "No, she doesn\'t."',opts:['like','likes','liking','to like'],a:'like',exp:'助動詞 Does 後面要接原形動詞 like。'},
     {diff:'hard',src:'奇鼎',q:'"How many (　　) are there on the desk?" "There are three."',opts:['erasers','eraser','water','juice'],a:'erasers',exp:'How many 後面接可數名詞複數形 erasers。'}
   ]);
