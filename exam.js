@@ -23,6 +23,12 @@ function uniqueOpts(ans, cand){
 // ===== 0. 國小高頻破音字詞庫覆寫引擎（詞語層級最長優先匹配，杜絕單字直查標錯音）=====
 // 格式：詞語 -> 以空白分隔之各字注音；若某字用 '_' 代表沿用 ZY_DATA 單字預設音
 const POLY_PHRASE_RAW = {
+  // 0b. 本輪補強（家長試用回饋＋自動審查發現的錯讀）
+  '倒塌':'ㄉㄠˇ _','倒楣':'ㄉㄠˇ _','倒閉':'ㄉㄠˇ _','倒下':'ㄉㄠˇ _','跌倒':'_ ㄉㄠˇ','摔倒':'_ ㄉㄠˇ','絆倒':'_ ㄉㄠˇ',
+  '記載':'_ ㄗㄞˇ','刊載':'_ ㄗㄞˇ','登載':'_ ㄗㄞˇ','轉載':'_ ㄗㄞˇ','五載':'_ ㄗㄞˇ','千載':'_ ㄗㄞˇ',
+  '率領':'ㄕㄨㄞˋ _','草率':'_ ㄕㄨㄞˋ','輕率':'_ ㄕㄨㄞˋ','坦率':'_ ㄕㄨㄞˋ','直率':'_ ㄕㄨㄞˋ','率先':'ㄕㄨㄞˋ _',
+  '長滿':'ㄓㄤˇ _','長著':'ㄓㄤˇ ˙ㄓㄜ','長成':'ㄓㄤˇ _','長胖':'ㄓㄤˇ _','長肉':'ㄓㄤˇ _','長牙':'ㄓㄤˇ _','長芽':'ㄓㄤˇ _',
+  '寶藏':'_ ㄗㄤˋ','西藏':'_ ㄗㄤˋ','一場雨':'_ ㄔㄤˊ _','一場大雨':'_ ㄔㄤˊ _ _','一場雷':'_ ㄔㄤˊ _','一場夢':'_ ㄔㄤˊ _',
   // 0. 了（預設 ˙ㄌㄜ；「了解／了不起／受不了」等讀 ㄌㄧㄠˇ）
   '了解':'ㄌㄧㄠˇ _','了不起':'ㄌㄧㄠˇ _ _','了結':'ㄌㄧㄠˇ _','了得':'ㄌㄧㄠˇ ˙ㄉㄜ','明了':'_ ㄌㄧㄠˇ','一目了然':'_ _ ㄌㄧㄠˇ _',
   '受不了':'_ _ ㄌㄧㄠˇ','吃不了':'_ _ ㄌㄧㄠˇ','來不了':'_ _ ㄌㄧㄠˇ','去不了':'_ _ ㄌㄧㄠˇ','做不了':'_ _ ㄌㄧㄠˇ',
@@ -194,6 +200,19 @@ function isNumeralDigitRun(list, i){
   return (e-s)>=1;
 }
 const HAN_RE_SANDHI=/[\u3400-\u9fff]/;
+// 「得」作結構助詞（跑得很快、玩得很開心）讀輕聲 ˙ㄉㄜ；動詞「取得／獲得／值得／覺得／記得…」維持 ㄉㄜˊ
+const DE_VERB_PREV=new Set(['取','獲','贏','值','覺','記','曉','懂','省','捨','使','博','顯','難','不','心','所','落','換','求','賺','考','拿','贏','奪','換','惹','免','怪']);
+const DE_DEGREE_NEXT=new Set(['很','太','非','真','更','極','挺','蠻','特','滿','快','慢','遠','近','清','乾','整','漂','開','高','舒','累','餓','美','久','累','好']);
+function applyDeParticle(list){
+  for(let i=1;i<list.length-1;i++){
+    const cur=list[i];
+    if(!cur||cur.ch!=='得'||cur.zy!=='ㄉㄜˊ') continue;
+    const p=list[i-1].ch, n=list[i+1].ch;
+    if(DE_VERB_PREV.has(p)) continue;
+    if(n==='好' && /[取考拿]/.test(p)) continue;
+    if(DE_DEGREE_NEXT.has(n) && /[\u3400-\u9fff]/.test(p)) cur.zy='˙ㄉㄜ';
+  }
+}
 function applyYiBuSandhi(list){
   for(let i=0;i<list.length;i++){
     const cur=list[i];
@@ -209,8 +228,8 @@ function applyYiBuSandhi(list){
       const t=TONE_OF_ZY(next.zy);
       cur.zy = (t===4||t===5) ? 'ㄧˊ' : 'ㄧˋ';
     } else if(cur.ch==='不' && cur.zy==='ㄅㄨˋ'){
-      if(prev && next && pch===nch && HAN_RE_SANDHI.test(pch)) cur.zy='˙ㄅㄨ'; // 對不對、好不好、是不是（夾在相同兩字之間讀輕聲）
-      else if(TONE_OF_ZY(next&&next.zy)===4) cur.zy='ㄅㄨˊ'; // 不是、不要、不會
+      // 臺灣課本標音：「好不好」不＋三聲＝ㄅㄨˋ；「對不對」不＋四聲＝ㄅㄨˊ（不使用輕聲）
+      if(TONE_OF_ZY(next&&next.zy)===4) cur.zy='ㄅㄨˊ'; // 不是、不要、不會、對不對
     }
   }
   return list;
@@ -242,9 +261,11 @@ function resolveTextZhuyin(str){
       i++;
     }
   }
+  applyDeParticle(out);
   return applyYiBuSandhi(out);
 }
 window.resolveTextZhuyin = resolveTextZhuyin;
+window.POLY_PHRASE_MAP = POLY_PHRASE_MAP;
 
 // ===== 0a-3. 考點字注音遮蔽（避免「問讀音／國字，卻在題目上把答案的注音印出來」）=====
 // 規則：題幹在問「讀音／注音」時，被「」『』單獨框起的國字，其所有出現處一律不標注音；
