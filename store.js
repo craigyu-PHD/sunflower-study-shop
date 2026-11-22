@@ -89,7 +89,7 @@ function renderPreschoolWorkbench(){
     return;
   }
   if($('wbPreInfo') && first.artMode){
-    $('wbPreInfo').textContent = first.artMode === 'story' ? `📖 ${first.level.name}彩虹繪本：6 篇故事 × 4 頁，每頁彩色插圖＋注音大字（共 ${first.totalPages} 面）` : `🖍️ ${first.level.name}著色本：19 種大圖輪廓輪流印製，附注音圖名與七彩色票（共 ${first.totalPages} 面）`;
+    $('wbPreInfo').textContent = `${first.topicLabel}｜${first.level.name}（共 ${first.totalPages} 面，全黑白）`;
   } else if($('wbPreInfo') && first.level){
     $('wbPreInfo').textContent = `📐 ${first.level.name}（每頁 ${first.level.cols} 欄 × ${first.level.rows} 列＝${first.level.cols*first.level.rows} 格置頂到底全滿）｜${first.level.desc}（共 ${first.totalPages} 面 A4）`;
   }
@@ -511,7 +511,7 @@ function updateItemPriceHint(){
     const preSheets = +($('stPreSheets')?.value || 10);
     sheets = qty * preSheets;
     const lvlMap = {small:'小班（3～4歲）', mid:'中班（4～5歲）', large:'大班（5～6歲）'};
-    const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC', color:'著色本', story:'彩虹繪本'};
+    const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC', color:'著色本', dots:'數字連連看', train:'加法列車', count:'數一數連連看', line:'運筆描線'};
     const lvlTxt = lvlMap[$('stPreLevel')?.value || 'small'] || '小班';
     const topTxt = topMap[$('stPreTopic')?.value || 'all'] || '綜合';
     if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${preSheets}張）`;
@@ -578,7 +578,7 @@ function getPreviewSheetMeta(){
     const lvl = $('stPreLevel')?.value || 'small';
     const lvlName = {small:'小班',mid:'中班',large:'大班'}[lvl] || '小班';
     const topic = $('stPreTopic')?.value || 'all';
-    const topName = {all:'ㄅㄆㄇ・123・ABC',zy:'注音符號',num:'數字123',abc:'英文字母',color:'著色本',story:'彩虹繪本'}[topic] || '綜合';
+    const topName = {all:'ㄅㄆㄇ・123・ABC',zy:'注音符號',num:'數字123',abc:'英文字母',color:'著色本',dots:'數字連連看',train:'加法列車',count:'數一數連連看',line:'運筆描線'}[topic] || '綜合';
     const list = [];
     for(let i = 0; i < preSheets; i++){
       list.push({
@@ -841,9 +841,7 @@ async function updateStorePreview(){
       wmText: '向日葵國小伴學誌・線上樣本預覽請勿截圖'
     });
     if($('stPreDesc') && res.artMode){
-      $('stPreDesc').textContent = res.artMode === 'story'
-        ? `🌈 ${res.level.name}｜彩虹繪本：${res.itemCount} 頁原創短篇故事（小雞、小魚、蝴蝶、蝸牛、小熊、小貓），彩色插圖，全文附注音，${res.level.name==='小班'?'每頁一句話':(res.level.name==='中班'?'每頁兩句話':'每頁三句話')}，可邊聽邊指讀。`
-        : `🖍️ ${res.level.name}｜著色本：${res.itemCount} 種可愛大圖輪廓（太陽、彩虹、花朵、蝴蝶、小魚…），附注音圖名與七彩色票，線條${res.level.name==='小班'?'最粗最好塗':(res.level.name==='中班'?'粗細適中':'細緻有背景')}。`;
+      $('stPreDesc').textContent = `${res.topicLabel}｜${res.level.name}：全部黑白印刷、不用彩墨，每張正反雙面。`;
     } else if($('stPreDesc') && res.level){
       $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列置頂到底滿格、共收錄 ${res.itemCount} 個階段符號依序循環）`;
     }
@@ -989,7 +987,7 @@ function buildCurrentSelectionsAsCartItems(){
     const lvlId = $('stPreLevel')?.value || 'small';
     const lvlObj = (window.PRESCHOOL_BANK && window.PRESCHOOL_BANK.levels[lvlId]) || { name: '小班', cols: 5, rows: 6 };
     const topic = $('stPreTopic')?.value || 'all';
-    const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）', color:'著色本（大圖輪廓・注音圖名）', story:'彩虹繪本（故事＋彩色插圖＋注音）' }[topic] || '綜合進度';
+    const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）', color:'著色本（黑白大圖輪廓）', dots:'數字連連看（黑白）', train:'加法列車（黑白）', count:'數一數連連看（黑白）', line:'運筆描線（黑白）' }[topic] || '綜合進度';
     const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
     const sheets = preSheets * qty;
     const amount = sheets * 5;

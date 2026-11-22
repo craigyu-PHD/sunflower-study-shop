@@ -192,56 +192,6 @@
   }
   function esc(s){ return String(s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
 
-  // ===== 彩虹繪本故事 =====
-  // t：依班別取字數——小班 1 句、中班 2 句、大班 3 句
-  var STORIES=[
-    {title:'小雞找彩虹',pages:[
-      {subs:[['tree',150,150,.62],['chick',390,260,.55]],bg:'rain',t:['下雨了，小雞躲在大樹下。','小雞說：「雨什麼時候才會停？」','小雞抬頭看，天空灰灰的。']},
-      {subs:[['sun',400,70,.5],['chick',200,260,.6]],bg:'day',t:['太陽出來了，雨停了。','天空亮起來，小雞好開心。','小雞開心地跳來跳去。']},
-      {subs:[['rainbow',150,30,.95],['chick',40,330,.45]],bg:'day',t:['看，天上有彩虹！','彩虹有紅、橙、黃、綠、藍、靛、紫。','小雞數一數，有七種顏色。']},
-      {subs:[['rainbow',160,40,.8],['chick',70,330,.4],['flower',480,330,.35]],bg:'day',t:['小雞和花朵一起看彩虹。','小雞說：「彩虹真漂亮！」','大家都笑了，今天真快樂。']}]},
-    {title:'七彩小魚',pages:[
-      {subs:[['fish',120,230,.6]],bg:'sea',t:['小魚住在大海裡。','小魚有一身橘橘的亮鱗片。','牠每天游來游去，很快樂。']},
-      {subs:[['fish',50,230,.5],['balloon',500,60,.32]],bg:'sea',t:['小魚看到好多泡泡。','泡泡圓圓的，飄呀飄。','小魚想：「泡泡裡有什麼呢？」']},
-      {subs:[['rainbow',200,40,.8],['fish',300,330,.45]],bg:'sea',t:['小魚游到水面上。','牠看見天空有彩虹。','小魚說：「我也想要七種顏色！」']},
-      {subs:[['fish',60,290,.42],['fish',360,230,.42],['star',230,60,.3]],bg:'sea',t:['小魚的朋友們游過來。','大家身上有紅色、黃色和藍色。','有朋友在，每一天都是彩色的。']}]},
-    {title:'蝴蝶找花',pages:[
-      {subs:[['butterfly',160,130,.65]],bg:'day',t:['蝴蝶飛呀飛。','蝴蝶說：「我肚子餓了。」','蝴蝶想找一朵香香的花。']},
-      {subs:[['butterfly',60,170,.45],['tree',380,150,.5]],bg:'day',t:['大樹上沒有花。','蝴蝶問：「花在哪裡呢？」','蝴蝶飛過大樹，繼續找。']},
-      {subs:[['flower',150,170,.6],['butterfly',390,110,.4]],bg:'day',t:['啊，有一朵紅花！','紅花開得又大又漂亮。','蝴蝶輕輕停在花上面。']},
-      {subs:[['flower',60,230,.42],['flower',390,230,.42],['butterfly',230,50,.4],['sun',480,20,.28]],bg:'day',t:['蝴蝶吃飽了。','花朵說：「謝謝你來玩。」','蝴蝶說：「明天我還要再來！」']}]},
-    {title:'小蝸牛慢慢爬',pages:[
-      {subs:[['snail',100,200,.75]],bg:'day',t:['小蝸牛爬呀爬。','牠爬得很慢很慢。','小蝸牛背著彩色的殼。']},
-      {subs:[['snail',60,280,.5],['apple',400,60,.4]],bg:'day',t:['前面有一顆紅蘋果。','蘋果在大樹下面。','小蝸牛說：「我要爬過去看看。」']},
-      {subs:[['snail',200,300,.5],['umbrella',50,60,.45],['cloud',420,60,.5]],bg:'rain',t:['下雨了，小蝸牛不怕。','牠躲進自己的殼裡。','雨停以後，牠又繼續爬。']},
-      {subs:[['snail',80,280,.5],['apple',380,230,.42],['sun',400,20,.3]],bg:'day',t:['小蝸牛終於到了。','牠用了很多時間，但沒有放棄。','慢慢走，也能走到喜歡的地方。']}]},
-    {title:'小熊的生日',pages:[
-      {subs:[['bear',180,160,.6]],bg:'day',t:['今天是小熊的生日。','小熊笑得好開心。','牠早早起床，等朋友來。']},
-      {subs:[['balloon',130,80,.6]],bg:'day',t:['小熊買了三顆氣球。','有紅色、黃色和藍色。','氣球飄呀飄，真好看。']},
-      {subs:[['icecream',60,120,.55],['cat',360,200,.45]],bg:'day',t:['小貓送來冰淇淋。','冰淇淋涼涼的、甜甜的。','小熊說：「謝謝你！」']},
-      {subs:[['bear',70,230,.42],['cat',370,250,.38],['star',230,40,.32],['balloon',440,50,.22]],bg:'day',t:['大家一起唱生日歌。','小熊許了一個願望。','今天是最棒的一天。']}]},
-    {title:'小貓坐火箭',pages:[
-      {subs:[['cat',170,180,.6]],bg:'night',t:['夜晚，小貓看著天空。','天空有好多亮亮的星星。','小貓想：「我想去星星那裡玩。」']},
-      {subs:[['rocket',190,40,.8]],bg:'night',t:['看，有一枝大火箭！','火箭紅紅的，又大又高。','小貓說：「我可以上去嗎？」']},
-      {subs:[['rocket',80,180,.55],['star',380,60,.4],['star',440,300,.28]],bg:'night',t:['咻，火箭飛起來了。','小貓看見好多大星星。','小貓高興地說：「哇，好漂亮！」']},
-      {subs:[['cat',90,250,.42],['star',360,60,.45],['sun',470,300,.28]],bg:'night',t:['小貓玩了一整晚。','牠回到家，慢慢睡著了。','夢裡也有星星陪牠玩。']}]}
-  ];
-
-  // 雲：story 用的簡單背景物件
-  SUB.cloud={name:'雲朵',draw:function(c){ return cloud(300,330,2,c); }};
-
-  function bgSvg(kind, w, h){
-    var defs={day:['#d9f0ff','#e8f7d4'],rain:['#c8d3de','#d9e6d0'],sea:['#c8ecff','#7fc8ee'],night:['#2b2f6b','#4a3f86']}[kind]||['#d9f0ff','#e8f7d4'];
-    var s='<defs><linearGradient id="bgg'+kind+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+defs[0]+'"/><stop offset="1" stop-color="'+defs[1]+'"/></linearGradient></defs>';
-    s+='<rect x="0" y="0" width="'+w+'" height="'+h+'" rx="22" fill="url(#bgg'+kind+')" stroke="#222" stroke-width="4"/>';
-    if(kind==='night'){ for(var i=0;i<14;i++){var x=(i*173)%w,y=(i*97)%(h*0.55);s+='<circle cx="'+(30+x%(w-60))+'" cy="'+(20+y)+'" r="'+(2+(i%3))+'" fill="#fff9c4"/>';}}
-    if(kind==='rain'){ for(var j=0;j<18;j++){var rx=20+(j*53)%(w-40),ry=15+(j*71)%(h*0.5);s+='<path d="M'+rx+' '+ry+' l-9 26" stroke="#5c7fa3" stroke-width="3" stroke-linecap="round"/>';}}
-    if(kind==='sea'){ s+='<path d="M0 '+(h-60)+' Q'+(w*0.25)+' '+(h-90)+' '+(w*0.5)+' '+(h-60)+' T'+w+' '+(h-60)+' V'+h+' H0 Z" fill="#4fb3e0" opacity=".55"/>'; }
-    if(kind==='day'||kind==='rain'){ s+='<path d="M0 '+(h-55)+' Q'+(w*0.3)+' '+(h-95)+' '+(w*0.6)+' '+(h-60)+' T'+w+' '+(h-70)+' V'+h+' H0 Z" fill="#a5d6a7" stroke="#222" stroke-width="3"/>'; }
-    return s;
-  }
-
-  function levelIdx(levelId){ return levelId==='small'?0:(levelId==='mid'?1:2); }
 
   function buildHeader(titleHtml, subHtml){
     var hd=document.createElement('div');
@@ -251,13 +201,7 @@
     return hd;
   }
 
-  function rainbowBar(w){
-    var s='<svg viewBox="0 0 '+w+' 14" width="'+w+'" height="14" style="display:block">';
-    RAINBOW.forEach(function(k,i){ s+='<rect x="'+(i*w/7)+'" y="0" width="'+(w/7+1)+'" height="14" fill="'+PAL[k]+'"/>'; });
-    return s+'</svg>';
-  }
 
-  // ===== 著色本一頁 =====
   function colorPage(pIdx, levelId, lvl, cfgCommon){
     var key=SUB_KEYS[pIdx % SUB_KEYS.length];
     var round=Math.floor(pIdx/SUB_KEYS.length);
@@ -297,44 +241,161 @@
   }
 
   // ===== 繪本一頁 =====
-  function storyPage(pIdx, levelId, lvl){
-    var perStory=4;
-    var sIdx=Math.floor(pIdx/perStory)%STORIES.length, pInS=pIdx%perStory;
-    var st=STORIES[sIdx], pgDef=st.pages[pInS];
-    var li=levelIdx(levelId), nSent=li+1;
-    var W=740, H=(levelId==='small'?690:(levelId==='mid'?620:530)), c=mkCtx(true, levelId==='small'?'mid':levelId);
-    c.sw = levelId==='small' ? 6 : 5; // 繪本插圖線條較細，顏色為主
-    var pg=document.createElement('div');
-    pg.className='a4 preschool-a4';
-    pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
-    pg.appendChild(buildHeader('🌈 向日葵彩虹繪本｜'+lvl.name, '《'+st.title+'》第 '+(pInS+1)+' / '+perStory+' 頁'));
-    var inner='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">'+bgSvg(pgDef.bg,W,H);
-    pgDef.subs.forEach(function(s){
-      var d=SUB[s[0]]; if(!d) return;
-      inner+='<g transform="translate('+s[1]+' '+(s[2]+(H-560)*0.7)+') scale('+s[3]+')">'+d.draw(c)+'</g>';
+  // ===== 黑白（省印製成本）新題型 =====
+  function frameSvg(inner,W,H){
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'"><rect x="3" y="3" width="'+(W-6)+'" height="'+(H-6)+'" rx="26" fill="#fff" stroke="#222" stroke-width="4" stroke-dasharray="14 10"/>'+inner+'</svg>';
+  }
+  function placeBox(pg,html,top,h,W){
+    var b=document.createElement('div');
+    b.style.cssText='position:absolute;left:27px;top:'+top+'px;width:'+(W||740)+'px;'+(h?'height:'+h+'px;':'');
+    b.innerHTML=html; pg.appendChild(b); return b;
+  }
+  function seeded(n){ var s=(n*9301+49297)%233280; return function(){ s=(s*9301+49297)%233280; return s/233280; }; }
+
+  // ---- 1. 數字連連看：點點依序連線畫出圖案 ----
+  function heartPts(){ var p=[]; for(var i=0;i<12;i++){var t=i/12*2*Math.PI; p.push([300+16*Math.pow(Math.sin(t),3)*14, 300-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*14]);} return p; }
+  var DOT_SHAPES=[
+    {name:'星星',v:[[300,40],[360,210],[540,215],[395,320],[450,500],[300,395],[150,500],[205,320],[60,215],[240,210]]},
+    {name:'房子',v:[[300,50],[540,260],[480,260],[480,520],[120,520],[120,260],[60,260]]},
+    {name:'愛心',v:heartPts()},
+    {name:'小魚',v:[[90,300],[200,190],[340,150],[460,220],[560,150],[560,450],[460,380],[340,450],[200,410]]},
+    {name:'帆船',v:[[300,40],[480,380],[300,380],[300,40],[250,70],[110,380],[250,380],[300,380],[540,380],[470,520],[130,520],[60,380]]},
+    {name:'火箭',v:[[300,30],[400,150],[400,420],[500,520],[400,500],[340,560],[260,560],[200,500],[100,520],[200,420],[200,150]]},
+    {name:'大樹',v:[[300,40],[430,120],[500,240],[420,320],[360,330],[360,520],[240,520],[240,330],[180,320],[100,240],[170,120]]},
+    {name:'皇冠',v:[[90,470],[60,170],[190,300],[300,120],[410,300],[540,170],[510,470]]}
+  ];
+  function dotPoints(shape,N){
+    var v=shape.v,k=v.length,cnt=[],segs=[];
+    for(var i=0;i<k;i++){var a=v[i],b=v[(i+1)%k];segs.push(Math.hypot(a[0]-b[0],a[1]-b[1]));cnt.push(0);}
+    var extra=Math.max(0,N-k);
+    for(var e=0;e<extra;e++){var bi=0,bv=-1;for(var j=0;j<k;j++){var val=segs[j]/(cnt[j]+1);if(val>bv){bv=val;bi=j;}}cnt[bi]++;}
+    var pts=[];
+    for(var i2=0;i2<k;i2++){var a2=v[i2],b2=v[(i2+1)%k];for(var m=0;m<=cnt[i2];m++){var t=m/(cnt[i2]+1);pts.push([a2[0]+(b2[0]-a2[0])*t,a2[1]+(b2[1]-a2[1])*t]);}}
+    return pts;
+  }
+  function dotsPage(pIdx,levelId,lvl){
+    var shape=DOT_SHAPES[pIdx%DOT_SHAPES.length];
+    var N={small:10,mid:16,large:24}[levelId];
+    var pts=dotPoints(shape,Math.max(N,shape.v.length));
+    var W=740,H=730,sc=1.1,ox=(W-600*sc)/2,oy=(H-600*sc)/2;
+    var fs=levelId==='small'?34:(levelId==='mid'?28:24), r=levelId==='small'?13:(levelId==='mid'?10:8);
+    var g='';
+    pts.forEach(function(p,i){
+      var x=ox+p[0]*sc,y=oy+p[1]*sc;
+      // 數字放在點的外側（遠離圖形中心）
+      var dx=x-W/2,dy=y-H/2,d=Math.hypot(dx,dy)||1,tx=x+dx/d*(r+fs*0.7),ty=y+dy/d*(r+fs*0.7)+fs*0.35;
+      g+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+(i===0?'#222':'#fff')+'" stroke="#222" stroke-width="3.5"/>';
+      g+='<text x="'+tx.toFixed(1)+'" y="'+ty.toFixed(1)+'" text-anchor="middle" font-size="'+fs+'" font-weight="700" font-family="Arial Rounded MT Bold,Arial,sans-serif" fill="#111">'+(i+1)+'</text>';
     });
-    inner+='</svg>';
-    var box=document.createElement('div');
-    box.style.cssText='position:absolute;left:27px;top:96px;width:'+W+'px;height:'+H+'px';
-    box.innerHTML=inner;
-    pg.appendChild(box);
-    var fs = levelId==='small' ? 56 : (levelId==='mid' ? 42 : 34);
-    var txt=document.createElement('div');
-    txt.style.cssText='position:absolute;left:40px;top:'+(96+H+22)+'px;width:714px;font-size:'+fs+'px;line-height:1.7;color:#111;letter-spacing:2px';
-    txt.innerHTML=pgDef.t.slice(0,nSent).map(function(sen){return '<div style="margin-bottom:6px">'+zyHtml(sen)+'</div>';}).join('');
-    pg.appendChild(txt);
-    var bar=document.createElement('div');
-    bar.style.cssText='position:absolute;left:27px;top:1052px;width:740px';
-    bar.innerHTML=rainbowBar(740);
-    pg.appendChild(bar);
+    var pg=newPage();
+    pg.appendChild(buildHeader('🔢 向日葵數字連連看｜'+lvl.name,lvl.stageTitle+'・照著數字順序連一連'));
+    placeBox(pg,frameSvg(g,W,H),96,H);
+    placeBox(pg,'<div style="text-align:center;font-size:42px;line-height:1.5">從 <b>1</b> 連到 <b>'+pts.length+'</b>，猜猜看是什麼？</div>',846,0);
+    placeBox(pg,'<div style="text-align:center;font-size:34px;color:#444">答案：<span style="display:inline-block;width:260px;border-bottom:4px solid #222">&nbsp;</span></div>',944,0);
     return pg;
   }
 
+  // ---- 2. 加法列車（黑白）----
+  function trainPage(pIdx,levelId,lvl){
+    var rnd=seeded(pIdx+7), maxS=levelId==='small'?5:10, rows=levelId==='small'?4:(levelId==='mid'?6:7);
+    var W=740, rowH=Math.floor(720/rows), s='';
+    function dots(n,x,y,w,h){ var o='',cols=n<=3?n:Math.ceil(n/2),rws=n<=3?1:2,gx=w/(cols+1),gy=h/(rws+1);
+      for(var i=0;i<n;i++){var c=i%cols,r2=Math.floor(i/cols);o+='<circle cx="'+(x+gx*(c+1)).toFixed(1)+'" cy="'+(y+gy*(r2+1)).toFixed(1)+'" r="'+(levelId==='small'?13:10)+'" fill="#fff" stroke="#222" stroke-width="3"/>';}
+      return o; }
+    for(var r=0;r<rows;r++){
+      var a=1+Math.floor(rnd()*(maxS-1)), b=1+Math.floor(rnd()*(maxS-a)); if(a+b>maxS){b=maxS-a;} if(b<1){b=1;a=Math.max(1,maxS-1);}
+      var y=10+r*rowH, h=rowH-14, cw=108, ch=Math.min(h-24,96);
+      var x=14;
+      // 火車頭
+      s+='<rect x="'+x+'" y="'+(y+h-ch-10)+'" width="'+cw+'" height="'+ch+'" rx="12" fill="#fff" stroke="#222" stroke-width="4"/><rect x="'+(x+14)+'" y="'+(y+h-ch-34)+'" width="26" height="26" fill="#fff" stroke="#222" stroke-width="4"/><circle cx="'+(x+cw-34)+'" cy="'+(y+h-ch+22)+'" r="20" fill="#fff" stroke="#222" stroke-width="4"/>';
+      s+='<circle cx="'+(x+28)+'" cy="'+(y+h-8)+'" r="14" fill="#fff" stroke="#222" stroke-width="4"/><circle cx="'+(x+cw-28)+'" cy="'+(y+h-8)+'" r="14" fill="#fff" stroke="#222" stroke-width="4"/>';
+      var parts=[[a,'a'],['＋','op'],[b,'b'],['＝','eq'],['','ans']], cx=x+cw+20;
+      parts.forEach(function(pt){
+        if(pt[1]==='op'||pt[1]==='eq'){ s+='<text x="'+(cx+24)+'" y="'+(y+h-ch/2-2)+'" text-anchor="middle" font-size="54" font-weight="700" fill="#222">'+pt[0]+'</text>'; cx+=52; return; }
+        s+='<line x1="'+(cx-14)+'" y1="'+(y+h-ch/2)+'" x2="'+cx+'" y2="'+(y+h-ch/2)+'" stroke="#222" stroke-width="4"/>';
+        s+='<rect x="'+cx+'" y="'+(y+h-ch-10)+'" width="'+cw+'" height="'+ch+'" rx="10" fill="#fff" stroke="#222" stroke-width="4" '+(pt[1]==='ans'?'stroke-dasharray="10 8"':'')+'/>';
+        if(pt[1]!=='ans') s+=dots(pt[0],cx,y+h-ch-10,cw,ch);
+        s+='<circle cx="'+(cx+26)+'" cy="'+(y+h-8)+'" r="14" fill="#fff" stroke="#222" stroke-width="4"/><circle cx="'+(cx+cw-26)+'" cy="'+(y+h-8)+'" r="14" fill="#fff" stroke="#222" stroke-width="4"/>';
+        cx+=cw+8;
+      });
+      s+='<path d="M10 '+(y+h+4)+' H730" stroke="#222" stroke-width="3"/>';
+    }
+    var pg=newPage();
+    pg.appendChild(buildHeader('🚂 向日葵加法列車｜'+lvl.name,lvl.stageTitle+'・數一數圓圈，寫出一共有幾個'));
+    placeBox(pg,frameSvg(s,W,740),96,740);
+    placeBox(pg,'<div style="text-align:center;font-size:36px;line-height:1.6">火車開囉！在虛線車廂裡寫上答案 🚂</div>',860,0);
+    return pg;
+  }
+
+  // ---- 3. 數一數連連看（黑白）----
+  function countPage(pIdx,levelId,lvl){
+    var rnd=seeded(pIdx+31), maxN=levelId==='small'?5:(levelId==='mid'?8:10), rows=levelId==='small'?4:5;
+    var nums=[]; while(nums.length<rows){var n=1+Math.floor(rnd()*maxN); if(nums.indexOf(n)<0) nums.push(n);}
+    var right=nums.slice().sort(function(){return rnd()-.5;});
+    var W=740,H=720,rowH=H/rows,s='';
+    function shapeAt(kind,cx,cy,r){
+      if(kind===0) return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#fff" stroke="#222" stroke-width="3.5"/>';
+      if(kind===1) return '<path d="'+starPath(cx,cy,r*1.15,r*.5)+'" fill="#fff" stroke="#222" stroke-width="3.5"/>';
+      return '<path d="M'+cx+' '+(cy-r)+' L'+(cx+r)+' '+(cy+r*.85)+' L'+(cx-r)+' '+(cy+r*.85)+' Z" fill="#fff" stroke="#222" stroke-width="3.5"/>';
+    }
+    nums.forEach(function(n,i){
+      var cy=rowH*i+rowH/2, kind=(i+pIdx)%3, r=levelId==='small'?26:20, per=5, gx=r*2+12;
+      for(var k=0;k<n;k++){ s+=shapeAt(kind,60+(k%per)*gx+r,cy+(n>per?(k<per?-r-4:r+4):0),r); }
+      s+='<circle cx="400" cy="'+cy+'" r="11" fill="#222"/>';
+    });
+    right.forEach(function(n,i){
+      var cy=rowH*i+rowH/2;
+      s+='<circle cx="560" cy="'+cy+'" r="11" fill="#222"/><text x="650" y="'+(cy+22)+'" text-anchor="middle" font-size="72" font-weight="700" font-family="Arial Rounded MT Bold,Arial,sans-serif" fill="#111">'+n+'</text>';
+    });
+    var pg=newPage();
+    pg.appendChild(buildHeader('🔗 向日葵數一數連連看｜'+lvl.name,lvl.stageTitle+'・數一數，連到正確的數字'));
+    placeBox(pg,frameSvg(s,W,H),96,H);
+    placeBox(pg,'<div style="text-align:center;font-size:38px;line-height:1.6">左邊有幾個？用線連到右邊的數字。</div>',840,0);
+    return pg;
+  }
+
+  // ---- 4. 運筆描線（黑白，虛線描畫）----
+  function linePage(pIdx,levelId,lvl){
+    var kinds=levelId==='small'?['line','wave','arc']:(levelId==='mid'?['wave','zig','arc','loop']:['zig','loop','spiral','wave','scallop']);
+    var rows=levelId==='small'?6:8, W=740, rowH=720/rows, s='';
+    for(var r=0;r<rows;r++){
+      var kind=kinds[(r+pIdx)%kinds.length], y=rowH*r+rowH/2, x0=70, x1=670, d='', amp=rowH*0.28;
+      if(kind==='line') d='M'+x0+' '+y+' H'+x1;
+      else if(kind==='wave'){ d='M'+x0+' '+y; for(var i=0;i<6;i++){var xa=x0+i*100; d+=' Q'+(xa+25)+' '+(y-(i%2?-amp:amp)*1.6)+' '+(xa+50)+' '+y+' T'+(xa+100)+' '+y;} d=d.replace(/ T[\d.]+ [\d.]+/g,''); d='M'+x0+' '+y+' C'+(x0+60)+' '+(y-amp*2)+' '+(x0+140)+' '+(y-amp*2)+' '+(x0+200)+' '+y+' S'+(x0+340)+' '+(y+amp*2)+' '+(x0+400)+' '+y+' S'+(x0+540)+' '+(y-amp*2)+' '+x1+' '+y; }
+      else if(kind==='zig'){ d='M'+x0+' '+(y+amp); for(var j=1;j<=6;j++) d+=' L'+(x0+j*100)+' '+(y+(j%2?-amp:amp)); }
+      else if(kind==='arc') d='M'+x0+' '+(y+amp)+' Q'+((x0+x1)/2)+' '+(y-amp*2.2)+' '+x1+' '+(y+amp);
+      else if(kind==='loop'){ d='M'+x0+' '+y; for(var k=0;k<4;k++){var xa2=x0+k*150; d+=' C'+(xa2+90)+' '+(y-amp*2.2)+' '+(xa2+90)+' '+(y+amp*2.2)+' '+(xa2+30)+' '+y+' S'+(xa2+120)+' '+(y-amp*.2)+' '+(xa2+150)+' '+y;} }
+      else if(kind==='scallop'){ d='M'+x0+' '+y; for(var m=0;m<6;m++) d+=' Q'+(x0+m*100+50)+' '+(y-amp*2)+' '+(x0+(m+1)*100)+' '+y; }
+      else { d='M'+(W/2)+' '+y; var rr=2; for(var t2=0;t2<40;t2++){var a=t2*0.45,rad=2+t2*0.9; d+=' L'+(W/2+Math.cos(a)*rad*1.2).toFixed(1)+' '+(y+Math.sin(a)*rad*0.9).toFixed(1);} }
+      s+='<path d="'+d+'" fill="none" stroke="#222" stroke-width="5" stroke-dasharray="3 14" stroke-linecap="round"/>';
+      s+='<circle cx="'+x0+'" cy="'+(kind==='zig'||kind==='arc'?y+amp:y)+'" r="14" fill="#222"/>';
+      s+='<path d="M'+(x1+6)+' '+(kind==='zig'||kind==='arc'?y+(kind==='arc'?amp:(6%2?-amp:amp)):y)+' l-26 -16 v32 z" fill="#222" transform="translate(0 0)"/>';
+    }
+    var pg=newPage();
+    pg.appendChild(buildHeader('✏️ 向日葵運筆描線｜'+lvl.name,lvl.stageTitle+'・從黑點出發，沿著虛線描到箭頭'));
+    placeBox(pg,frameSvg(s,W,730),96,730);
+    placeBox(pg,'<div style="text-align:center;font-size:36px;line-height:1.6">握好筆，慢慢描，不要超出虛線 ✏️</div>',860,0);
+    return pg;
+  }
+
+  function newPage(){
+    var pg=document.createElement('div');
+    pg.className='a4 preschool-a4';
+    pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
+    return pg;
+  }
+
+  var TOPICS={
+    color:{fn:colorPage,label:'🖍️ 著色本（黑白大圖輪廓＋注音圖名）',cn:'著色本',items:SUB_KEYS.length},
+    dots:{fn:dotsPage,label:'🔢 數字連連看（黑白・照數字順序連線畫圖）',cn:'數字連連看',items:DOT_SHAPES.length},
+    train:{fn:trainPage,label:'🚂 加法列車（黑白・圖示加法）',cn:'加法列車',items:99},
+    count:{fn:countPage,label:'🔗 數一數連連看（黑白・數量配對）',cn:'數一數連連看',items:99},
+    line:{fn:linePage,label:'✏️ 運筆描線（黑白・虛線描畫）',cn:'運筆描線',items:99}
+  };
+
   function buildPages(cfg, lvl){
-    var levelId=cfg.level||'small';
-    var topic=cfg.topic;
-    var sheets=Math.max(1,Math.min(30,+(cfg.sheets||1)));
-    var wantPages=sheets*2;
+    var levelId=cfg.level||'small', topic=cfg.topic, T=TOPICS[topic]||TOPICS.color;
+    var sheets=Math.max(1,Math.min(30,+(cfg.sheets||1))), wantPages=sheets*2;
     var cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜幼兒園適齡運筆啟蒙・專屬訂製請勿轉售';
     var wmText=cfg.wmText||'';
     var previewIdx=cfg.sampleLimit?Math.max(0,+(cfg.previewPageIdx||0)):-1;
@@ -347,19 +408,18 @@
       pageIndices=[ps,ps+1].filter(function(i){return i<wantPages;});
       if(!pageIndices.length) pageIndices=[0];
     }
-    var topicLabel=topic==='story'?'🌈 彩虹繪本（短篇故事＋彩色插圖＋注音）':'🖍️ 著色本（大圖輪廓＋注音圖名）';
     var pages=pageIndices.map(function(pIdx){
-      var pg=topic==='story'?storyPage(pIdx,levelId,lvl):colorPage(pIdx,levelId,lvl);
+      var pg=T.fn(pIdx,levelId,lvl,cfg);
       if(window.createWatermarkLayer) pg.appendChild(window.createWatermarkLayer(794,1122,wmText));
       var sNo=Math.floor(pIdx/2)+1, side=(pIdx%2===0)?'正面':'背面';
       var cap=document.createElement('div');
       cap.className='cap';
-      cap.textContent=cpr+'　｜　幼兒園'+lvl.name+(topic==='story'?'彩虹繪本':'著色本')+'　第 '+sNo+' 張'+side+'（第 '+(pIdx+1)+'/'+wantPages+' 面）';
+      cap.textContent=cpr+'　｜　幼兒園'+lvl.name+T.cn+'　第 '+sNo+' 張'+side+'（第 '+(pIdx+1)+'/'+wantPages+' 面）';
       pg.appendChild(cap);
       return pg;
     });
-    return {pages:pages, level:lvl, topicLabel:topicLabel, itemCount: topic==='story'?STORIES.length*4:SUB_KEYS.length, totalPages:wantPages, sheets:sheets, artMode:topic};
+    return {pages:pages, level:lvl, topicLabel:T.label, itemCount:T.items, totalPages:wantPages, sheets:sheets, artMode:topic, topicCn:T.cn};
   }
 
-  window.PRESCHOOL_ART={buildPages:buildPages, SUB:SUB, STORIES:STORIES, SUB_KEYS:SUB_KEYS, COLOR_NAMES:COLOR_NAMES};
+  window.PRESCHOOL_ART={buildPages:buildPages, SUB:SUB, SUB_KEYS:SUB_KEYS, COLOR_NAMES:COLOR_NAMES, DOT_SHAPES:DOT_SHAPES, dotPoints:dotPoints, TOPICS:TOPICS};
 })();

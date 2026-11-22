@@ -156,7 +156,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 
 /* 國語科：A4 橫式上下雙排直書（上排＋下排，由右至左隱藏式格子欄流） */
 .a4.ex-land{width:1122px;height:794px}
-.ex-zh-tiers{width:100%;height:100%;padding:8px 10px 10px;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
+.ex-zh-tiers{width:100%;height:100%;padding:8px 10px 26px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
 .ex-zh-tier{flex:1;min-height:0;display:flex;flex-direction:row-reverse;align-items:flex-start;width:100%;color:#111;font-size:var(--ex-fs,13px);gap:var(--zh-col-gap,4px);overflow:hidden}
 .ex-zh-tier.tier-top{border-bottom:1.5px dashed #cbbba0;padding-bottom:3px}
 .ex-zh-wrap{display:flex;flex-direction:row-reverse;align-items:flex-start;width:100%;height:100%;padding:22px 26px;color:#111;font-size:var(--ex-fs,13.5px);gap:var(--zh-col-gap,4px);overflow:hidden}
@@ -194,7 +194,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
   .a4.ex-land{page:land}
   #examSheet{display:block;padding:0;gap:0}
   .ex-wrap{padding:8mm 10mm}
-  .ex-zh-wrap,.ex-zh-tiers{padding:2mm 5mm}
+  .ex-zh-wrap,.ex-zh-tiers{padding:2mm 5mm 7mm}
 }
 
 /* 即時題數與兩頁一張顯眼狀態橫幅 */
@@ -627,3 +627,18 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .legal-chk{margin-top:5px;padding:7px 9px;font-size:.82rem;line-height:1.42}
 .test-order-chk{margin-top:6px;padding:6px 9px;background:#f4f7ff;border:1px dashed #b9c6e6;border-radius:8px;font-size:.8rem;line-height:1.4;color:#33456b;width:100%}
 .test-order-chk input{margin-top:2px;flex:none}
+
+/* 每週營收統計儀表板（深色工作室風格） */
+.wk-panel{margin:12px 0;padding:16px 18px;border-radius:16px;background:radial-gradient(1200px 400px at 10% -20%,#312e81 0,#0f172a 55%,#020617 100%);color:#e2e8f0;box-shadow:0 8px 28px rgba(15,23,42,.35)}
+.wk-title{font-size:1.1rem;font-weight:800;margin-bottom:10px;color:#f8fafc}.wk-title small{font-weight:500;color:#94a3b8;font-size:.76rem}
+.wk-empty{color:#94a3b8;font-size:.9rem;padding:8px 0}
+.wk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.wk-k{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 12px}
+.wk-k span{display:block;font-size:.74rem;color:#94a3b8}.wk-k b{display:block;font-size:1.5rem;margin:2px 0;background:linear-gradient(90deg,#22d3ee,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}.wk-k small{color:#94a3b8;font-size:.72rem}
+.wk-chart{overflow-x:auto}.wk-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.76rem;color:#cbd5e1;margin:4px 0 10px}
+.wk-legend i,.wk-plans i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.wk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.wk-grid2{grid-template-columns:1fr}}
+.wk-sub{font-size:.8rem;color:#94a3b8;margin-bottom:6px}.wk-plans{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.76rem;margin-top:8px;color:#cbd5e1}
+.wk-days{display:flex;gap:8px;align-items:flex-end;height:90px}.wk-day{flex:1;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:.72rem;color:#94a3b8}.wk-day div{width:70%;background:linear-gradient(#f472b6,#6366f1);border-radius:5px 5px 0 0}.wk-day b{color:#e2e8f0}
+.wk-det{margin-top:12px;font-size:.82rem}.wk-det summary{cursor:pointer;color:#7dd3fc}.wk-det table{width:100%;border-collapse:collapse;margin-top:8px}.wk-det th,.wk-det td{padding:5px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08)}.wk-det th:first-child,.wk-det td:first-child{text-align:left}
+@media print{#weeklyStatsPanel{display:none!important}}
