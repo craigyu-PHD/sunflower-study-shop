@@ -843,6 +843,8 @@
     const levelId = PRESCHOOL_LEVELS[cfg.level] ? cfg.level : 'small';
     const lvl = PRESCHOOL_LEVELS[levelId];
     const topic = cfg.topic || 'all';
+    // 著色本／彩虹繪本由 preschool_art.js 產製（同一套幼兒園版型、浮水印與雙面頁數規則）
+    if((topic === 'color' || topic === 'story') && window.PRESCHOOL_ART) return window.PRESCHOOL_ART.buildPages({ ...cfg, level: levelId, topic }, lvl);
     const baseItems = lvl.getItems(topic);
     const cols = lvl.cols;
     const rows = lvl.rows;

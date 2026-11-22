@@ -509,7 +509,7 @@ function updateItemPriceHint(){
     const preSheets = +($('stPreSheets')?.value || 10);
     sheets = qty * preSheets;
     const lvlMap = {small:'小班（3～4歲）', mid:'中班（4～5歲）', large:'大班（5～6歲）'};
-    const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC'};
+    const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC', color:'著色本', story:'彩虹繪本'};
     const lvlTxt = lvlMap[$('stPreLevel')?.value || 'small'] || '小班';
     const topTxt = topMap[$('stPreTopic')?.value || 'all'] || '綜合';
     if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${preSheets}張）`;
@@ -576,7 +576,7 @@ function getPreviewSheetMeta(){
     const lvl = $('stPreLevel')?.value || 'small';
     const lvlName = {small:'小班',mid:'中班',large:'大班'}[lvl] || '小班';
     const topic = $('stPreTopic')?.value || 'all';
-    const topName = {all:'ㄅㄆㄇ・123・ABC',zy:'注音符號',num:'數字123',abc:'英文字母'}[topic] || '綜合';
+    const topName = {all:'ㄅㄆㄇ・123・ABC',zy:'注音符號',num:'數字123',abc:'英文字母',color:'著色本',story:'彩虹繪本'}[topic] || '綜合';
     const list = [];
     for(let i = 0; i < preSheets; i++){
       list.push({
@@ -983,7 +983,7 @@ function buildCurrentSelectionsAsCartItems(){
     const lvlId = $('stPreLevel')?.value || 'small';
     const lvlObj = (window.PRESCHOOL_BANK && window.PRESCHOOL_BANK.levels[lvlId]) || { name: '小班', cols: 5, rows: 6 };
     const topic = $('stPreTopic')?.value || 'all';
-    const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）' }[topic] || '綜合進度';
+    const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）', color:'著色本（大圖輪廓・注音圖名）', story:'彩虹繪本（故事＋彩色插圖＋注音）' }[topic] || '綜合進度';
     const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
     const sheets = preSheets * qty;
     const amount = sheets * 5;

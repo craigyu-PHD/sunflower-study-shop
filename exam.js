@@ -24,6 +24,153 @@ function uniqueOpts(ans, cand){
 // 格式：詞語 -> 以空白分隔之各字注音；若某字用 '_' 代表沿用 ZY_DATA 單字預設音
 const POLY_PHRASE_RAW = {
   // 0b. 本輪補強（家長試用回饋＋自動審查發現的錯讀）
+  '首長':'_ ㄓㄤˇ',
+  '園長':'_ ㄓㄤˇ',
+  '場長':'_ ㄓㄤˇ',
+  '會長':'_ ㄓㄤˇ',
+  '船長':'_ ㄓㄤˇ',
+  '店長':'_ ㄓㄤˇ',
+  '局長':'_ ㄓㄤˇ',
+  '館長':'_ ㄓㄤˇ',
+  '族長':'_ ㄓㄤˇ',
+  '課長':'_ ㄓㄤˇ',
+  '司長':'_ ㄓㄤˇ',
+  '處長':'_ ㄓㄤˇ',
+  '科長':'_ ㄓㄤˇ',
+  '艦長':'_ ㄓㄤˇ',
+  '機長':'_ ㄓㄤˇ',
+  '酋長':'_ ㄓㄤˇ',
+  '縣長':'_ ㄓㄤˇ',
+  '市長':'_ ㄓㄤˇ',
+  '鄉長':'_ ㄓㄤˇ',
+  '鎮長':'_ ㄓㄤˇ',
+  '議長':'_ ㄓㄤˇ',
+  '主長':'_ ㄓㄤˇ',
+  '排長':'_ ㄓㄤˇ',
+  '連長':'_ ㄓㄤˇ',
+  '營長':'_ ㄓㄤˇ',
+  '站長':'_ ㄓㄤˇ',
+  '各有所長':'_ _ _ ㄔㄤˊ',
+  '三行':'_ ㄏㄤˊ',
+  '四行':'_ ㄏㄤˊ',
+  '五行':'_ ㄏㄤˊ',
+  '六行':'_ ㄏㄤˊ',
+  '七行':'_ ㄏㄤˊ',
+  '八行':'_ ㄏㄤˊ',
+  '九行':'_ ㄏㄤˊ',
+  '十行':'_ ㄏㄤˊ',
+  '換行':'_ ㄏㄤˊ',
+  '每行':'_ ㄏㄤˊ',
+  '多行':'_ ㄏㄤˊ',
+  '首行':'_ ㄏㄤˊ',
+  '末行':'_ ㄏㄤˊ',
+  '斷行':'_ ㄏㄤˊ',
+  '行距':'ㄏㄤˊ _',
+  '重畫':'ㄔㄨㄥˊ _',
+  '重編':'ㄔㄨㄥˊ _',
+  '重排':'ㄔㄨㄥˊ _',
+  '重設':'ㄔㄨㄥˊ _',
+  '重試':'ㄔㄨㄥˊ _',
+  '重跑':'ㄔㄨㄥˊ _',
+  '重生':'ㄔㄨㄥˊ _',
+  '重寫':'ㄔㄨㄥˊ _',
+  '重做':'ㄔㄨㄥˊ _',
+  '重考':'ㄔㄨㄥˊ _',
+  '重選':'ㄔㄨㄥˊ _',
+  '重算':'ㄔㄨㄥˊ _',
+  '重印':'ㄔㄨㄥˊ _',
+  '重版':'ㄔㄨㄥˊ _',
+  '重讀':'ㄔㄨㄥˊ _',
+  '重修':'ㄔㄨㄥˊ _',
+  '懶覺':'_ ㄐㄧㄠˋ',
+  '補覺':'_ ㄐㄧㄠˋ',
+  '數星':'ㄕㄨˇ _',
+  '數起':'ㄕㄨˇ _',
+  '數過':'ㄕㄨˇ _',
+  '數來':'ㄕㄨˇ _',
+  '數不':'ㄕㄨˇ _',
+  '數著':'ㄕㄨˇ ˙ㄓㄜ',
+  '還回':'ㄏㄨㄢˊ _',
+  '還債':'ㄏㄨㄢˊ _',
+  '交還':'_ ㄏㄨㄢˊ',
+  '借還':'_ ㄏㄨㄢˊ',
+  '奉還':'_ ㄏㄨㄢˊ',
+  '都市':'ㄉㄨ _',
+  '都會':'ㄉㄨ _',
+  '都城':'ㄉㄨ _',
+  '都更':'ㄉㄨ _',
+  '國都':'_ ㄉㄨ',
+  '水都':'_ ㄉㄨ',
+  '首都':'_ ㄉㄨ',
+  '古都':'_ ㄉㄨ',
+  '京都':'_ ㄉㄨ',
+  '大都市':'_ ㄉㄨ _',
+  '推倒':'_ ㄉㄠˇ',
+  '撞倒':'_ ㄉㄠˇ',
+  '吹倒':'_ ㄉㄠˇ',
+  '擊倒':'_ ㄉㄠˇ',
+  '嚇倒':'_ ㄉㄠˇ',
+  '壓倒':'_ ㄉㄠˇ',
+  '昏倒':'_ ㄉㄠˇ',
+  '病倒':'_ ㄉㄠˇ',
+  '絆倒':'_ ㄉㄠˇ',
+  '打倒':'_ ㄉㄠˇ',
+  '倒地':'ㄉㄠˇ _',
+  '顛倒':'_ ㄉㄠˇ',
+  '量長':'ㄌㄧㄤˊ _',
+  '量身':'ㄌㄧㄤˊ _',
+  '量體':'ㄌㄧㄤˊ _',
+  '量高':'ㄌㄧㄤˊ _',
+  '量尺':'ㄌㄧㄤˊ _',
+  '量杯':'ㄌㄧㄤˊ _',
+  '量筒':'ㄌㄧㄤˊ _',
+  '量角':'ㄌㄧㄤˊ _',
+  '測量':'_ ㄌㄧㄤˊ',
+  
+  '丈量':'_ ㄌㄧㄤˊ',
+  '空調':'_ ㄊㄧㄠˊ',
+  '調和':'ㄊㄧㄠˊ _',
+  '調節':'ㄊㄧㄠˊ _',
+  '調養':'ㄊㄧㄠˊ _',
+  '轉動':'ㄓㄨㄢˋ _',
+  '轉圈':'ㄓㄨㄢˋ _',
+  '轉盤':'ㄓㄨㄢˋ _',
+  '轉速':'ㄓㄨㄢˋ _',
+  '轉軸':'ㄓㄨㄢˋ _',
+  '旋轉':'_ ㄓㄨㄢˋ',
+  '自轉':'_ ㄓㄨㄢˋ',
+  '公轉':'_ ㄓㄨㄢˋ',
+  '運轉':'_ ㄓㄨㄢˋ',
+  '輪轉':'_ ㄓㄨㄢˋ',
+  '差不多':'ㄔㄚˋ _ _',
+  '差點':'ㄔㄚˋ _',
+  '差一點':'ㄔㄚˋ ㄧˋ _',
+  '差勁':'ㄔㄚˋ _',
+  '出差':'_ ㄔㄞ',
+  '差事':'ㄔㄞ _',
+  '給予':'ㄐㄧˇ _',
+  '供給':'_ ㄐㄧˇ',
+  '補給':'_ ㄐㄧˇ',
+  '自給':'_ ㄐㄧˇ',
+  '配給':'_ ㄐㄧˇ',
+  '一會兒':'ㄧˋ ㄏㄨㄟˇ ㄦ',
+  '會兒':'ㄏㄨㄟˇ ㄦ',
+  '會計':'ㄎㄨㄞˋ _',
+  '充分':'_ ㄈㄣˋ',
+  '安分':'_ ㄈㄣˋ',
+  '大將':'_ ㄐㄧㄤˋ',
+  '上將':'_ ㄐㄧㄤˋ',
+  '了卻':'ㄌㄧㄠˇ _',
+  '沉著':'_ ㄓㄨㄛˊ',
+  '使得':'_ ˙ㄉㄜ',
+  '值得':'_ ˙ㄉㄜ',
+  '記得':'_ ˙ㄉㄜ',
+  '懂得':'_ ˙ㄉㄜ',
+  '曉得':'_ ˙ㄉㄜ',
+  '捨得':'_ ˙ㄉㄜ',
+  '免得':'_ ˙ㄉㄜ',
+  '認得':'_ ˙ㄉㄜ',
+  '省得':'_ ˙ㄉㄜ',
   '倒塌':'ㄉㄠˇ _','倒楣':'ㄉㄠˇ _','倒閉':'ㄉㄠˇ _','倒下':'ㄉㄠˇ _','跌倒':'_ ㄉㄠˇ','摔倒':'_ ㄉㄠˇ','絆倒':'_ ㄉㄠˇ',
   '記載':'_ ㄗㄞˇ','刊載':'_ ㄗㄞˇ','登載':'_ ㄗㄞˇ','轉載':'_ ㄗㄞˇ','五載':'_ ㄗㄞˇ','千載':'_ ㄗㄞˇ',
   '率領':'ㄕㄨㄞˋ _','草率':'_ ㄕㄨㄞˋ','輕率':'_ ㄕㄨㄞˋ','坦率':'_ ㄕㄨㄞˋ','直率':'_ ㄕㄨㄞˋ','率先':'ㄕㄨㄞˋ _',
@@ -132,7 +279,7 @@ const POLY_PHRASE_RAW = {
   '返還':'_ ㄏㄨㄢˊ','還給':'ㄏㄨㄢˊ _','還原':'ㄏㄨㄢˊ _','生還':'_ ㄏㄨㄢˊ','往還':'_ ㄏㄨㄢˊ','以牙還牙':'_ _ ㄏㄨㄢˊ _',
   // 24. 調（預設 ㄊㄧㄠˊ；覆寫 ㄉㄧㄠˋ）
   '音調':'_ ㄉㄧㄠˋ','聲調':'_ ㄉㄧㄠˋ','語調':'_ ㄉㄧㄠˋ','曲調':'ㄑㄩˇ ㄉㄧㄠˋ','強調':'ㄑㄧㄤˊ ㄉㄧㄠˋ',
-  '步調':'_ ㄉㄧㄠˋ','格調':'_ ㄉㄧㄠˋ','單調':'_ ㄉㄧㄠˋ','基調':'_ ㄉㄧㄠˋ','空調':'ㄎㄨㄥ ㄉㄧㄠˋ',
+  '步調':'_ ㄉㄧㄠˋ','格調':'_ ㄉㄧㄠˋ','單調':'_ ㄉㄧㄠˋ','基調':'_ ㄉㄧㄠˋ',
   '調動':'ㄉㄧㄠˋ _','調查':'ㄉㄧㄠˋ _','調職':'ㄉㄧㄠˋ _','調閱':'ㄉㄧㄠˋ _','調度':'ㄉㄧㄠˋ _','才調':'_ ㄉㄧㄠˋ',
   // 25. 少（預設 ㄕㄠˇ；覆寫 ㄕㄠˋ）
   '少年':'ㄕㄠˋ _','少女':'ㄕㄠˋ _','青少年':'_ ㄕㄠˋ _','少男':'ㄕㄠˋ _','年少':'_ ㄕㄠˋ',
@@ -203,6 +350,43 @@ const HAN_RE_SANDHI=/[\u3400-\u9fff]/;
 // 「得」作結構助詞（跑得很快、玩得很開心）讀輕聲 ˙ㄉㄜ；動詞「取得／獲得／值得／覺得／記得…」維持 ㄉㄜˊ
 const DE_VERB_PREV=new Set(['取','獲','贏','值','覺','記','曉','懂','省','捨','使','博','顯','難','不','心','所','落','換','求','賺','考','拿','贏','奪','換','惹','免','怪']);
 const DE_DEGREE_NEXT=new Set(['很','太','非','真','更','極','挺','蠻','特','滿','快','慢','遠','近','清','乾','整','漂','開','高','舒','累','餓','美','久','累','好']);
+// 「為」作介詞（為你、為大家服務＝替…）讀 ㄨㄟˋ；「成為／認為／行為」等維持 ㄨㄟˊ
+const WEI_NEXT=new Set(['你','我','他','她','牠','您','咱','大','自','別','同','孩','媽','爸','老']);
+const WEI_PREV_KEEP=new Set(['認','成','行','作','以','因','稱','視','淪','改','寫','分','變','做','當','此','何','甚','極','淨','廣','淡']);
+function applyWeiBenefit(list){
+  for(let i=0;i<list.length-1;i++){
+    const c=list[i]; if(!c||c.ch!=='為'||c.zy!=='ㄨㄟˊ') continue;
+    const p=i>0?list[i-1].ch:'';
+    if(WEI_PREV_KEEP.has(p)) continue;
+    if(WEI_NEXT.has(list[i+1].ch)) c.zy='ㄨㄟˋ';
+  }
+}
+// 「教」作動詞（教我、教書、教英文）讀 ㄐㄧㄠ；「教室／教育／教學／教師」維持 ㄐㄧㄠˋ
+const JIAO_NEXT=new Set(['我','你','他','她','牠','咱','大','同','小','孩','弟','妹','書','課','英','國','數','畫','唱','寫','跳','游']);
+function applyJiaoVerb(list){
+  for(let i=0;i<list.length-1;i++){
+    const c=list[i]; if(!c||c.ch!=='教'||c.zy!=='ㄐㄧㄠˋ') continue;
+    if(JIAO_NEXT.has(list[i+1].ch)) c.zy='ㄐㄧㄠ';
+  }
+}
+// 「相」預設讀 ㄒㄧㄤ（相似、相同、互相）；「相片／相貌／照相／長相／真相／月相」讀 ㄒㄧㄤˋ
+const XIANG4_NEXT=new Set(['片','貌','機','聲','紙','簿','框','冊']);
+const XIANG4_PREV=new Set(['照','長','真','月','面','首','宰','外','攝','底','皮','手','骨']);
+function applyXiang(list){
+  for(let i=0;i<list.length;i++){
+    const c=list[i]; if(!c||c.ch!=='相'||c.zy!=='ㄒㄧㄤˋ') continue;
+    const p=i>0?list[i-1].ch:'', n=i<list.length-1?list[i+1].ch:'';
+    const hasNext=!!n && /[\u3400-\u9fff]/.test(n);
+    if(XIANG4_NEXT.has(n) || XIANG4_PREV.has(p) || !hasNext) continue;
+    c.zy='ㄒㄧㄤ';
+  }
+}
+// 「不了」（吃不了、去不了、受不了）的「了」讀 ㄌㄧㄠˇ
+function applyBuLiao(list){
+  for(let i=1;i<list.length;i++){
+    const c=list[i]; if(c&&c.ch==='了'&&c.zy==='˙ㄌㄜ'&&list[i-1].ch==='不') c.zy='ㄌㄧㄠˇ';
+  }
+}
 function applyDeParticle(list){
   for(let i=1;i<list.length-1;i++){
     const cur=list[i];
@@ -262,6 +446,10 @@ function resolveTextZhuyin(str){
     }
   }
   applyDeParticle(out);
+  applyWeiBenefit(out);
+  applyXiang(out);
+  applyBuLiao(out);
+  applyJiaoVerb(out);
   return applyYiBuSandhi(out);
 }
 window.resolveTextZhuyin = resolveTextZhuyin;
@@ -358,6 +546,16 @@ function rubyHtml(str){
     return out;
   }).join('');
 }
+
+// 繪本／著色本用：不論「國字附注音」勾選與否，一律把整句附上注音（橫書，字級由外層 font-size 決定）
+window.zhuyinForceHtml=function(str){
+  NZ_CHARS=null; NZ_ALL=false;
+  let out='';
+  for(const {ch,zy} of resolveTextZhuyin(String(str))){
+    out+= zy ? hCellHan(ch,zy) : esc(ch);
+  }
+  return out;
+};
 
 // 直書國語專用：隱藏式等寬格子（所有格子統一 viewBox 寬 42；有注音時主軸 x=14、注音軸 x=30；無注音時全部置中 x=21）
 const VPUNC_MAP={'「':'﹁','」':'﹂','『':'﹃','』':'﹄','（':'︵','）':'︶','(':'︵',')':'︶','【':'︻','】':'︼','〔':'︹','〕':'︺','《':'︽','》':'︾','〈':'︿','〉':'﹀','…':'⋮','—':'︱','→':'↓','；':'；','：':'：','，':'，','。':'。','、':'、','？':'？','！':'！','／':'／'};
@@ -4530,8 +4728,11 @@ function generateExamQuestions(cfg){
   const extQuestions = cfg.excludeQuestions instanceof Set ? cfg.excludeQuestions : null;
   const extSigs = cfg.excludeSigs instanceof Set ? cfg.excludeSigs : null;
 
+  if(window.QAudit) QAudit.resetStats();
   const isGlobalDup=(cand, checkSig=true)=>{
     if(!cand||!cand.q) return true;
+    // 自動審題：不合格的候選題（量詞錯、洩題、算式錯、選項錯…）一律直接換題
+    if(window.QAudit && QAudit.blocks(cand,{subj,g})) return true;
     if(examQuestionsUsed.has(cand.q) || (extQuestions && extQuestions.has(cand.q))) return true;
     if(checkSig){
       const sig=normalizeTemplateSig(cand.q);
@@ -6219,6 +6420,11 @@ async function generateFromUI(arg){
   await __uiYield();
   if(stale()) return;
   curExam=generateExamQuestions(cfg);
+  if(window.QAudit){
+    const st=QAudit.getStats();
+    $('exMsg').style.color='#1f9d55';
+    $('exMsg').textContent=`🔍 自動審題完成：本卷共檢查 ${st.checked} 道候選題，已自動攔下並換掉 ${st.blocked} 道有問題的題目（量詞、洩題、算式、選項、改錯字等）。`;
+  }
   const willBalance = !skipAutoBalance && $('exTwoPage') && $('exTwoPage').checked && $('exLayout').value==='2col';
   __uiProgress('exProgress', 30, '產生題目並繪製…');
   await __uiYield();
@@ -6329,7 +6535,7 @@ function normalizeOrderRow(raw, idx){
   }
 
   const preLevel = raw.preLevel || (/大班/.test(String(raw.grade||raw.diff||''))?'large':(/中班/.test(String(raw.grade||raw.diff||''))?'mid':'small'));
-  const preTopic = raw.preTopic || (/注音/.test(String(raw.subj||raw.scope||''))?'zy':(/數字/.test(String(raw.subj||raw.scope||''))?'num':(/ABC/i.test(String(raw.subj||raw.scope||''))?'abc':'all')));
+  const preTopic = raw.preTopic || (/注音/.test(String(raw.subj||raw.scope||''))?'zy':(/數字/.test(String(raw.subj||raw.scope||''))?'num':(/ABC/i.test(String(raw.subj||raw.scope||''))?'abc':(/著色/.test(String(raw.subj||raw.scope||''))?'color':(/繪本/.test(String(raw.subj||raw.scope||''))?'story':'all')))));
   const preIllust = raw.preIllust !== undefined ? !!raw.preIllust : true;
   const mazeLevel = String(raw.mazeLevel || (/大班/.test(String(raw.diff||''))?'large':'baby')).trim();
   const mazeAns = raw.mazeAns !== undefined ? !!raw.mazeAns : true;
@@ -7696,7 +7902,7 @@ async function generateBatchAll(overrideOrders=null){
         strokeRes = { pages: mRes.pages || [], charCount: mRes.mazeCount || 0 };
       }else if(ord.plan==='preschool' && window.PRESCHOOL_BANK){
         const lvlGuess = ord.preLevel || (/大班/.test(ord.grade)?'large':(/中班/.test(ord.grade)?'mid':'small'));
-        const topGuess = ord.preTopic || (/注音/.test(ord.subj)?'zy':(/數字/.test(ord.subj)?'num':(/ABC/i.test(ord.subj)?'abc':'all')));
+        const topGuess = ord.preTopic || (/注音/.test(ord.subj)?'zy':(/數字/.test(ord.subj)?'num':(/ABC/i.test(ord.subj)?'abc':(/著色/.test(ord.subj)?'color':(/繪本/.test(ord.subj)?'story':'all')))));
         const preRes = window.PRESCHOOL_BANK.buildPages({
           level: lvlGuess, topic: topGuess, sheets: +ord.sheets || 10, illust: ord.preIllust !== false, wmText
         });
