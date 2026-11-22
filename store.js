@@ -88,7 +88,9 @@ function renderPreschoolWorkbench(){
     __uiProgressDone('preProgress', '產生失敗');
     return;
   }
-  if($('wbPreInfo') && first.level){
+  if($('wbPreInfo') && first.artMode){
+    $('wbPreInfo').textContent = first.artMode === 'story' ? `📖 ${first.level.name}彩虹繪本：6 篇故事 × 4 頁，每頁彩色插圖＋注音大字（共 ${first.totalPages} 面）` : `🖍️ ${first.level.name}著色本：19 種大圖輪廓輪流印製，附注音圖名與七彩色票（共 ${first.totalPages} 面）`;
+  } else if($('wbPreInfo') && first.level){
     $('wbPreInfo').textContent = `📐 ${first.level.name}（每頁 ${first.level.cols} 欄 × ${first.level.rows} 列＝${first.level.cols*first.level.rows} 格置頂到底全滿）｜${first.level.desc}（共 ${first.totalPages} 面 A4）`;
   }
   sheet.innerHTML = '';
@@ -838,7 +840,11 @@ async function updateStorePreview(){
       previewPageIdx: orderCfg.previewPageIdx,
       wmText: '向日葵國小伴學誌・線上樣本預覽請勿截圖'
     });
-    if($('stPreDesc') && res.level){
+    if($('stPreDesc') && res.artMode){
+      $('stPreDesc').textContent = res.artMode === 'story'
+        ? `🌈 ${res.level.name}｜彩虹繪本：${res.itemCount} 頁原創短篇故事（小雞、小魚、蝴蝶、蝸牛、小熊、小貓），彩色插圖，全文附注音，${res.level.name==='小班'?'每頁一句話':(res.level.name==='中班'?'每頁兩句話':'每頁三句話')}，可邊聽邊指讀。`
+        : `🖍️ ${res.level.name}｜著色本：${res.itemCount} 種可愛大圖輪廓（太陽、彩虹、花朵、蝴蝶、小魚…），附注音圖名與七彩色票，線條${res.level.name==='小班'?'最粗最好塗':(res.level.name==='中班'?'粗細適中':'細緻有背景')}。`;
+    } else if($('stPreDesc') && res.level){
       $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列置頂到底滿格、共收錄 ${res.itemCount} 個階段符號依序循環）`;
     }
     if(res.pages && res.pages.length){

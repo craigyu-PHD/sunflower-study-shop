@@ -302,7 +302,7 @@
     var sIdx=Math.floor(pIdx/perStory)%STORIES.length, pInS=pIdx%perStory;
     var st=STORIES[sIdx], pgDef=st.pages[pInS];
     var li=levelIdx(levelId), nSent=li+1;
-    var W=740, H=(levelId==='small'?690:(levelId==='mid'?620:560)), c=mkCtx(true, levelId==='small'?'mid':levelId);
+    var W=740, H=(levelId==='small'?690:(levelId==='mid'?620:530)), c=mkCtx(true, levelId==='small'?'mid':levelId);
     c.sw = levelId==='small' ? 6 : 5; // 繪本插圖線條較細，顏色為主
     var pg=document.createElement('div');
     pg.className='a4 preschool-a4';
@@ -318,7 +318,7 @@
     box.style.cssText='position:absolute;left:27px;top:96px;width:'+W+'px;height:'+H+'px';
     box.innerHTML=inner;
     pg.appendChild(box);
-    var fs = levelId==='small' ? 56 : (levelId==='mid' ? 42 : 36);
+    var fs = levelId==='small' ? 56 : (levelId==='mid' ? 42 : 34);
     var txt=document.createElement('div');
     txt.style.cssText='position:absolute;left:40px;top:'+(96+H+22)+'px;width:714px;font-size:'+fs+'px;line-height:1.7;color:#111;letter-spacing:2px';
     txt.innerHTML=pgDef.t.slice(0,nSent).map(function(sen){return '<div style="margin-bottom:6px">'+zyHtml(sen)+'</div>';}).join('');
