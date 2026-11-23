@@ -76,6 +76,8 @@ function renderPreschoolWorkbench(){
   const level = $('wbPreLevel')?.value || 'small';
   const topic = $('wbPreTopic')?.value || 'all';
   const sheets = Math.max(1, +($('wbPreSheets')?.value || 5));
+  const isWritingTopic = (topic === 'all' || topic === 'zy' || topic === 'num' || topic === 'abc');
+  if($('wbPreIllustWrap')) $('wbPreIllustWrap').style.display = isWritingTopic ? '' : 'none';
   const illust = $('wbPreIllust') ? $('wbPreIllust').checked : true;
   const wm = typeof window.getWmText === 'function' ? window.getWmText() : '';
   const cfg = { level, topic, sheets, illust, wmText: wm };
@@ -89,9 +91,9 @@ function renderPreschoolWorkbench(){
     return;
   }
   if($('wbPreInfo') && first.artMode){
-    $('wbPreInfo').textContent = `${first.topicLabel}｜${first.level.name}（共 ${first.totalPages} 面，全黑白）`;
+    $('wbPreInfo').textContent = `${first.topicLabel}｜${first.level.name}（共 ${first.totalPages} 面，黑白線稿省墨）`;
   } else if($('wbPreInfo') && first.level){
-    $('wbPreInfo').textContent = `📐 ${first.level.name}（每頁 ${first.level.cols} 欄 × ${first.level.rows} 列＝${first.level.cols*first.level.rows} 格置頂到底全滿）｜${first.level.desc}（共 ${first.totalPages} 面 A4）`;
+    $('wbPreInfo').textContent = `📐 ${first.level.name}（每頁 ${first.level.cols} 欄 × ${first.level.rows} 列＝${first.level.cols*first.level.rows} 格）｜${first.level.desc}（共 ${first.totalPages} 面 A4）`;
   }
   sheet.innerHTML = '';
 
@@ -101,7 +103,9 @@ function renderPreschoolWorkbench(){
     if(!pg) return;
     const cap = document.createElement('div');
     cap.className = 'pcap';
-    cap.textContent = `A4 直式幼兒園寫字帖（${res.level.cols}欄×${res.level.rows}列）　第 ${pgIdx+1} / ${total} 頁`;
+    cap.textContent = res.artMode
+      ? `A4 直式幼兒園${res.topicCn || '練習本'}（${res.level.name}）　第 ${pgIdx+1} / ${total} 頁`
+      : `A4 直式幼兒園寫字帖（${res.level.cols}欄×${res.level.rows}列）　第 ${pgIdx+1} / ${total} 頁`;
     sheet.appendChild(cap);
     sheet.appendChild(pg);
   };
@@ -834,9 +838,9 @@ async function updateStorePreview(){
       wmText: '向日葵國小伴學誌・線上樣本預覽請勿截圖'
     });
     if($('stPreDesc') && res.artMode){
-      $('stPreDesc').textContent = `${res.topicLabel}｜${res.level.name}：全部黑白印刷、不用彩墨，每張正反雙面。`;
+      $('stPreDesc').textContent = `${res.topicLabel}｜${res.level.name}：黑白線稿省墨印刷，每張正反雙面。`;
     } else if($('stPreDesc') && res.level){
-      $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列、共收錄 ${res.itemCount} 個階段符號依序循環，黑白省墨印刷）`;
+      $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列、共收錄 ${res.itemCount} 個階段符號依序循環）`;
     }
     if(res.pages && res.pages.length){
       renderPreviewPagesDualOrSingle(scaleBox, res.pages, false);
@@ -1040,7 +1044,7 @@ function buildCurrentSelectionsAsCartItems(){
         preIllust: illust,
         custom_words: '',
         custom_units: `${lvlObj.name}｜${topicName}`,
-        spec_note: `${lvlObj.cols}欄×${lvlObj.rows}列大格滿版｜${topicName}｜${illust?'含黑白小插圖':'簡潔大格'}`,
+        spec_note: `${lvlObj.cols}欄×${lvlObj.rows}列大格滿版｜${topicName}｜${illust?'含可愛小插圖':'簡潔大格'}`,
         unitSheets: preSheets,
         qty,
         sheets,
@@ -1657,10 +1661,12 @@ function initStore(){
   }
 
   const syncPreMazeSubUI = () => {
-    const isMz = ($('stPreTopic')?.value || 'all') === 'maze';
+    const topic = $('stPreTopic')?.value || 'all';
+    const isMz = topic === 'maze';
+    const isWritingTopic = (topic === 'all' || topic === 'zy' || topic === 'num' || topic === 'abc');
     if($('stMazeSubOpts')) $('stMazeSubOpts').style.display = isMz ? '' : 'none';
     if($('stPreLevelWrap')) $('stPreLevelWrap').style.display = isMz ? 'none' : '';
-    if($('stPreIllustWrap')) $('stPreIllustWrap').style.display = isMz ? 'none' : '';
+    if($('stPreIllustWrap')) $('stPreIllustWrap').style.display = isWritingTopic ? '' : 'none';
   };
   syncPreMazeSubUI();
 
@@ -1823,21 +1829,181 @@ function initStore(){
   window.addEventListener('resize', () => {
     if($('viewStore') && $('viewStore').style.display !== 'none') scheduleStorePreview();
   });
+  // ===== 三大工作台（幼兒園／寫字帖／測驗卷）預覽規格控制列（單頁／雙頁並排／四頁總覽 ＋ 縮放 ＋ 快速跳頁） =====
+  const __wbViewState = {
+    preSheet:  { mode: '1col', zoom: 100 },
+    sheet:     { mode: '1col', zoom: 100 },
+    examSheet: { mode: '1col', zoom: 100 }
+  };
+
+  function syncWorkbenchPages(containerId){
+    const c = $(containerId);
+    if(!c) return;
+    const st = __wbViewState[containerId] || { mode: '1col', zoom: 100 };
+    // 將尚未包裝的 (.pcap + .a4) 配對包進 .wb-page-unit，確保雙頁／四頁並排時頁標與試卷不會分離
+    const rawA4s = [...c.children].filter(el => el.classList && el.classList.contains('a4'));
+    if(rawA4s.length){
+      rawA4s.forEach(a4 => {
+        const prev = a4.previousElementSibling;
+        const unit = document.createElement('div');
+        unit.className = 'wb-page-unit';
+        c.insertBefore(unit, a4);
+        if(prev && prev.classList && prev.classList.contains('pcap') && prev.parentElement === c){
+          unit.appendChild(prev);
+        }
+        unit.appendChild(a4);
+      });
+    }
+    c.classList.toggle('wb-grid-2', st.mode === '2col');
+    c.classList.toggle('wb-grid-4', st.mode === '4col');
+    c.style.setProperty('--wb-zoom', (st.zoom / 100).toFixed(2));
+    const units = [...c.querySelectorAll('.wb-page-unit')];
+    units.forEach((u, idx) => {
+      u.style.zoom = (st.zoom / 100).toFixed(2);
+      u.onclick = st.mode === '4col' ? () => {
+        st.mode = '1col';
+        st.zoom = 100;
+        syncWorkbenchPages(containerId);
+        u.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } : null;
+    });
+
+    const bar = $(containerId + 'ViewBar');
+    if(!bar) return;
+    bar.querySelectorAll('.wb-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === st.mode));
+    bar.querySelectorAll('.wb-zoom-btn[data-zoom]').forEach(b => b.classList.toggle('active', +b.dataset.zoom === st.zoom));
+    const pctEl = bar.querySelector('.wb-zoom-pct');
+    if(pctEl) pctEl.textContent = `${st.zoom}%`;
+
+    const allPages = [...c.querySelectorAll('.a4')];
+    const sel = bar.querySelector('.wb-jump-sel');
+    if(sel){
+      if(sel.options.length !== allPages.length){
+        sel.innerHTML = allPages.map((pg, i) => {
+          const capEl = pg.parentElement?.querySelector('.pcap');
+          const txt = capEl ? capEl.textContent.replace(/\s+/g, ' ').trim() : `第 ${i + 1} 頁`;
+          return `<option value="${i}">第 ${i + 1} / ${allPages.length} 頁｜${esc(txt.slice(0, 26))}</option>`;
+        }).join('');
+      }
+    }
+    updateWorkbenchActivePage(containerId);
+  }
+
+  function updateWorkbenchActivePage(containerId){
+    const c = $(containerId);
+    const bar = $(containerId + 'ViewBar');
+    if(!c || !bar || c.offsetParent === null) return;
+    const pages = [...c.querySelectorAll('.a4')];
+    const loc = bar.querySelector('.wb-loc-badge');
+    const sel = bar.querySelector('.wb-jump-sel');
+    if(!pages.length){
+      if(loc) loc.textContent = '📍 尚無頁面';
+      return;
+    }
+    const viewMid = window.innerHeight * 0.38;
+    let bestIdx = 0, bestDist = Infinity;
+    pages.forEach((pg, i) => {
+      const r = pg.getBoundingClientRect();
+      const d = Math.abs((r.top + r.bottom) / 2 - viewMid);
+      if(d < bestDist){ bestDist = d; bestIdx = i; }
+    });
+    if(loc) loc.textContent = `📍 目前位置：第 ${bestIdx + 1} / ${pages.length} 頁`;
+    if(sel && document.activeElement !== sel && sel.selectedIndex !== bestIdx){
+      sel.selectedIndex = bestIdx;
+    }
+  }
+
+  function initWorkbenchViewBars(){
+    ['preSheet','sheet','examSheet'].forEach(containerId => {
+      const c = $(containerId);
+      if(!c || $(containerId + 'ViewBar')) return;
+      const bar = document.createElement('div');
+      bar.id = containerId + 'ViewBar';
+      bar.className = 'wb-view-bar noprint';
+      bar.innerHTML = `
+        <div class="wb-view-group">
+          <span class="wb-view-lbl">👁️ 預覽排列：</span>
+          <button type="button" class="wb-mode-btn active" data-mode="1col">📄 單頁直排</button>
+          <button type="button" class="wb-mode-btn" data-mode="2col">📖 兩頁並排</button>
+          <button type="button" class="wb-mode-btn" data-mode="4col">🎛️ 四頁總覽</button>
+        </div>
+        <div class="wb-view-group">
+          <span class="wb-view-lbl">🔍 縮放：</span>
+          <button type="button" class="wb-zoom-btn" data-step="-10" title="縮小 10%">➖</button>
+          <button type="button" class="wb-zoom-btn" data-zoom="50">50%</button>
+          <button type="button" class="wb-zoom-btn" data-zoom="65">65%</button>
+          <button type="button" class="wb-zoom-btn" data-zoom="80">80%</button>
+          <button type="button" class="wb-zoom-btn active" data-zoom="100">100%</button>
+          <button type="button" class="wb-zoom-btn" data-zoom="120">120%</button>
+          <button type="button" class="wb-zoom-btn" data-step="10" title="放大 10%">➕</button>
+          <span class="wb-zoom-pct" style="font-size:.82rem;font-weight:800;color:#7a3b00;min-width:42px;text-align:center">100%</span>
+        </div>
+        <div class="wb-view-group">
+          <span class="wb-loc-badge">📍 目前位置：第 1 頁</span>
+          <select class="wb-jump-sel" title="快速跳至指定頁"></select>
+          <button type="button" class="wb-zoom-btn wb-top-btn" title="回到頂端">⏫ 頂端</button>
+        </div>
+      `;
+      c.parentNode.insertBefore(bar, c);
+
+      const st = __wbViewState[containerId];
+      bar.querySelectorAll('.wb-mode-btn').forEach(btn => {
+        btn.onclick = () => {
+          const m = btn.dataset.mode;
+          st.mode = m;
+          // 切換為兩頁並排或四頁總覽時，自動配適剛好塞進畫面的縮放比例（使用者仍可隨時再按 ➕/➖）
+          if(m === '2col') st.zoom = 65;
+          else if(m === '4col') st.zoom = 35;
+          else st.zoom = 100;
+          syncWorkbenchPages(containerId);
+        };
+      });
+      bar.querySelectorAll('.wb-zoom-btn[data-zoom]').forEach(btn => {
+        btn.onclick = () => {
+          st.zoom = +btn.dataset.zoom;
+          syncWorkbenchPages(containerId);
+        };
+      });
+      bar.querySelectorAll('.wb-zoom-btn[data-step]').forEach(btn => {
+        btn.onclick = () => {
+          st.zoom = Math.max(30, Math.min(140, st.zoom + (+btn.dataset.step)));
+          syncWorkbenchPages(containerId);
+        };
+      });
+      const sel = bar.querySelector('.wb-jump-sel');
+      if(sel){
+        sel.onchange = () => {
+          const pages = [...c.querySelectorAll('.a4')];
+          const target = pages[+sel.value];
+          if(target) (target.closest('.wb-page-unit') || target).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+      }
+      const topBtn = bar.querySelector('.wb-top-btn');
+      if(topBtn){
+        topBtn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
+  initWorkbenchViewBars();
+
   // 通用滑桿：捲動同步 active（批次滑桿的 scroll 監聽器會自動轉委派給 __sideRailSync）
   // select 模式（訂購頁）由下拉選單同步，不依賴 window scroll；scroll 模式用 body rail。
   window.addEventListener('scroll', () => {
     const box = $('batchMinimap');
     if(box && box.dataset.rail === 'generic') window.__sideRailSync();
+    ['preSheet','sheet','examSheet'].forEach(updateWorkbenchActivePage);
   }, {passive:true});
-  // 非同步產製完成後自動重建通用滑桿節點
+  // 非同步產製完成後自動重建通用滑桿節點與工作台預覽排版
   if(typeof MutationObserver !== 'undefined'){
     ['preSheet','sheet','examSheet'].forEach(id=>{
       const c = $(id); if(!c) return;
-      let lastCount = -1;
+      let lastCount = -1, syncTimer = null;
       new MutationObserver(()=>{
         const cnt = c.querySelectorAll('.a4').length;
         if(cnt !== lastCount){ lastCount = cnt; refreshGenericRail(); }
-      }).observe(c, {childList:true, subtree:true});
+        if(syncTimer) clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => syncWorkbenchPages(id), 60);
+      }).observe(c, {childList:true});
     });
     const sel = $('stPreviewSheetSel');
     if(sel){

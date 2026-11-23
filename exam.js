@@ -887,9 +887,9 @@ function svgBlockAdd(a,b){
   const xA=4, xPlus=xA+wA+14, xB=xPlus+14, W=xB+wB+4;
   const draw=(n,xOff)=>{
     const isTwo=n>5, y0=twoRows?(isTwo?4:12):4;
-    return Array.from({length:n},(_,i)=>`<rect x="${xOff+(i%5)*16}" y="${i>=5?20:y0}" width="13" height="13" fill="#e4e4e7" stroke="#222" stroke-width="1.2"/>`).join('');
+    return Array.from({length:n},(_,i)=>`<rect x="${xOff+(i%5)*16}" y="${i>=5?20:y0}" width="13" height="13" fill="#ffe5b4" stroke="#333" stroke-width="1.2"/>`).join('');
   };
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${draw(a,xA)}<text x="${xPlus}" y="${H/2}" dominant-baseline="central" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">＋</text>${draw(b,xB)}</svg>`;
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${draw(a,xA)}<text x="${xPlus}" y="${H/2}" dominant-baseline="central" text-anchor="middle" font-size="14" font-weight="bold" fill="#d33">＋</text>${draw(b,xB)}</svg>`;
 }
 function svgLengthCompare(order){
   const lens=[88,52,70];
@@ -6069,7 +6069,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-col-l{padding-right:14px;border-right:1px solid #bbb;min-height:100%}
 .ex-col-r{padding-left:14px}
 .ex-col-1{flex:1}
-.ex-sec{font-weight:700;font-size:1em;background:#f4f4f5;color:#111;padding:3px 8px;border-left:4px solid #111;margin:6px 0 6px}
+.ex-sec{font-weight:700;font-size:1em;background:#fff3df;color:#7a3b00;padding:3px 8px;border-left:4px solid #ff7a1a;margin:6px 0 6px}
 .ex-q{display:grid;grid-template-columns:auto 1fr;column-gap:6px;margin-bottom:var(--ex-gap,8px);break-inside:avoid;align-items:baseline}
 .ex-q .qno{font-weight:700;white-space:nowrap;padding-right:2px}
 .ex-q .qbody{min-width:0}
@@ -6099,7 +6099,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-hd h3{margin:0;font-size:1.22rem;letter-spacing:.06em;line-height:1.3}
 .ex-zh-hd .ex-sub{font-size:.8rem;color:#444;margin-right:4px;line-height:1.3}
 .ex-zh-hd .ex-zh-info{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:600;padding-bottom:32px}
-.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#f4f4f5;color:#111;padding:8px 4px;border-top:4px solid #111;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
+.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 3px;flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1.2px dashed #94a3b8;border-radius:5px;width:var(--zh-box-calc,2.6em);height:94%;margin:0 2px;flex:none}

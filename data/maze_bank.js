@@ -28,25 +28,25 @@
       id: 'baby', name: '幼幼迷宮（3～5歲）', short: '幼幼迷宮',
       cols: 6, rows: 8, cell: 106, wall: 6.5, icon: '🐥', goal: '🏠',
       story: '小雞找回家', hint: '從「起點」出發，幫小雞走到「終點」！', age: '3～5 歲',
-      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
+      color: '#fef3c7', accent: '#d97706', bg: '#ffffff'
     },
     brain: {
       id: 'brain', name: '動腦迷宮（5～7歲）', short: '動腦迷宮',
       cols: 9, rows: 12, cell: 72, wall: 5, icon: '🐟', goal: '🧒',
       story: '小魚找朋友', hint: '從「起點」出發，帶小魚游到「終點」！', age: '5～7 歲',
-      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
+      color: '#dbeafe', accent: '#1d4ed8', bg: '#ffffff'
     },
     creative: {
       id: 'creative', name: '創意迷宮（7～9歲）', short: '創意迷宮',
       cols: 12, rows: 16, cell: 54, wall: 4, icon: '🐝', goal: '🌻',
       story: '蜜蜂採花蜜', hint: '從「起點」出發，幫蜜蜂飛到花朵！', age: '7～9 歲',
-      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
+      color: '#dcfce7', accent: '#15803d', bg: '#ffffff'
     },
     challenge: {
       id: 'challenge', name: '進階迷宮（9～12歲）', short: '進階迷宮',
       cols: 15, rows: 20, cell: 43, wall: 3.2, icon: '🦁', goal: '💎',
       story: '勇士尋寶藏', hint: '從「起點」出發，跟著線索找到寶藏！', age: '9～12 歲',
-      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
+      color: '#ede9fe', accent: '#6d28d9', bg: '#ffffff'
     }
   };
 
@@ -141,23 +141,24 @@
     const H = maze.rows * cell + padTop + padBot;
     const ox = padX, oy = padTop;
     const parts = [
-      `<rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="14" fill="#ffffff" stroke="#111111" stroke-width="${Math.max(2, wall * 0.6)}"/>`
+      `<rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="14" fill="#ffffff" stroke="${lv.accent}" stroke-width="${Math.max(2.2, wall * 0.6)}"/>`
     ];
 
-    // 起點／終點柔和灰階底紋（純黑白省墨、幼兒一眼辨識）
+    // 起點／終點柔和底紋（白底省墨、起終點溫和標示讓幼兒一眼辨識）
     if(!showPath){
-      parts.push(`<rect x="${ox + 2}" y="${oy + 2}" width="${cell - 4}" height="${cell - 4}" rx="6" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4 3"/>`);
-      parts.push(`<rect x="${ox + (maze.cols - 1) * cell + 2}" y="${oy + (maze.rows - 1) * cell + 2}" width="${cell - 4}" height="${cell - 4}" rx="6" fill="#f3f4f6" stroke="#111111" stroke-width="1.8" stroke-dasharray="4 3"/>`);
+      parts.push(`<rect x="${ox + 2}" y="${oy + 2}" width="${cell - 4}" height="${cell - 4}" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+      parts.push(`<rect x="${ox + (maze.cols - 1) * cell + 2}" y="${oy + (maze.rows - 1) * cell + 2}" width="${cell - 4}" height="${cell - 4}" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.8" stroke-dasharray="4 3"/>`);
     }
 
-    // 解答路徑（純黑白深灰虛線＋起終圓點）
+    // 解答路徑（清晰橘色折線）
     if(showPath && maze.path.length > 1){
       const pts = maze.path.map(i => `${ox + (i % maze.cols + 0.5) * cell},${oy + (Math.floor(i / maze.cols) + 0.5) * cell}`).join(' ');
-      parts.push(`<polyline points="${pts}" fill="none" stroke="#555555" stroke-width="${Math.max(2.4, wall * 0.85)}" stroke-dasharray="${Math.max(5, cell * 0.22)} ${Math.max(3, cell * 0.14)}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      parts.push(`<polyline points="${pts}" fill="none" stroke="#f97316" stroke-opacity="0.28" stroke-width="${cell * 0.45}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      parts.push(`<polyline points="${pts}" fill="none" stroke="#ea580c" stroke-width="${Math.max(2.4, wall * 0.85)}" stroke-linecap="round" stroke-linejoin="round"/>`);
     }
 
     // 牆：起點頂牆／終點底牆留出入口缺口，其餘每格畫北、西牆與南、東外牆
-    const seg = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#111111" stroke-width="${wall}" stroke-linecap="round"/>`;
+    const seg = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1f2937" stroke-width="${wall}" stroke-linecap="round"/>`;
     for(let i = 0; i < maze.cols * maze.rows; i++){
       const x = i % maze.cols, y = Math.floor(i / maze.cols);
       const px = ox + x * cell, py = oy + y * cell;

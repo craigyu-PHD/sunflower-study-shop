@@ -1,38 +1,76 @@
 /* 台灣幼兒園運筆與符號啟蒙寫字帖資料庫 ＆ A4 滿版繪製引擎（小班／中班／大班：ㄅㄆㄇ、阿拉伯數字、ABC 整合編排） */
 (function(){
+  // 37 個注音符號：每一組詞彙與圖示均嚴格對應聲母／韻母音韻（含 3 組音韻詞彙輪替，共 111 組音韻配對）
   const ZY_ALL = [
-    {sym:'ㄅ', hint:'杯子', icon:'🥤'}, {sym:'ㄆ', hint:'葡萄', icon:'🍇'}, {sym:'ㄇ', hint:'貓咪', icon:'🐱'},
-    {sym:'ㄈ', hint:'飛機', icon:'✈️'}, {sym:'ㄉ', hint:'大象', icon:'🐘'}, {sym:'ㄊ', hint:'兔子', icon:'🐰'},
-    {sym:'ㄋ', hint:'牛奶', icon:'🥛'}, {sym:'ㄌ', hint:'獅子', icon:'🦁'}, {sym:'ㄍ', hint:'鴿子', icon:'🕊️'},
-    {sym:'ㄎ', hint:'恐龍', icon:'🦕'}, {sym:'ㄏ', hint:'河馬', icon:'🦛'}, {sym:'ㄐ', hint:'雞蛋', icon:'🥚'},
-    {sym:'ㄑ', hint:'氣球', icon:'🎈'}, {sym:'ㄒ', hint:'西瓜', icon:'🍉'}, {sym:'ㄓ', hint:'蜘蛛', icon:'🕷️'},
-    {sym:'ㄔ', hint:'尺子', icon:'📏'}, {sym:'ㄕ', hint:'書包', icon:'🎒'}, {sym:'ㄖ', hint:'太陽', icon:'🌞'},
-    {sym:'ㄗ', hint:'積木', icon:'🧱'}, {sym:'ㄘ', hint:'草莓', icon:'🍓'}, {sym:'ㄙ', hint:'雨傘', icon:'☂️'},
-    {sym:'ㄚ', hint:'鴨子', icon:'🦆'}, {sym:'ㄛ', hint:'公雞', icon:'🐓'}, {sym:'ㄜ', hint:'白鵝', icon:'🦢'},
-    {sym:'ㄝ', hint:'葉子', icon:'🍃'}, {sym:'ㄞ', hint:'愛心', icon:'❤️'}, {sym:'ㄟ', hint:'向日葵', icon:'🌻'},
-    {sym:'ㄠ', hint:'小貓', icon:'🐾'}, {sym:'ㄡ', hint:'海鷗', icon:'🐦'}, {sym:'ㄢ', hint:'平安', icon:'🍎'},
-    {sym:'ㄣ', hint:'森林', icon:'🌲'}, {sym:'ㄤ', hint:'糖果', icon:'🍬'}, {sym:'ㄥ', hint:'蜜蜂', icon:'🐝'},
-    {sym:'ㄦ', hint:'耳朵', icon:'👂'}, {sym:'ㄧ', hint:'衣服', icon:'👕'}, {sym:'ㄨ', hint:'烏龜', icon:'🐢'},
-    {sym:'ㄩ', hint:'小魚', icon:'🐟'}
+    {sym:'ㄅ', hint:'杯子', icon:'🥤', alts:[{hint:'杯子',icon:'🥤'},{hint:'包子',icon:'🥟'},{hint:'餅乾',icon:'🍪'}]},
+    {sym:'ㄆ', hint:'葡萄', icon:'🍇', alts:[{hint:'葡萄',icon:'🍇'},{hint:'蘋果',icon:'🍎'},{hint:'螃蟹',icon:'🦀'}]},
+    {sym:'ㄇ', hint:'貓咪', icon:'🐱', alts:[{hint:'貓咪',icon:'🐱'},{hint:'帽子',icon:'👒'},{hint:'蘑菇',icon:'🍄'}]},
+    {sym:'ㄈ', hint:'飛機', icon:'✈️', alts:[{hint:'飛機',icon:'✈️'},{hint:'風箏',icon:'🪁'},{hint:'番茄',icon:'🍅'}]},
+    {sym:'ㄉ', hint:'大象', icon:'🐘', alts:[{hint:'大象',icon:'🐘'},{hint:'蛋糕',icon:'🎂'},{hint:'袋鼠',icon:'🦘'}]},
+    {sym:'ㄊ', hint:'兔子', icon:'🐰', alts:[{hint:'兔子',icon:'🐰'},{hint:'太陽',icon:'🌞'},{hint:'糖果',icon:'🍬'}]},
+    {sym:'ㄋ', hint:'牛奶', icon:'🥛', alts:[{hint:'牛奶',icon:'🥛'},{hint:'檸檬',icon:'🍋'},{hint:'鬧鐘',icon:'⏰'}]},
+    {sym:'ㄌ', hint:'老虎', icon:'🐯', alts:[{hint:'老虎',icon:'🐯'},{hint:'梨子',icon:'🍐'},{hint:'禮物',icon:'🎁'}]},
+    {sym:'ㄍ', hint:'鴿子', icon:'🕊️', alts:[{hint:'鴿子',icon:'🕊️'},{hint:'狗狗',icon:'🐶'},{hint:'骨頭',icon:'🦴'}]},
+    {sym:'ㄎ', hint:'恐龍', icon:'🦕', alts:[{hint:'恐龍',icon:'🦕'},{hint:'卡車',icon:'🚚'},{hint:'褲子',icon:'👖'}]},
+    {sym:'ㄏ', hint:'河馬', icon:'🦛', alts:[{hint:'河馬',icon:'🦛'},{hint:'蝴蝶',icon:'🦋'},{hint:'猴子',icon:'🐵'}]},
+    {sym:'ㄐ', hint:'雞蛋', icon:'🥚', alts:[{hint:'雞蛋',icon:'🥚'},{hint:'積木',icon:'🧱'},{hint:'橘子',icon:'🍊'}]},
+    {sym:'ㄑ', hint:'氣球', icon:'🎈', alts:[{hint:'氣球',icon:'🎈'},{hint:'企鵝',icon:'🐧'},{hint:'鉛筆',icon:'✏️'}]},
+    {sym:'ㄒ', hint:'西瓜', icon:'🍉', alts:[{hint:'西瓜',icon:'🍉'},{hint:'香蕉',icon:'🍌'},{hint:'星星',icon:'⭐'}]},
+    {sym:'ㄓ', hint:'蜘蛛', icon:'🕷️', alts:[{hint:'蜘蛛',icon:'🕷️'},{hint:'小豬',icon:'🐷'},{hint:'竹子',icon:'🎍'}]},
+    {sym:'ㄔ', hint:'車子', icon:'🚗', alts:[{hint:'車子',icon:'🚗'},{hint:'長頸鹿',icon:'🦒'},{hint:'尺',icon:'📏'}]},
+    {sym:'ㄕ', hint:'獅子', icon:'🦁', alts:[{hint:'獅子',icon:'🦁'},{hint:'書包',icon:'🎒'},{hint:'大樹',icon:'🌳'}]},
+    {sym:'ㄖ', hint:'日曆', icon:'📅', alts:[{hint:'日曆',icon:'📅'},{hint:'熱狗',icon:'🌭'},{hint:'向日葵',icon:'🌻'}]},
+    {sym:'ㄗ', hint:'足球', icon:'⚽', alts:[{hint:'足球',icon:'⚽'},{hint:'鑽石',icon:'💎'},{hint:'嘴巴',icon:'👄'}]},
+    {sym:'ㄘ', hint:'草莓', icon:'🍓', alts:[{hint:'草莓',icon:'🍓'},{hint:'刺蝟',icon:'🦔'},{hint:'彩虹',icon:'🌈'}]},
+    {sym:'ㄙ', hint:'松鼠', icon:'🐿️', alts:[{hint:'松鼠',icon:'🐿️'},{hint:'森林',icon:'🌲'},{hint:'雨傘',icon:'☂️'}]},
+    {sym:'ㄚ', hint:'鴨子', icon:'🦆', alts:[{hint:'鴨子',icon:'🦆'},{hint:'牙齒',icon:'🦷'},{hint:'豆芽',icon:'🌱'}]},
+    {sym:'ㄛ', hint:'喔喔啼', icon:'🐓', alts:[{hint:'喔喔啼',icon:'🐓'},{hint:'巫婆',icon:'🧙‍♀️'},{hint:'鳳梨',icon:'🍍'}]},
+    {sym:'ㄜ', hint:'白鵝', icon:'🦢', alts:[{hint:'白鵝',icon:'🦢'},{hint:'河馬',icon:'🦛'},{hint:'車子',icon:'🚗'}]},
+    {sym:'ㄝ', hint:'葉子', icon:'🍃', alts:[{hint:'葉子',icon:'🍃'},{hint:'鞋子',icon:'👟'},{hint:'蝴蝶',icon:'🦋'}]},
+    {sym:'ㄞ', hint:'愛心', icon:'❤️', alts:[{hint:'愛心',icon:'❤️'},{hint:'白雲',icon:'☁️'},{hint:'海豚',icon:'🐬'}]},
+    {sym:'ㄟ', hint:'杯子', icon:'🥤', alts:[{hint:'杯子',icon:'🥤'},{hint:'飛機',icon:'✈️'},{hint:'草莓',icon:'🍓'}]},
+    {sym:'ㄠ', hint:'小貓', icon:'🐱', alts:[{hint:'小貓',icon:'🐱'},{hint:'水蜜桃',icon:'🍑'},{hint:'書包',icon:'🎒'}]},
+    {sym:'ㄡ', hint:'海鷗', icon:'🐦', alts:[{hint:'海鷗',icon:'🐦'},{hint:'小狗',icon:'🐶'},{hint:'猴子',icon:'🐵'}]},
+    {sym:'ㄢ', hint:'安全帽', icon:'⛑️', alts:[{hint:'安全帽',icon:'⛑️'},{hint:'帆船',icon:'⛵'},{hint:'雞蛋',icon:'🥚'}]},
+    {sym:'ㄣ', hint:'大門', icon:'🚪', alts:[{hint:'大門',icon:'🚪'},{hint:'森林',icon:'🌲'},{hint:'愛心',icon:'❤️'}]},
+    {sym:'ㄤ', hint:'糖果', icon:'🍬', alts:[{hint:'糖果',icon:'🍬'},{hint:'太陽',icon:'🌞'},{hint:'綿羊',icon:'🐑'}]},
+    {sym:'ㄥ', hint:'蜜蜂', icon:'🐝', alts:[{hint:'蜜蜂',icon:'🐝'},{hint:'燈籠',icon:'🏮'},{hint:'風箏',icon:'🪁'}]},
+    {sym:'ㄦ', hint:'耳朵', icon:'👂', alts:[{hint:'耳朵',icon:'👂'},{hint:'耳機',icon:'🎧'},{hint:'花兒',icon:'🌸'}]},
+    {sym:'ㄧ', hint:'衣服', icon:'👕', alts:[{hint:'衣服',icon:'👕'},{hint:'椅子',icon:'🪑'},{hint:'玉米',icon:'🌽'}]},
+    {sym:'ㄨ', hint:'烏龜', icon:'🐢', alts:[{hint:'烏龜',icon:'🐢'},{hint:'屋子',icon:'🏠'},{hint:'禮物',icon:'🎁'}]},
+    {sym:'ㄩ', hint:'玉米', icon:'🌽', alts:[{hint:'玉米',icon:'🌽'},{hint:'雨傘',icon:'☂️'},{hint:'金魚',icon:'🐟'}]}
   ];
 
   const ABC_ALL = [
-    {up:'A', lo:'a', hint:'Apple', icon:'🍎'}, {up:'B', lo:'b', hint:'Bear', icon:'🐻'},
-    {up:'C', lo:'c', hint:'Cat', icon:'🐱'}, {up:'D', lo:'d', hint:'Dog', icon:'🐶'},
-    {up:'E', lo:'e', hint:'Egg', icon:'🥚'}, {up:'F', lo:'f', hint:'Fish', icon:'🐟'},
-    {up:'G', lo:'g', hint:'Grape', icon:'🍇'}, {up:'H', lo:'h', hint:'House', icon:'🏠'},
-    {up:'I', lo:'i', hint:'Ice', icon:'🍦'}, {up:'J', lo:'j', hint:'Juice', icon:'🧃'},
-    {up:'K', lo:'k', hint:'Kite', icon:'🪁'}, {up:'L', lo:'l', hint:'Lion', icon:'🦁'},
-    {up:'M', lo:'m', hint:'Moon', icon:'🌙'}, {up:'N', lo:'n', hint:'Nest', icon:'🪺'},
-    {up:'O', lo:'o', hint:'Orange', icon:'🍊'}, {up:'P', lo:'p', hint:'Panda', icon:'🐼'},
-    {up:'Q', lo:'q', hint:'Queen', icon:'👑'}, {up:'R', lo:'r', hint:'Rabbit', icon:'🐰'},
-    {up:'S', lo:'s', hint:'Star', icon:'⭐'}, {up:'T', lo:'t', hint:'Tree', icon:'🌳'},
-    {up:'U', lo:'u', hint:'Umbrella', icon:'☂️'}, {up:'V', lo:'v', hint:'Van', icon:'🚐'},
-    {up:'W', lo:'w', hint:'Whale', icon:'🐳'}, {up:'X', lo:'x', hint:'X-ray', icon:'🩻'},
-    {up:'Y', lo:'y', hint:'Yo-yo', icon:'🪀'}, {up:'Z', lo:'z', hint:'Zebra', icon:'🦓'}
+    {up:'A', lo:'a', hint:'Apple', icon:'🍎', alts:[{hint:'Apple',icon:'🍎'},{hint:'Ant',icon:'🐜'},{hint:'Airplane',icon:'✈️'}]},
+    {up:'B', lo:'b', hint:'Bear', icon:'🐻', alts:[{hint:'Bear',icon:'🐻'},{hint:'Banana',icon:'🍌'},{hint:'Bus',icon:'🚌'}]},
+    {up:'C', lo:'c', hint:'Cat', icon:'🐱', alts:[{hint:'Cat',icon:'🐱'},{hint:'Cake',icon:'🎂'},{hint:'Car',icon:'🚗'}]},
+    {up:'D', lo:'d', hint:'Dog', icon:'🐶', alts:[{hint:'Dog',icon:'🐶'},{hint:'Duck',icon:'🦆'},{hint:'Drum',icon:'🥁'}]},
+    {up:'E', lo:'e', hint:'Egg', icon:'🥚', alts:[{hint:'Egg',icon:'🥚'},{hint:'Elephant',icon:'🐘'},{hint:'Ear',icon:'👂'}]},
+    {up:'F', lo:'f', hint:'Fish', icon:'🐟', alts:[{hint:'Fish',icon:'🐟'},{hint:'Frog',icon:'🐸'},{hint:'Flower',icon:'🌸'}]},
+    {up:'G', lo:'g', hint:'Grape', icon:'🍇', alts:[{hint:'Grape',icon:'🍇'},{hint:'Gift',icon:'🎁'},{hint:'Guitar',icon:'🎸'}]},
+    {up:'H', lo:'h', hint:'House', icon:'🏠', alts:[{hint:'House',icon:'🏠'},{hint:'Hat',icon:'👒'},{hint:'Heart',icon:'❤️'}]},
+    {up:'I', lo:'i', hint:'Ice cream', icon:'🍦', alts:[{hint:'Ice cream',icon:'🍦'},{hint:'Island',icon:'🏝️'},{hint:'Ice',icon:'🧊'}]},
+    {up:'J', lo:'j', hint:'Juice', icon:'🧃', alts:[{hint:'Juice',icon:'🧃'},{hint:'Jellyfish',icon:'🪼'},{hint:'Jacket',icon:'🧥'}]},
+    {up:'K', lo:'k', hint:'Kite', icon:'🪁', alts:[{hint:'Kite',icon:'🪁'},{hint:'Key',icon:'🔑'},{hint:'Koala',icon:'🐨'}]},
+    {up:'L', lo:'l', hint:'Lion', icon:'🦁', alts:[{hint:'Lion',icon:'🦁'},{hint:'Lemon',icon:'🍋'},{hint:'Leaf',icon:'🍃'}]},
+    {up:'M', lo:'m', hint:'Moon', icon:'🌙', alts:[{hint:'Moon',icon:'🌙'},{hint:'Monkey',icon:'🐵'},{hint:'Milk',icon:'🥛'}]},
+    {up:'N', lo:'n', hint:'Nest', icon:'🪺', alts:[{hint:'Nest',icon:'🪺'},{hint:'Nose',icon:'👃'},{hint:'Nut',icon:'🥜'}]},
+    {up:'O', lo:'o', hint:'Orange', icon:'🍊', alts:[{hint:'Orange',icon:'🍊'},{hint:'Owl',icon:'🦉'},{hint:'Octopus',icon:'🐙'}]},
+    {up:'P', lo:'p', hint:'Panda', icon:'🐼', alts:[{hint:'Panda',icon:'🐼'},{hint:'Pig',icon:'🐷'},{hint:'Peach',icon:'🍑'}]},
+    {up:'Q', lo:'q', hint:'Queen', icon:'👑', alts:[{hint:'Queen',icon:'👑'},{hint:'Question',icon:'❓'},{hint:'Quilt',icon:'🛏️'}]},
+    {up:'R', lo:'r', hint:'Rabbit', icon:'🐰', alts:[{hint:'Rabbit',icon:'🐰'},{hint:'Rainbow',icon:'🌈'},{hint:'Rocket',icon:'🚀'}]},
+    {up:'S', lo:'s', hint:'Star', icon:'⭐', alts:[{hint:'Star',icon:'⭐'},{hint:'Sun',icon:'🌞'},{hint:'Strawberry',icon:'🍓'}]},
+    {up:'T', lo:'t', hint:'Tree', icon:'🌳', alts:[{hint:'Tree',icon:'🌳'},{hint:'Tiger',icon:'🐯'},{hint:'Train',icon:'🚂'}]},
+    {up:'U', lo:'u', hint:'Umbrella', icon:'☂️', alts:[{hint:'Umbrella',icon:'☂️'},{hint:'Unicorn',icon:'🦄'},{hint:'Up',icon:'⬆️'}]},
+    {up:'V', lo:'v', hint:'Van', icon:'🚐', alts:[{hint:'Van',icon:'🚐'},{hint:'Violin',icon:'🎻'},{hint:'Volcano',icon:'🌋'}]},
+    {up:'W', lo:'w', hint:'Whale', icon:'🐳', alts:[{hint:'Whale',icon:'🐳'},{hint:'Watermelon',icon:'🍉'},{hint:'Watch',icon:'⌚'}]},
+    {up:'X', lo:'x', hint:'X-ray', icon:'🩻', alts:[{hint:'X-ray',icon:'🩻'},{hint:'Box',icon:'📦'},{hint:'Fox',icon:'🦊'}]},
+    {up:'Y', lo:'y', hint:'Yo-yo', icon:'🪀', alts:[{hint:'Yo-yo',icon:'🪀'},{hint:'Yacht',icon:'⛵'},{hint:'Yarn',icon:'🧶'}]},
+    {up:'Z', lo:'z', hint:'Zebra', icon:'🦓', alts:[{hint:'Zebra',icon:'🦓'},{hint:'Zoo',icon:'🦒'},{hint:'Zero',icon:'0️⃣'}]}
   ];
 
-  const NUM_ICONS = ['🍎','🐻','🌸','⭐','🐟','🍓','🎈','🐝','🦋','🌻','🚗','🍪','🐥','🍉','🚀','🎁','🐢','🌈','🦄','👑'];
+  const NUM_ICONS = ['🍎','🐥','🌸','⭐','🐟','🍓','🎈','🐝','🦋','🌻','🚗','🍪','🐰','🍉','🚀','🎁','🐢','🌈','🦄','👑'];
 
   function makeNumItem(n){
     const icon = NUM_ICONS[(n - 1) % NUM_ICONS.length];
@@ -53,11 +91,11 @@
       stageTitle: '運筆協調・感官啟蒙篇',
       cols: 5,
       rows: 6,
-      desc: '特大格防手痠：數字 1～5 具象點數描畫、注音 ㄅㄆㄇㄈ／ㄚㄛㄜ 聲韻初識、ABC 大寫 A～J 趣味描寫',
+      desc: '特大格防手痠：數字 1～5 具象點數描畫、注音 ㄅㄆㄇㄈ／ㄚㄛㄜㄧㄨㄩ 聲韻初識、ABC 大寫 A～J 趣味描寫',
       getItems(topic){
         const nums = [1,2,3,4,5].map(makeNumItem);
-        const zys = ZY_ALL.slice(0, 6).concat(ZY_ALL.slice(21, 24)).map(x=>({kind:'zy', ...x}));
-        const abcs = ABC_ALL.slice(0, 10).map(x=>({kind:'abc', sym:x.up, hint:x.hint, icon:x.icon}));
+        const zys = ZY_ALL.slice(0, 4).concat(ZY_ALL.slice(21, 24), ZY_ALL.slice(34, 37)).map(x=>({kind:'zy', ...x}));
+        const abcs = ABC_ALL.slice(0, 10).map(x=>({kind:'abc', sym:x.up, hint:x.hint, icon:x.icon, alts:x.alts}));
         if(topic === 'num') return nums;
         if(topic === 'zy') return zys;
         if(topic === 'abc') return abcs;
@@ -74,7 +112,7 @@
       getItems(topic){
         const nums = Array.from({length:10}, (_,i)=>makeNumItem(i+1));
         const zys = ZY_ALL.slice(0, 21).map(x=>({kind:'zy', ...x}));
-        const abcs = ABC_ALL.map(x=>({kind:'abc', sym:x.up, hint:x.hint, icon:x.icon}));
+        const abcs = ABC_ALL.map(x=>({kind:'abc', sym:x.up, hint:x.hint, icon:x.icon, alts:x.alts}));
         if(topic === 'num') return nums;
         if(topic === 'zy') return zys;
         if(topic === 'abc') return abcs;
@@ -92,7 +130,7 @@
         const nums = Array.from({length:20}, (_,i)=>makeNumItem(i+1))
           .concat([30,40,50,60,70,80,90,100].map(n=>({kind:'num', sym:String(n), hint:`${n}`, dots:0, icon:'🌟'})));
         const zys = ZY_ALL.map(x=>({kind:'zy', ...x}));
-        const abcs = ABC_ALL.map(x=>({kind:'abc', sym:`${x.up}${x.lo}`, hint:x.hint, icon:x.icon}));
+        const abcs = ABC_ALL.map(x=>({kind:'abc', sym:`${x.up}${x.lo}`, hint:x.hint, icon:x.icon, alts:x.alts}));
         if(topic === 'num') return nums;
         if(topic === 'zy') return zys;
         if(topic === 'abc') return abcs;
@@ -609,118 +647,7 @@
     }
   }
 
-  // 100+ 種純黑白幾何／生活／自然小圖示 Canvas 繪製器（取代彩色 Emoji，省墨且隨機搭配不重複）
-  function drawBwCanvasIcon(g, idx, cx, cy, r){
-    const k = ((idx % 108) + 108) % 108;
-    const sub = k % 18;
-    const variant = Math.floor(k / 18); // 0..5 共 6 組變化（18×6＝108 種黑白圖形）
-    g.save();
-    g.translate(cx, cy);
-    if(variant % 2 === 1) g.rotate((variant * 15) * Math.PI / 180);
-    g.strokeStyle = '#222222';
-    g.fillStyle = '#ffffff';
-    g.lineWidth = Math.max(1.3, r * 0.14);
-    g.lineJoin = 'round';
-    g.lineCap = 'round';
-    const R = r * (0.92 + (variant % 3) * 0.05);
-    g.beginPath();
-    if(sub === 0){ // 星星（5~8角）
-      const pts = 5 + (variant % 4);
-      for(let i=0;i<pts*2;i++){
-        const a = -Math.PI/2 + i*Math.PI/pts, rad = (i%2) ? R*0.45 : R;
-        if(i===0) g.moveTo(Math.cos(a)*rad, Math.sin(a)*rad);
-        else g.lineTo(Math.cos(a)*rad, Math.sin(a)*rad);
-      }
-      g.closePath(); g.fill(); g.stroke();
-    } else if(sub === 1){ // 花朵
-      const pet = 5 + (variant % 4);
-      for(let i=0;i<pet;i++){
-        const a = i*2*Math.PI/pet;
-        g.moveTo(Math.cos(a)*R*0.55 + R*0.36, Math.sin(a)*R*0.55);
-        g.arc(Math.cos(a)*R*0.55, Math.sin(a)*R*0.55, R*0.36, 0, Math.PI*2);
-      }
-      g.fill(); g.stroke();
-      g.beginPath(); g.arc(0,0,R*0.32,0,Math.PI*2); g.fill(); g.stroke();
-    } else if(sub === 2){ // 愛心
-      g.moveTo(0, R*0.85);
-      g.bezierCurveTo(-R*1.2, R*0.1, -R*0.95, -R*0.85, 0, -R*0.25);
-      g.bezierCurveTo(R*0.95, -R*0.85, R*1.2, R*0.1, 0, R*0.85);
-      g.closePath(); g.fill(); g.stroke();
-    } else if(sub === 3){ // 小魚
-      g.ellipse(-R*0.15, 0, R*0.72, R*0.48, 0, 0, Math.PI*2); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(R*0.52, 0); g.lineTo(R*0.98, -R*0.45); g.lineTo(R*0.98, R*0.45); g.closePath(); g.fill(); g.stroke();
-      g.beginPath(); g.arc(-R*0.42, -R*0.1, R*0.09, 0, Math.PI*2); g.fillStyle='#222'; g.fill();
-    } else if(sub === 4){ // 蘋果／水果
-      g.arc(0, R*0.12, R*0.75, 0, Math.PI*2); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(0, -R*0.62); g.quadraticCurveTo(R*0.2, -R*0.98, R*0.45, -R*0.82); g.stroke();
-    } else if(sub === 5){ // 房子
-      g.rect(-R*0.65, -R*0.1, R*1.3, R*0.9); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(-R*0.85, -R*0.1); g.lineTo(0, -R*0.9); g.lineTo(R*0.85, -R*0.1); g.closePath(); g.fill(); g.stroke();
-    } else if(sub === 6){ // 太陽
-      g.arc(0, 0, R*0.55, 0, Math.PI*2); g.fill(); g.stroke();
-      const rays = 8 + (variant % 4)*2;
-      g.beginPath();
-      for(let i=0;i<rays;i++){
-        const a = i*2*Math.PI/rays;
-        g.moveTo(Math.cos(a)*R*0.68, Math.sin(a)*R*0.68);
-        g.lineTo(Math.cos(a)*R*0.96, Math.sin(a)*R*0.96);
-      }
-      g.stroke();
-    } else if(sub === 7){ // 月亮
-      g.arc(0, 0, R*0.82, 0.4, Math.PI*2 - 0.4);
-      g.arc(R*0.35, 0, R*0.62, Math.PI*2 - 0.55, 0.55, true);
-      g.closePath(); g.fill(); g.stroke();
-    } else if(sub === 8){ // 雲朵
-      g.arc(-R*0.38, R*0.15, R*0.38, 0, Math.PI*2);
-      g.arc(0, -R*0.12, R*0.48, 0, Math.PI*2);
-      g.arc(R*0.42, R*0.15, R*0.36, 0, Math.PI*2);
-      g.fill(); g.stroke();
-    } else if(sub === 9){ // 蝴蝶
-      g.ellipse(-R*0.42, -R*0.25, R*0.45, R*0.32, -0.4, 0, Math.PI*2);
-      g.ellipse(R*0.42, -R*0.25, R*0.45, R*0.32, 0.4, 0, Math.PI*2);
-      g.ellipse(-R*0.35, R*0.32, R*0.35, R*0.25, 0.4, 0, Math.PI*2);
-      g.ellipse(R*0.35, R*0.32, R*0.35, R*0.25, -0.4, 0, Math.PI*2);
-      g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(0, -R*0.65); g.lineTo(0, R*0.65); g.stroke();
-    } else if(sub === 10){ // 小熊／動物臉
-      g.arc(-R*0.55, -R*0.55, R*0.28, 0, Math.PI*2); g.fill(); g.stroke();
-      g.beginPath(); g.arc(R*0.55, -R*0.55, R*0.28, 0, Math.PI*2); g.fill(); g.stroke();
-      g.beginPath(); g.arc(0, R*0.05, R*0.72, 0, Math.PI*2); g.fill(); g.stroke();
-      g.fillStyle='#222';
-      g.beginPath(); g.arc(-R*0.25, -R*0.05, R*0.09, 0, Math.PI*2); g.arc(R*0.25, -R*0.05, R*0.09, 0, Math.PI*2); g.fill();
-    } else if(sub === 11){ // 皇冠
-      g.moveTo(-R*0.75, R*0.55); g.lineTo(-R*0.85, -R*0.45); g.lineTo(-R*0.35, R*0.05);
-      g.lineTo(0, -R*0.65); g.lineTo(R*0.35, R*0.05); g.lineTo(R*0.85, -R*0.45); g.lineTo(R*0.75, R*0.55);
-      g.closePath(); g.fill(); g.stroke();
-    } else if(sub === 12){ // 帆船
-      g.moveTo(-R*0.8, R*0.25); g.lineTo(R*0.8, R*0.25); g.lineTo(R*0.55, R*0.75); g.lineTo(-R*0.55, R*0.75); g.closePath(); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(0, R*0.25); g.lineTo(0, -R*0.85); g.lineTo(R*0.65, R*0.1); g.closePath(); g.fill(); g.stroke();
-    } else if(sub === 13){ // 大樹
-      g.rect(-R*0.18, R*0.2, R*0.36, R*0.65); g.fill(); g.stroke();
-      g.beginPath(); g.arc(0, -R*0.22, R*0.62, 0, Math.PI*2); g.fill(); g.stroke();
-    } else if(sub === 14){ // 雨傘
-      g.arc(0, 0, R*0.82, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(0, 0); g.lineTo(0, R*0.68); g.arc(-R*0.15, R*0.68, R*0.15, 0, Math.PI); g.stroke();
-    } else if(sub === 15){ // 氣球
-      g.ellipse(0, -R*0.18, R*0.62, R*0.72, 0, 0, Math.PI*2); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(0, R*0.54); g.lineTo(0, R*0.95); g.stroke();
-    } else if(sub === 16){ // 多邊形寶石（3~8邊）
-      const sides = 3 + (variant % 6);
-      for(let i=0;i<sides;i++){
-        const a = -Math.PI/2 + i*2*Math.PI/sides;
-        if(i===0) g.moveTo(Math.cos(a)*R*0.88, Math.sin(a)*R*0.88);
-        else g.lineTo(Math.cos(a)*R*0.88, Math.sin(a)*R*0.88);
-      }
-      g.closePath(); g.fill(); g.stroke();
-    } else { // 小汽車
-      g.rect(-R*0.82, -R*0.05, R*1.64, R*0.52); g.fill(); g.stroke();
-      g.beginPath(); g.moveTo(-R*0.52, -R*0.05); g.lineTo(-R*0.32, -R*0.55); g.lineTo(R*0.32, -R*0.55); g.lineTo(R*0.52, -R*0.05); g.closePath(); g.fill(); g.stroke();
-      g.beginPath(); g.arc(-R*0.45, R*0.52, R*0.22, 0, Math.PI*2); g.arc(R*0.45, R*0.52, R*0.22, 0, Math.PI*2); g.fill(); g.stroke();
-    }
-    g.restore();
-  }
-
-  function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId, slotIdx){
+  function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId){
     const SCALE = 2;
     const cv = document.createElement('canvas');
     cv.width = cw * SCALE;
@@ -728,14 +655,14 @@
     const g = cv.getContext('2d');
     g.scale(SCALE, SCALE);
 
-    // 完全淡灰描寫版：整格淡灰底，不用紅框、田字格中線、筆順數字或逐筆累積
+    // 淡灰描寫版：整格淡灰底
     g.fillStyle = '#eef1f5';
     g.fillRect(0, 0, cw, chh);
 
     const pad = levelId === 'large' ? 2.5 : 3;
     const bx = pad, by = pad, bw = cw - pad*2, bh = chh - pad*2;
 
-    // 寫字格：淡灰外框＋淡灰田字虛線中線；不加入紅框、筆順數字或逐筆引導線
+    // 寫字格：淡灰外框＋淡灰田字虛線中線
     const drawCellGrid = (withMid)=>{
       g.save();
       g.strokeStyle = '#d3dae5';
@@ -753,7 +680,7 @@
     };
 
     if(rowIdx === 0){
-      // 頂格：保留插圖徽章＋點點提示；示範字改淡灰底上的深灰字，移除彩色／紅色外框
+      // 頂格：保留可愛彩色插圖徽章＋十格陣點點提示＋對應詞彙
       g.fillStyle = '#e9edf3';
       g.fillRect(bx, by, bw, bh);
       g.strokeStyle = '#cfd6e0';
@@ -769,17 +696,17 @@
         const iconCx = bx + 6 + circleR;
         const iconCy = by + 2 + topH * 0.50;
         g.save();
-        g.fillStyle = '#f1f5f9';
-        g.strokeStyle = '#cbd5e1';
-        g.lineWidth = 1;
+        g.fillStyle = item.kind === 'zy' ? '#ffedd5' : (item.kind === 'num' ? '#dcfce7' : '#dbeafe');
         g.beginPath();
         g.arc(iconCx, iconCy, circleR, 0, Math.PI * 2);
         g.fill();
-        g.stroke();
         g.restore();
 
-        const iconIdx = ((slotIdx || 0) * 37 + (item.sym ? item.sym.charCodeAt(0) : 0) * 13 + (levelId ? levelId.charCodeAt(0) : 0)) % 108;
-        drawBwCanvasIcon(g, iconIdx, iconCx, iconCy, circleR * 0.72);
+        const iconFs = Math.max(18, Math.round(topH * 0.68));
+        g.font = `${iconFs}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+        g.textBaseline = 'middle';
+        g.textAlign = 'center';
+        g.fillText(item.icon || '🌟', iconCx, iconCy + 1);
 
         if(item.kind === 'num' && item.dots > 0 && item.dots <= 10){
           const cnt = item.dots;
@@ -795,7 +722,7 @@
           const totalH = (rowsD - 1) * stepY;
           const baseCy = by + 2 + topH * 0.50 - totalH / 2;
           g.save();
-          g.fillStyle = '#222222';
+          g.fillStyle = '#15803d';
           for(let dIdx = 0; dIdx < cnt; dIdx++){
             const rI = Math.floor(dIdx / 5);
             const cI = dIdx % 5;
@@ -809,14 +736,14 @@
           }
           g.restore();
         } else if(item.kind === 'num' && item.dots > 10 && item.dots <= 20){
-          // 11～20：顯示「10」十位積木＋個位點點（20 顯示兩個「10」積木），不留空白
+          // 11～20：顯示「10」十位積木＋個位點點（20 顯示兩個「10」積木）
           const ones = item.dots - 10;
           const areaLeft = iconCx + circleR + 5;
           const areaRight = bx + bw - 5;
           const areaCy = by + 2 + topH * 0.50;
           g.save();
           const drawTenPill = (px, py, pw, ph) => {
-            g.fillStyle = '#222222';
+            g.fillStyle = '#f59e0b';
             g.beginPath();
             g.roundRect(px, py, pw, ph, 4);
             g.fill();
@@ -843,7 +770,7 @@
             const stepX = dotR * 2.45;
             const stepY = dotR * 2.55;
             const baseCy = areaCy - ((rowsD - 1) * stepY) / 2;
-            g.fillStyle = '#222222';
+            g.fillStyle = '#15803d';
             for(let dIdx = 0; dIdx < ones; dIdx++){
               const rI = Math.floor(dIdx / 5);
               const cI = dIdx % 5;
@@ -866,21 +793,21 @@
           const badgeW = Math.min(44, Math.max(28, areaRight - areaLeft));
           const badgeH = Math.min(18, Math.max(13, topH * 0.58));
           g.save();
-          g.fillStyle = '#f3f4f6';
-          g.strokeStyle = '#222222';
+          g.fillStyle = '#dcfce7';
+          g.strokeStyle = '#16a34a';
           g.lineWidth = 1.2;
           g.beginPath();
           g.roundRect(areaRight - badgeW, areaCy - badgeH / 2, badgeW, badgeH, 5);
           g.fill();
           g.stroke();
-          g.fillStyle = '#111111';
+          g.fillStyle = '#14532d';
           g.font = `800 ${Math.max(8, Math.round(badgeH * 0.62))}px "Noto Sans TC",sans-serif`;
           g.textAlign = 'center';
           g.textBaseline = 'middle';
           g.fillText(`10×${tens}`, areaRight - badgeW / 2, areaCy + 0.5);
           g.restore();
         } else {
-          g.fillStyle = '#222222';
+          g.fillStyle = '#5a2d00';
           const hintFs = Math.max(10, Math.min(13.5, Math.round(bw * 0.12)));
           g.font = `700 ${hintFs}px "Noto Sans TC","PingFang TC",sans-serif`;
           g.textAlign = 'right';
@@ -895,7 +822,7 @@
         g.stroke();
       }
 
-      // 示範格：淡灰底上的深灰示範字（保留插圖與提示；移除紅框、田字格中線、筆順圓點編號）
+      // 示範格：淡灰底上的深灰示範字
       const sym = String(item.sym);
       const gapPx = showIllust ? 2 : 3;
       const modelTop = showIllust ? (by + 2 + topH + gapPx) : (by + 2);
@@ -915,8 +842,7 @@
       return cv;
     }
 
-    // 淡灰描寫練習格：每格保留完整寫字格（淡灰外框＋田字虛線），格內為淡灰全字供幼兒直接描寫；
-    // 仍不使用紅框、筆順圓點編號或逐筆累積，維持原本淡灰描寫風格
+    // 淡灰描寫練習格
     drawCellGrid(true);
     const sym = String(item.sym);
     const len = sym.length;
@@ -937,11 +863,10 @@
   }
 
   const _preschoolUrlCache = new Map();
-  function drawPreschoolCellCached(item, rowIdx, totalRows, w, h, showIllust, levelId, slotIdx){
-    const sKey = rowIdx === 0 ? (slotIdx || 0) : 0;
-    const key = `${levelId}|${item.kind}|${item.sym}|${item.ex}|${rowIdx}|${totalRows}|${w}x${h}|${showIllust?1:0}|${sKey}`;
+  function drawPreschoolCellCached(item, rowIdx, totalRows, w, h, showIllust, levelId){
+    const key = `${levelId}|${item.kind}|${item.sym}|${item.hint||''}|${item.icon||''}|${rowIdx}|${totalRows}|${w}x${h}|${showIllust?1:0}`;
     if(_preschoolUrlCache.has(key)) return _preschoolUrlCache.get(key);
-    const cv = drawPreschoolCell(item, rowIdx, totalRows, w, h, showIllust, levelId, sKey);
+    const cv = drawPreschoolCell(item, rowIdx, totalRows, w, h, showIllust, levelId);
     const url = cv.toDataURL();
     if(_preschoolUrlCache.size > 600){
       const first = _preschoolUrlCache.keys().next().value;
@@ -955,11 +880,26 @@
     const levelId = PRESCHOOL_LEVELS[cfg.level] ? cfg.level : 'small';
     const lvl = PRESCHOOL_LEVELS[levelId];
     const topic = cfg.topic || 'all';
-    // 著色本／彩虹繪本由 preschool_art.js 產製（同一套幼兒園版型、浮水印與雙面頁數規則）
     if((topic === 'color' || topic === 'dots' || topic === 'train' || topic === 'count' || topic === 'line') && window.PRESCHOOL_ART) return window.PRESCHOOL_ART.buildPages({ ...cfg, level: levelId, topic }, lvl);
-    const baseItems = lvl.getItems(topic);
+    const rawItems = lvl.getItems(topic);
     const cols = lvl.cols;
     const rows = lvl.rows;
+    // 三合一綜合順序（all）：讓「數字」「注音」「ABC」各自湊滿整頁欄數，絕不在同一頁混排注音與英文
+    let baseItems = rawItems;
+    if(topic === 'all'){
+      const padCat = (arr) => {
+        if(!arr.length) return [];
+        const target = Math.ceil(arr.length / cols) * cols;
+        const out = [];
+        for(let i = 0; i < target; i++) out.push(arr[i % arr.length]);
+        return out;
+      };
+      baseItems = [
+        ...padCat( lvl.getItems('num') ),
+        ...padCat( lvl.getItems('zy') ),
+        ...padCat( lvl.getItems('abc') )
+      ];
+    }
     const sheets = Math.max(1, Math.min(30, +(cfg.sheets || 1)));
     let wantPages = cfg.singlePass ? Math.max(2, Math.ceil(baseItems.length / cols)) : (sheets * 2);
     if(wantPages % 2 === 1) wantPages += 1;
@@ -968,11 +908,20 @@
     const cpr = window.COPYRIGHT_STATEMENT || '🌻 向日葵國小伴學誌｜幼兒園適齡運筆啟蒙・專屬訂製請勿轉售';
     const topicLabel = { all:'ㄅㄆㄇ・數字・ABC 綜合進度', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）' }[topic] || '綜合練習';
 
-    // 依所選班別與順序展開項目，並確保每頁每一欄皆 100% 填滿不留白
+    // 依所選班別與順序展開項目；重複輪替時自動切換同音韻的第二／第三組詞彙與圖示
     const totalSlots = wantPages * cols;
     const expanded = [];
+    const seenPerSym = {};
     for(let i = 0; i < totalSlots; i++){
-      expanded.push(baseItems[i % baseItems.length]);
+      const base = baseItems[i % baseItems.length];
+      const rIdx = (seenPerSym[base.sym] = (seenPerSym[base.sym] || 0));
+      seenPerSym[base.sym] = rIdx + 1;
+      if(base.alts && base.alts.length){
+        const alt = base.alts[rIdx % base.alts.length];
+        expanded.push({ ...base, hint: alt.hint, icon: alt.icon });
+      } else {
+        expanded.push(base);
+      }
     }
 
     const previewIdx = cfg.sampleLimit ? Math.max(0, +(cfg.previewPageIdx || 0)) : -1;
@@ -1001,13 +950,13 @@
       hd.className = 'pre-a4-hd';
       hd.innerHTML = `
         <div class="pre-a4-title">
-          <b>向日葵幼兒園寫字帖｜${lvl.name}</b>
+          <b>🐣 向日葵幼兒園寫字帖｜${lvl.name}</b>
           <span>${lvl.stageTitle}・${topicLabel}</span>
         </div>
         <div class="pre-a4-info">
           <span>寶貝姓名：<span class="pre-name-box"></span></span>
           <span>日期：　 月　 日</span>
-          <span>☆☆☆</span>
+          <span>⭐🌟</span>
         </div>`;
       pg.appendChild(hd);
 
@@ -1016,10 +965,9 @@
       const slice = expanded.slice(pIdx * cols, (pIdx + 1) * cols);
 
       slice.forEach((item, c) => {
-        const slotIdx = pIdx * cols + c;
         for(let r = 0; r < rows; r++){
           const im = document.createElement('img');
-          im.src = drawPreschoolCellCached(item, r, rows, cwMax, chh, showIllust, levelId, slotIdx);
+          im.src = drawPreschoolCellCached(item, r, rows, cwMax, chh, showIllust, levelId);
           im.style.cssText = `position:absolute;left:${leftOff + c * cwMax}px;top:${topOff + r * chh}px;width:${cwMax}px;height:${chh}px;display:block`;
           pg.appendChild(im);
         }
