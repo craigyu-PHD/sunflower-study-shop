@@ -24,6 +24,9 @@ function uniqueOpts(ans, cand){
 // 格式：詞語 -> 以空白分隔之各字注音；若某字用 '_' 代表沿用 ZY_DATA 單字預設音
 const POLY_PHRASE_RAW = {
   // 0b. 本輪補強（家長試用回饋＋自動審查發現的錯讀）
+  '相機':'ㄒㄧㄤˋ ㄐㄧ',
+  '調色盤':'ㄊㄧㄠˊ ㄙㄜˋ ㄆㄢˊ',
+  '調色':'ㄊㄧㄠˊ ㄙㄜˋ',
   '種了':'ㄓㄨㄥˋ _',
   '種地':'ㄓㄨㄥˋ _',
   '種好':'ㄓㄨㄥˋ _',
@@ -878,8 +881,15 @@ function svgDicePair(a,b){
   return `<svg width="86" height="32" viewBox="0 0 86 32" xmlns="http://www.w3.org/2000/svg">${svgDice(a,4)}<text x="43" y="21" text-anchor="middle" font-size="12" fill="#333">和</text>${svgDice(b,54)}</svg>`;
 }
 function svgBlockAdd(a,b){
-  const draw=(n,xOff)=>Array.from({length:n},(_,i)=>`<rect x="${xOff+(i%5)*16}" y="${i>=5?20:4}" width="13" height="13" fill="#ffe5b4" stroke="#333" stroke-width="1.2"/>`).join('');
-  return `<svg width="185" height="38" viewBox="0 0 185 38" xmlns="http://www.w3.org/2000/svg">${draw(a,4)}<text x="92" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#d33">＋</text>${draw(b,102)}</svg>`;
+  const twoRows=(a>5||b>5), H=twoRows?38:22;
+  const colsA=Math.min(Math.max(1,a),5), colsB=Math.min(Math.max(1,b),5);
+  const wA=colsA*16-3, wB=colsB*16-3;
+  const xA=4, xPlus=xA+wA+14, xB=xPlus+14, W=xB+wB+4;
+  const draw=(n,xOff)=>{
+    const isTwo=n>5, y0=twoRows?(isTwo?4:12):4;
+    return Array.from({length:n},(_,i)=>`<rect x="${xOff+(i%5)*16}" y="${i>=5?20:y0}" width="13" height="13" fill="#e4e4e7" stroke="#222" stroke-width="1.2"/>`).join('');
+  };
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${draw(a,xA)}<text x="${xPlus}" y="${H/2}" dominant-baseline="central" text-anchor="middle" font-size="14" font-weight="bold" fill="#111">＋</text>${draw(b,xB)}</svg>`;
 }
 function svgLengthCompare(order){
   const lens=[88,52,70];
@@ -6059,7 +6069,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-col-l{padding-right:14px;border-right:1px solid #bbb;min-height:100%}
 .ex-col-r{padding-left:14px}
 .ex-col-1{flex:1}
-.ex-sec{font-weight:700;font-size:1em;background:#fff3df;color:#7a3b00;padding:3px 8px;border-left:4px solid #ff7a1a;margin:6px 0 6px}
+.ex-sec{font-weight:700;font-size:1em;background:#f4f4f5;color:#111;padding:3px 8px;border-left:4px solid #111;margin:6px 0 6px}
 .ex-q{display:grid;grid-template-columns:auto 1fr;column-gap:6px;margin-bottom:var(--ex-gap,8px);break-inside:avoid;align-items:baseline}
 .ex-q .qno{font-weight:700;white-space:nowrap;padding-right:2px}
 .ex-q .qbody{min-width:0}
@@ -6089,7 +6099,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-hd h3{margin:0;font-size:1.22rem;letter-spacing:.06em;line-height:1.3}
 .ex-zh-hd .ex-sub{font-size:.8rem;color:#444;margin-right:4px;line-height:1.3}
 .ex-zh-hd .ex-zh-info{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;font-weight:600;padding-bottom:32px}
-.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:8px 4px;border-top:4px solid #ff7a1a;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
+.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#f4f4f5;color:#111;padding:8px 4px;border-top:4px solid #111;margin:0 4px;height:100%;flex:none;font-size:.96em;line-height:1.25;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 3px;flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 .ex-zh-q .qbox{border:1.2px dashed #94a3b8;border-radius:5px;width:var(--zh-box-calc,2.6em);height:94%;margin:0 2px;flex:none}
@@ -7213,14 +7223,17 @@ function renderWeeklyDashboard(orders){
   const st=computeWeeklyStats(orders);
   const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
   const md=d=>`${d.getMonth()+1}/${d.getDate()}`;
-  if(!st.weeks.length){ host.innerHTML='<div class="wk-panel"><div class="wk-title">📈 每週營收統計</div><div class="wk-empty">還沒有帶下單時間的訂單；有訂單後這裡會自動畫出每週長條圖與累積曲線。</div></div>'; return; }
+  if(!st.weeks.length){
+    host.innerHTML='<details class="wk-collapse"><summary class="wk-sum">📈 每週營收統計 <span class="wk-sum-pill">尚無帶時間訂單・點擊展開</span></summary><div class="wk-panel"><div class="wk-empty">還沒有帶下單時間的訂單；有訂單後這裡會自動畫出每週長條圖與累積曲線。</div></div></details>';
+    return;
+  }
   const W=st.weeks, n=W.length, cur=W[n-1], prev=n>1?W[n-2]:null;
   const best=W.reduce((a,w)=>w.amount>a.amount?w:a,W[0]);
   const avg=st.total.amount/n;
   const wow=prev&&prev.amount>0?(cur.amount-prev.amount)/prev.amount:null;
   const planName={exam:'測驗卷',stroke:'寫字帖',both:'綜合包',preschool:'幼兒園',maze:'迷宮',other:'其他'};
   const planAgg={}; W.forEach(w=>Object.keys(w.byPlan).forEach(k=>planAgg[k]=(planAgg[k]||0)+w.byPlan[k]));
-  const planCol={exam:'#38bdf8',stroke:'#a78bfa',both:'#f472b6',preschool:'#fbbf24',maze:'#34d399',other:'#94a3b8'};
+  const planCol={exam:'#0ea5e9',stroke:'#8b5cf6',both:'#ec4899',preschool:'#f59e0b',maze:'#10b981',other:'#94a3b8'};
   const CW=Math.max(640,Math.min(1100,n*70+140)), CH=260, L=56, R=56, T=18, B=34, iw=CW-L-R, ih=CH-T-B;
   const maxBar=Math.max(1,...W.map(w=>w.amount)), maxCum=Math.max(1,st.total.amount);
   const bw=Math.min(46,iw/n*0.62), step=iw/n;
@@ -7228,16 +7241,16 @@ function renderWeeklyDashboard(orders){
   W.forEach((w,i)=>{
     const x=L+step*i+step/2, hb=ih*w.amount/maxBar, hp=ih*w.paid/maxBar;
     bars+=`<g><title>${md(w.start)} 起｜${w.orders} 筆・${w.sheets} 張｜${fmt(w.amount)}（已入帳 ${fmt(w.paid)}）</title>`+
-      `<rect x="${x-bw/2}" y="${T+ih-hb}" width="${bw}" height="${hb}" rx="6" fill="url(#wkBar)" opacity=".55"/>`+
+      `<rect x="${x-bw/2}" y="${T+ih-hb}" width="${bw}" height="${hb}" rx="6" fill="url(#wkBar)" opacity=".45"/>`+
       `<rect x="${x-bw/2}" y="${T+ih-hp}" width="${bw}" height="${hp}" rx="6" fill="url(#wkBar)"/></g>`;
     pts.push([x,T+ih-ih*w.cum/maxCum]); ptsPaid.push([x,T+ih-ih*w.cumPaid/maxCum]);
-    if(n<=16||i%Math.ceil(n/16)===0) xl+=`<text x="${x}" y="${CH-12}" text-anchor="middle" font-size="11" fill="#94a3b8">${md(w.start)}</text>`;
+    if(n<=16||i%Math.ceil(n/16)===0) xl+=`<text x="${x}" y="${CH-12}" text-anchor="middle" font-size="11" fill="#475569">${md(w.start)}</text>`;
   });
   const path=pp=>pp.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
   const smooth=pp=>{ if(pp.length<3) return path(pp); let d='M'+pp[0][0].toFixed(1)+' '+pp[0][1].toFixed(1); for(let i=1;i<pp.length;i++){const a=pp[i-1],b=pp[i],cx=(a[0]+b[0])/2; d+=` C${cx.toFixed(1)} ${a[1].toFixed(1)} ${cx.toFixed(1)} ${b[1].toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;} return d; };
-  let grid=''; for(let g=0;g<=4;g++){ const y=T+ih*g/4; grid+=`<line x1="${L}" y1="${y}" x2="${CW-R}" y2="${y}" stroke="#1e293b" stroke-width="1"/><text x="${L-8}" y="${y+4}" text-anchor="end" font-size="10" fill="#64748b">${fmt(maxBar*(4-g)/4)}</text><text x="${CW-R+8}" y="${y+4}" font-size="10" fill="#7dd3fc">${fmt(maxCum*(4-g)/4)}</text>`; }
+  let grid=''; for(let g=0;g<=4;g++){ const y=T+ih*g/4; grid+=`<line x1="${L}" y1="${y}" x2="${CW-R}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/><text x="${L-8}" y="${y+4}" text-anchor="end" font-size="10" fill="#64748b">${fmt(maxBar*(4-g)/4)}</text><text x="${CW-R+8}" y="${y+4}" font-size="10" fill="#0284c7">${fmt(maxCum*(4-g)/4)}</text>`; }
   const area=smooth(pts)+` L${pts[pts.length-1][0].toFixed(1)} ${T+ih} L${pts[0][0].toFixed(1)} ${T+ih} Z`;
-  const dots=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="#0f172a" stroke="#22d3ee" stroke-width="2.5"/>`).join('');
+  const dots=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="#ffffff" stroke="#06b6d4" stroke-width="2.5"/>`).join('');
   const planTot=Object.values(planAgg).reduce((a,b)=>a+b,0)||1;
   const planBar=Object.keys(planAgg).sort((a,b)=>planAgg[b]-planAgg[a]).map(k=>`<div title="${planName[k]||k} ${fmt(planAgg[k])}" style="flex:${planAgg[k]};background:${planCol[k]||'#94a3b8'};height:14px"></div>`).join('');
   const planLg=Object.keys(planAgg).sort((a,b)=>planAgg[b]-planAgg[a]).map(k=>`<span><i style="background:${planCol[k]||'#94a3b8'}"></i>${planName[k]||k} ${fmt(planAgg[k])}（${Math.round(planAgg[k]/planTot*100)}%）</span>`).join('');
@@ -7246,28 +7259,31 @@ function renderWeeklyDashboard(orders){
   const dayBars=dayAgg.map((c,i)=>`<div class="wk-day"><div style="height:${Math.max(3,c/maxDay*54)}px"></div><small>${dayName[i]}</small><b>${c}</b></div>`).join('');
   const wowTxt=wow===null?'—':`${wow>=0?'▲':'▼'} ${Math.abs(Math.round(wow*100))}%`;
   const rows=W.slice().reverse().slice(0,12).map(w=>`<tr><td>${md(w.start)}～${md(new Date(w.start.getTime()+6*86400000))}</td><td>${w.orders}</td><td>${w.sheets}</td><td>${fmt(w.amount)}</td><td>${fmt(w.paid)}</td><td>${fmt(w.cum)}</td><td>${w.growth===null?'—':(w.growth>=0?'▲':'▼')+Math.abs(Math.round(w.growth*100))+'%'}</td></tr>`).join('');
-  host.innerHTML=`<div class="wk-panel">
-    <div class="wk-title">📈 每週營收統計　<small>以週一為一週起點，自動累計；長條＝每週金額（深色＝已入帳），曲線＝累積金額</small></div>
-    <div class="wk-kpis">
-      <div class="wk-k"><span>累積營收</span><b>${fmt(st.total.amount)}</b><small>已入帳 ${fmt(st.total.paid)}</small></div>
-      <div class="wk-k"><span>本週（${md(cur.start)} 起）</span><b>${fmt(cur.amount)}</b><small>${cur.orders} 筆・${cur.sheets} 張　較上週 ${wowTxt}</small></div>
-      <div class="wk-k"><span>週平均</span><b>${fmt(avg)}</b><small>共 ${n} 週・${st.total.orders} 筆</small></div>
-      <div class="wk-k"><span>最佳一週</span><b>${fmt(best.amount)}</b><small>${md(best.start)} 起・${best.orders} 筆</small></div>
-      <div class="wk-k"><span>平均客單價</span><b>${fmt(st.total.orders?st.total.amount/st.total.orders:0)}</b><small>每筆 ${st.total.orders?(st.total.sheets/st.total.orders).toFixed(1):0} 張</small></div>
+  host.innerHTML=`<details class="wk-collapse">
+    <summary class="wk-sum">📈 每週營收統計 <span class="wk-sum-pill">累積 ${fmt(st.total.amount)}｜本週 ${fmt(cur.amount)}｜點擊展開</span></summary>
+    <div class="wk-panel">
+      <div class="wk-title">📈 每週營收統計　<small>以週一為一週起點，自動累計；長條＝每週金額（深色＝已入帳），曲線＝累積金額</small></div>
+      <div class="wk-kpis">
+        <div class="wk-k"><span>累積營收</span><b>${fmt(st.total.amount)}</b><small>已入帳 ${fmt(st.total.paid)}</small></div>
+        <div class="wk-k"><span>本週（${md(cur.start)} 起）</span><b>${fmt(cur.amount)}</b><small>${cur.orders} 筆・${cur.sheets} 張　較上週 ${wowTxt}</small></div>
+        <div class="wk-k"><span>週平均</span><b>${fmt(avg)}</b><small>共 ${n} 週・${st.total.orders} 筆</small></div>
+        <div class="wk-k"><span>最佳一週</span><b>${fmt(best.amount)}</b><small>${md(best.start)} 起・${best.orders} 筆</small></div>
+        <div class="wk-k"><span>平均客單價</span><b>${fmt(st.total.orders?st.total.amount/st.total.orders:0)}</b><small>每筆 ${st.total.orders?(st.total.sheets/st.total.orders).toFixed(1):0} 張</small></div>
+      </div>
+      <div class="wk-chart"><svg viewBox="0 0 ${CW} ${CH}" width="100%" style="max-width:${CW}px">
+        <defs><linearGradient id="wkBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ec4899"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+        <linearGradient id="wkArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#06b6d4" stop-opacity=".22"/><stop offset="1" stop-color="#06b6d4" stop-opacity="0"/></linearGradient></defs>
+        ${grid}${bars}<path d="${area}" fill="url(#wkArea)"/><path d="${smooth(ptsPaid)}" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5 4"/><path d="${smooth(pts)}" fill="none" stroke="#06b6d4" stroke-width="3.2" stroke-linecap="round"/>${dots}${xl}
+      </svg></div>
+      <div class="wk-legend"><span><i style="background:#6366f1"></i>每週金額</span><span><i style="background:#06b6d4"></i>累積營收（右軸）</span><span><i style="background:#10b981"></i>累積已入帳</span></div>
+      <div class="wk-grid2">
+        <div><div class="wk-sub">產品類型營收占比</div><div style="display:flex;border-radius:7px;overflow:hidden">${planBar}</div><div class="wk-plans">${planLg}</div></div>
+        <div><div class="wk-sub">下單星期分布（筆）</div><div class="wk-days">${dayBars}</div></div>
+      </div>
+      <details class="wk-det"><summary>📋 每週明細（最近 12 週）${st.undated?`｜另有 ${st.undated} 筆未填下單時間，未納入`:''}</summary>
+        <table><thead><tr><th>週別</th><th>訂單</th><th>張數</th><th>金額</th><th>已入帳</th><th>累積</th><th>週成長</th></tr></thead><tbody>${rows}</tbody></table></details>
     </div>
-    <div class="wk-chart"><svg viewBox="0 0 ${CW} ${CH}" width="100%" style="max-width:${CW}px">
-      <defs><linearGradient id="wkBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
-      <linearGradient id="wkArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity=".35"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></linearGradient></defs>
-      ${grid}${bars}<path d="${area}" fill="url(#wkArea)"/><path d="${smooth(ptsPaid)}" fill="none" stroke="#4ade80" stroke-width="2" stroke-dasharray="5 4"/><path d="${smooth(pts)}" fill="none" stroke="#22d3ee" stroke-width="3.5" stroke-linecap="round"/>${dots}${xl}
-    </svg></div>
-    <div class="wk-legend"><span><i style="background:#6366f1"></i>每週金額</span><span><i style="background:#22d3ee"></i>累積營收（右軸）</span><span><i style="background:#4ade80"></i>累積已入帳</span></div>
-    <div class="wk-grid2">
-      <div><div class="wk-sub">產品類型營收占比</div><div style="display:flex;border-radius:7px;overflow:hidden">${planBar}</div><div class="wk-plans">${planLg}</div></div>
-      <div><div class="wk-sub">下單星期分布（筆）</div><div class="wk-days">${dayBars}</div></div>
-    </div>
-    <details class="wk-det"><summary>📋 每週明細（最近 12 週）${st.undated?`｜另有 ${st.undated} 筆未填下單時間，未納入`:''}</summary>
-      <table><thead><tr><th>週別</th><th>訂單</th><th>張數</th><th>金額</th><th>已入帳</th><th>累積</th><th>週成長</th></tr></thead><tbody>${rows}</tbody></table></details>
-  </div>`;
+  </details>`;
 }
 window.renderWeeklyDashboard=renderWeeklyDashboard;
 

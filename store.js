@@ -491,7 +491,7 @@ function updateItemPriceHint(){
     const scName = getStoreScopeName($('stLazyScope')?.value || 'all');
     if($('stQtyUnit')) $('stQtyUnit').textContent = '組（20張）';
     if($('stItemPriceHint')){
-      $('stItemPriceHint').textContent = `（${qty} 組・共 ${sheets} 張不重複評量卷 × $5 ＝ 小計 NT$ ${sheets*5} 元）`;
+      $('stItemPriceHint').textContent = `（${qty} 組・共 ${sheets} 張評量卷 × $5 ＝ 小計 NT$ ${sheets*5} 元）`;
     }
     pickSummary = `<b>📝 評量綜合包</b>｜國小 ${g} 年級${sem}學期・${pubName}｜<b>${subj}</b>（${scName}）｜共 ${sheets} 張（$${sheets*5}）`;
   } else if(packMode === 'stroke_pack'){
@@ -509,31 +509,26 @@ function updateItemPriceHint(){
     pickSummary = `<b>✍️ 生字練習本</b>｜國小 ${g} 年級${sem}學期・${pubName}｜已選 <b>${lsCnt} 課</b>（${spMode}・${spCols}欄）｜共 ${sheets} 張（$${sheets*5}）`;
   } else if(packMode === 'preschool_pack'){
     const preSheets = +($('stPreSheets')?.value || 10);
+    const topic = $('stPreTopic')?.value || 'all';
     sheets = qty * preSheets;
-    const lvlMap = {small:'小班（3～4歲）', mid:'中班（4～5歲）', large:'大班（5～6歲）'};
-    const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC', color:'著色本', dots:'數字連連看', train:'加法列車', count:'數一數連連看', line:'運筆描線'};
-    const lvlTxt = lvlMap[$('stPreLevel')?.value || 'small'] || '小班';
-    const topTxt = topMap[$('stPreTopic')?.value || 'all'] || '綜合';
     if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${preSheets}張）`;
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = sheets >= 20
         ? `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元・已達 20 張可直接出貨！）`
         : `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元；購物車累計滿 20 張出貨）`;
     }
-    pickSummary = `<b>🐣 幼兒園寫字帖</b>｜${lvlTxt}｜${topTxt}｜共 ${sheets} 張（$${sheets*5}）`;
-  } else if(packMode === 'maze_pack'){
-    const mzSheets = +($('stMazeSheets')?.value || 10);
-    sheets = qty * mzSheets;
-    const mLv = (window.MAZE_BANK?.levels || {})[$('stMazeLevel')?.value || 'baby'];
-    const lvName = mLv ? mLv.short : '幼幼迷宮';
-    const ansTxt = $('stMazeAns')?.checked === false ? '不含解答' : '附解答頁';
-    if($('stQtyUnit')) $('stQtyUnit').textContent = `本（${mzSheets}張）`;
-    if($('stItemPriceHint')){
-      $('stItemPriceHint').textContent = sheets >= 20
-        ? `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元・已達 20 張可直接出貨！）`
-        : `（${sheets} 張 × $5 ＝ 小計 NT$ ${sheets*5} 元；購物車累計滿 20 張出貨）`;
+    if(topic === 'maze'){
+      const mLv = (window.MAZE_BANK?.levels || {})[$('stMazeLevel')?.value || 'baby'];
+      const lvName = mLv ? mLv.short : '幼幼迷宮';
+      const ansTxt = $('stMazeAns')?.checked === false ? '不含解答' : '附解答頁';
+      pickSummary = `<b>🌀 迷宮遊戲本</b>｜${lvName}｜${preSheets*2} 題／本・${ansTxt}｜共 ${sheets} 張（$${sheets*5}）`;
+    } else {
+      const lvlMap = {small:'小班（3～4歲）', mid:'中班（4～5歲）', large:'大班（5～6歲）'};
+      const topMap = {all:'ㄅㄆㄇ・123・ABC 綜合', zy:'注音ㄅㄆㄇ', num:'數字123', abc:'英文字母ABC', color:'著色本', dots:'數字連連看', train:'加法列車', count:'數一數連連看', line:'運筆描線'};
+      const lvlTxt = lvlMap[$('stPreLevel')?.value || 'small'] || '小班';
+      const topTxt = topMap[topic] || '綜合';
+      pickSummary = `<b>🐣 幼兒園教材</b>｜${lvlTxt}｜${topTxt}｜共 ${sheets} 張（$${sheets*5}）`;
     }
-    pickSummary = `<b>🌀 迷宮遊戲本</b>｜${lvName}｜${mzSheets*4} 題／本・${ansTxt}｜共 ${sheets} 張（$${sheets*5}）`;
   } else {
     sheets = qty;
     const price = qty * 5;
@@ -575,9 +570,21 @@ function getPreviewSheetMeta(){
 
   if(packMode === 'preschool_pack'){
     const preSheets = +($('stPreSheets')?.value || 10);
+    const topic = $('stPreTopic')?.value || 'all';
+    if(topic === 'maze'){
+      const lvlId = $('stMazeLevel')?.value || 'baby';
+      const lvName = (window.MAZE_BANK?.levels || {})[lvlId]?.short || '幼幼迷宮';
+      const list = [];
+      for(let i = 0; i < preSheets; i++){
+        list.push({ idx: i, type: 'maze', mzIdx: i, label: `第 ${i+1}/${preSheets} 張｜🌀 ${lvName}（正反2大題）` });
+      }
+      if($('stMazeAns')?.checked !== false){
+        list.push({ idx: preSheets, type: 'maze', mzIdx: preSheets, mzAnsPreview: true, label: `🗝️ 解答頁預覽（${preSheets*2} 題正確路線）` });
+      }
+      return list;
+    }
     const lvl = $('stPreLevel')?.value || 'small';
     const lvlName = {small:'小班',mid:'中班',large:'大班'}[lvl] || '小班';
-    const topic = $('stPreTopic')?.value || 'all';
     const topName = {all:'ㄅㄆㄇ・123・ABC',zy:'注音符號',num:'數字123',abc:'英文字母',color:'著色本',dots:'數字連連看',train:'加法列車',count:'數一數連連看',line:'運筆描線'}[topic] || '綜合';
     const list = [];
     for(let i = 0; i < preSheets; i++){
@@ -585,20 +592,6 @@ function getPreviewSheetMeta(){
         idx: i, type: 'preschool', preIdx: i,
         label: `第 ${i+1}/${preSheets} 張｜🐣 幼兒園${lvlName}（${topName}）`
       });
-    }
-    return list;
-  }
-
-  if(packMode === 'maze_pack'){
-    const mzSheets = +($('stMazeSheets')?.value || 10);
-    const lvlId = $('stMazeLevel')?.value || 'baby';
-    const lvName = (window.MAZE_BANK?.levels || {})[lvlId]?.short || '幼幼迷宮';
-    const list = [];
-    for(let i = 0; i < mzSheets; i++){
-      list.push({ idx: i, type: 'maze', mzIdx: i, label: `第 ${i+1}/${mzSheets} 張｜🌀 ${lvName}（正反4題）` });
-    }
-    if($('stMazeAns')?.checked !== false){
-      list.push({ idx: mzSheets, type: 'maze', mzIdx: mzSheets, mzAnsPreview: true, label: `🗝️ 解答頁預覽（${mzSheets*4} 題正確路線）` });
     }
     return list;
   }
@@ -746,33 +739,33 @@ async function updateStorePreview(){
   let orderCfg = null;
 
   if(packMode === 'preschool_pack'){
-    const lvl = $('stPreLevel')?.value || 'small';
     const topic = $('stPreTopic')?.value || 'all';
     const sheets = +($('stPreSheets')?.value || 10);
-    const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
-    orderCfg = {
-      plan: 'preschool',
-      preLevel: lvl,
-      preTopic: topic,
-      sheets,
-      illust,
-      sampleLimit: 1,
-      previewPageIdx: activeMeta ? (activeMeta.preIdx || 0) : 0
-    };
-    previewType = 'preschool';
-  } else if(packMode === 'maze_pack'){
-    const mzSh = +($('stMazeSheets')?.value || 10);
-    orderCfg = {
-      plan: 'maze',
-      mazeLevel: $('stMazeLevel')?.value || 'baby',
-      sheets: mzSh,
-      withAns: $('stMazeAns') ? $('stMazeAns').checked : true,
-      sampleLimit: 1,
-      previewPageIdx: activeMeta ? (activeMeta.mzIdx || 0) : 0,
-      mzAnsPreview: !!(activeMeta && activeMeta.mzAnsPreview),
-      mzAnsPreview: !!(activeMeta && activeMeta.mzAnsPreview)
-    };
-    previewType = 'maze';
+    if(topic === 'maze'){
+      orderCfg = {
+        plan: 'maze',
+        mazeLevel: $('stMazeLevel')?.value || 'baby',
+        sheets,
+        withAns: $('stMazeAns') ? $('stMazeAns').checked : true,
+        sampleLimit: 1,
+        previewPageIdx: activeMeta ? (activeMeta.mzIdx || 0) : 0,
+        mzAnsPreview: !!(activeMeta && activeMeta.mzAnsPreview)
+      };
+      previewType = 'maze';
+    } else {
+      const lvl = $('stPreLevel')?.value || 'small';
+      const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
+      orderCfg = {
+        plan: 'preschool',
+        preLevel: lvl,
+        preTopic: topic,
+        sheets,
+        illust,
+        sampleLimit: 1,
+        previewPageIdx: activeMeta ? (activeMeta.preIdx || 0) : 0
+      };
+      previewType = 'preschool';
+    }
   } else if(packMode === 'lazy'){
     const scope = $('stLazyScope').value;
     const subj = $('stLazySubj').value || '國語';
@@ -843,7 +836,7 @@ async function updateStorePreview(){
     if($('stPreDesc') && res.artMode){
       $('stPreDesc').textContent = `${res.topicLabel}｜${res.level.name}：全部黑白印刷、不用彩墨，每張正反雙面。`;
     } else if($('stPreDesc') && res.level){
-      $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列置頂到底滿格、共收錄 ${res.itemCount} 個階段符號依序循環）`;
+      $('stPreDesc').textContent = `🐣 ${res.level.name}｜${res.level.desc}（每頁 ${res.level.cols} 欄 × ${res.level.rows} 列、共收錄 ${res.itemCount} 個階段符號依序循環，黑白省墨印刷）`;
     }
     if(res.pages && res.pages.length){
       renderPreviewPagesDualOrSingle(scaleBox, res.pages, false);
@@ -859,14 +852,14 @@ async function updateStorePreview(){
       answerPreview: !!orderCfg.mzAnsPreview,
       wmText: '向日葵國小伴學誌・線上樣本預覽請勿截圖'
     });
-    if($('stMazeDesc')){
-      $('stMazeDesc').textContent = `🌀 ${res.level.name}｜${res.level.story}（${res.level.hint}）每張正反兩面共 4 題、每題保證有解${res.ansFaces?`，另附 ${res.ansFaces} 面解答頁`:''}。`;
+    if($('stPreDesc')){
+      $('stPreDesc').textContent = `🌀 ${res.level.name}｜${res.level.story}（${res.level.hint}）黑白大迷宮每面 1 題、每張正反 2 題${res.ansFaces?`，另附 ${res.ansFaces} 面解答頁`:''}。`;
     }
     if(res.pages && res.pages.length){
       renderPreviewPagesDualOrSingle(scaleBox, res.pages, false);
       if(badge) badge.textContent = orderCfg.mzAnsPreview
         ? `🗝️ 解答頁預覽（${res.mazeCount} 題正確路線）`
-        : `🌀 第 ${curIdx+1}/${orderCfg.sheets} 張正反雙面（${res.level.short}・每面2題）`;
+        : `🌀 第 ${curIdx+1}/${orderCfg.sheets} 張正反雙面（${res.level.short}・每面1大題）`;
     }
   } else if(previewType === 'stroke' && window.buildStrokePagesForOrder){
     let res = await window.buildStrokePagesForOrder(orderCfg, '向日葵國小伴學誌・線上樣本預覽請勿截圖');
@@ -984,76 +977,76 @@ function buildCurrentSelectionsAsCartItems(){
 
   if(packMode === 'preschool_pack'){
     const preSheets = +($('stPreSheets')?.value || 10);
-    const lvlId = $('stPreLevel')?.value || 'small';
-    const lvlObj = (window.PRESCHOOL_BANK && window.PRESCHOOL_BANK.levels[lvlId]) || { name: '小班', cols: 5, rows: 6 };
     const topic = $('stPreTopic')?.value || 'all';
-    const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母（ABC）', color:'著色本（黑白大圖輪廓）', dots:'數字連連看（黑白）', train:'加法列車（黑白）', count:'數一數連連看（黑白）', line:'運筆描線（黑白）' }[topic] || '綜合進度';
-    const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
     const sheets = preSheets * qty;
     const amount = sheets * 5;
-    items.push({
-      id: 'C' + Date.now() + '_PRE',
-      packType: '幼兒園寫字帖',
-      plan: 'preschool',
-      planName: `🐣 幼兒園寫字帖・${lvlObj.name}（${preSheets}張／本）`,
-      grade: `幼兒園${lvlObj.name}`,
-      sem: '適齡先修',
-      pub: 'pre',
-      pubName: '台灣幼教適齡課綱',
-      subj: topicName,
-      scope: topic,
-      scopeName: lvlObj.name,
-      diff: lvlId,
-      diffName: lvlObj.stageTitle || '運筆與符號啟蒙',
-      ruby: true,
-      strokeMode: 'A',
-      cols: lvlObj.cols,
-      layout: '2col',
-      preLevel: lvlId,
-      preTopic: topic,
-      preIllust: illust,
-      custom_words: '',
-      custom_units: `${lvlObj.name}｜${topicName}`,
-      spec_note: `${lvlObj.cols}欄×${lvlObj.rows}列大格滿版｜${topicName}｜${illust?'含可愛小插圖':'簡潔大格'}`,
-      unitSheets: preSheets,
-      qty,
-      sheets,
-      amount
-    });
-  } else if(packMode === 'maze_pack'){
-    const mzSheets = +($('stMazeSheets')?.value || 10);
-    const lvId = $('stMazeLevel')?.value || 'baby';
-    const lvObj = (window.MAZE_BANK?.levels || {})[lvId] || { short:'幼幼迷宮', name:'幼幼迷宮（3～5歲）', cols:5, rows:5 };
-    const withAns = $('stMazeAns') ? $('stMazeAns').checked : true;
-    const sheets = mzSheets * qty;
-    items.push({
-      id: 'C' + Date.now() + '_MAZE',
-      packType: '迷宮遊戲本',
-      plan: 'maze',
-      planName: `🌀 迷宮遊戲本・${lvObj.short}（${mzSheets}張／本）`,
-      grade: `迷宮．${lvObj.short}`,
-      sem: '多元益智',
-      pub: 'maze',
-      pubName: '向日葵原創迷宮',
-      subj: lvObj.story || '迷宮遊戲',
-      scope: lvId,
-      scopeName: lvObj.short,
-      diff: lvId,
-      diffName: lvObj.age || '適齡迷宮',
-      ruby: false,
-      strokeMode: 'A',
-      cols: lvObj.cols,
-      layout: '2col',
-      mazeLevel: lvId,
-      mazeAns: withAns,
-      custom_words: '',
-      custom_units: `${lvObj.short}｜${lvObj.story || ''}`,
-      spec_note: `每張正反兩面 4 題・${withAns?'附解答頁':'不含解答'}・${lvObj.cols}×${lvObj.rows} 格`,
-      unitSheets: mzSheets,
-      qty,
-      sheets,
-      amount: sheets * 5
-    });
+    if(topic === 'maze'){
+      const lvId = $('stMazeLevel')?.value || 'baby';
+      const lvObj = (window.MAZE_BANK?.levels || {})[lvId] || { short:'幼幼迷宮', name:'幼幼迷宮（3～5歲）', cols:6, rows:8 };
+      const withAns = $('stMazeAns') ? $('stMazeAns').checked : true;
+      items.push({
+        id: 'C' + Date.now() + '_MAZE',
+        packType: '迷宮遊戲本',
+        plan: 'maze',
+        planName: `🌀 迷宮遊戲本・${lvObj.short}（${preSheets}張／本）`,
+        grade: `迷宮・${lvObj.short}`,
+        sem: '多元益智',
+        pub: 'maze',
+        pubName: '向日葵原創迷宮',
+        subj: lvObj.story || '迷宮遊戲',
+        scope: lvId,
+        scopeName: lvObj.short,
+        diff: lvId,
+        diffName: lvObj.age || '適齡迷宮',
+        ruby: false,
+        strokeMode: 'A',
+        cols: lvObj.cols,
+        layout: '2col',
+        mazeLevel: lvId,
+        mazeAns: withAns,
+        custom_words: '',
+        custom_units: `${lvObj.short}｜${lvObj.story || ''}`,
+        spec_note: `每張正反兩面 2 大題・${withAns?'附解答頁':'不含解答'}・${lvObj.cols}×${lvObj.rows} 格`,
+        unitSheets: preSheets,
+        qty,
+        sheets,
+        amount
+      });
+    } else {
+      const lvlId = $('stPreLevel')?.value || 'small';
+      const lvlObj = (window.PRESCHOOL_BANK && window.PRESCHOOL_BANK.levels[lvlId]) || { name: '小班', cols: 5, rows: 6 };
+      const topicName = { all:'ㄅㄆㄇ・數字123・ABC 綜合', zy:'注音符號（ㄅㄆㄇ）', num:'阿拉伯數字（123）', abc:'英文字母ABC', color:'著色本（黑白大圖輪廓）', dots:'數字連連看（黑白）', train:'加法列車（黑白）', count:'數一數連連看（黑白）', line:'運筆描線（黑白）' }[topic] || '綜合進度';
+      const illust = $('stPreIllust') ? $('stPreIllust').checked : true;
+      items.push({
+        id: 'C' + Date.now() + '_PRE',
+        packType: '幼兒園寫字帖',
+        plan: 'preschool',
+        planName: `🐣 幼兒園寫字帖・${lvlObj.name}（${preSheets}張／本）`,
+        grade: `幼兒園${lvlObj.name}`,
+        sem: '適齡先修',
+        pub: 'pre',
+        pubName: '台灣幼教適齡課綱',
+        subj: topicName,
+        scope: topic,
+        scopeName: lvlObj.name,
+        diff: lvlId,
+        diffName: lvlObj.stageTitle || '運筆與符號啟蒙',
+        ruby: true,
+        strokeMode: 'A',
+        cols: lvlObj.cols,
+        layout: '2col',
+        preLevel: lvlId,
+        preTopic: topic,
+        preIllust: illust,
+        custom_words: '',
+        custom_units: `${lvlObj.name}｜${topicName}`,
+        spec_note: `${lvlObj.cols}欄×${lvlObj.rows}列大格滿版｜${topicName}｜${illust?'含黑白小插圖':'簡潔大格'}`,
+        unitSheets: preSheets,
+        qty,
+        sheets,
+        amount
+      });
+    }
   } else if(packMode === 'lazy'){
     const scope = $('stLazyScope').value;
     const scopeName = getStoreScopeName(scope);
@@ -1076,7 +1069,7 @@ function buildCurrentSelectionsAsCartItems(){
       layout: '2col',
       custom_words: '',
       custom_units: '',
-      spec_note: `20張雙面滿滿・單元與8大題型全輪替不重複（免費附解答）`,
+      spec_note: `20張正反雙面・單元與8大題型輪替出題（免費附解答）`,
       qty,
       sheets,
       amount
@@ -1663,23 +1656,30 @@ function initStore(){
     };
   }
 
-  // 購買模式 4 選 1：評量綜合包 vs 生字練習本 vs 幼兒園運筆寫字帖 vs 客製自由配
+  const syncPreMazeSubUI = () => {
+    const isMz = ($('stPreTopic')?.value || 'all') === 'maze';
+    if($('stMazeSubOpts')) $('stMazeSubOpts').style.display = isMz ? '' : 'none';
+    if($('stPreLevelWrap')) $('stPreLevelWrap').style.display = isMz ? 'none' : '';
+    if($('stPreIllustWrap')) $('stPreIllustWrap').style.display = isMz ? 'none' : '';
+  };
+  syncPreMazeSubUI();
+
+  // 購買模式 4 選 1：評量綜合包 vs 生字練習本 vs 幼兒園＆迷宮本 vs 客製自由配
   document.querySelectorAll('input[name=stPackMode]').forEach(r => {
     r.onchange = () => {
       const val = r.checked ? r.value : (document.querySelector('input[name=stPackMode]:checked')?.value || 'lazy');
       $('stLazyPanel').style.display = val === 'lazy' ? '' : 'none';
       if($('stStrokePackPanel')) $('stStrokePackPanel').style.display = val === 'stroke_pack' ? '' : 'none';
       if($('stPreschoolPanel')) $('stPreschoolPanel').style.display = val === 'preschool_pack' ? '' : 'none';
-      if($('stMazePanel')) $('stMazePanel').style.display = val === 'maze_pack' ? '' : 'none';
       $('stCustomPanel').style.display = val === 'custom' ? '' : 'none';
-      if($('stBasicSchoolWrap')) $('stBasicSchoolWrap').style.display = (val === 'preschool_pack' || val === 'maze_pack') ? 'none' : '';
+      if($('stBasicSchoolWrap')) $('stBasicSchoolWrap').style.display = val === 'preschool_pack' ? 'none' : '';
       $('lblPackLazy').classList.toggle('active', val === 'lazy');
       if($('lblPackStroke')) $('lblPackStroke').classList.toggle('active', val === 'stroke_pack');
       if($('lblPackPreschool')) $('lblPackPreschool').classList.toggle('active', val === 'preschool_pack');
-      if($('lblPackMaze')) $('lblPackMaze').classList.toggle('active', val === 'maze_pack');
       $('lblPackCustom').classList.toggle('active', val === 'custom');
       if($('stQty')) $('stQty').value = '1';
       if($('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
+      syncPreMazeSubUI();
       scheduleStorePreview();
     };
   });
@@ -1718,10 +1718,11 @@ function initStore(){
       scheduleStorePreview();
     };
   }
-  ['stLazySubj','stLazyScope','stSpSheets','stSpMode','stSpCols','stSpZy','stPreLevel','stPreTopic','stPreSheets','stPreIllust','stMazeLevel','stMazeSheets','stMazeAns','stStrokeMode','stStrokeCols','stStrokeZy','stCustomWords','stExamDiff','stExamLayout','stExamRuby','stQty'].forEach(id => {
+  ['stLazySubj','stLazyScope','stSpSheets','stSpMode','stSpCols','stSpZy','stPreLevel','stPreTopic','stPreSheets','stPreIllust','stMazeLevel','stMazeAns','stStrokeMode','stStrokeCols','stStrokeZy','stCustomWords','stExamDiff','stExamLayout','stExamRuby','stQty'].forEach(id => {
     const el = $(id); if(!el) return;
     el.onchange = () => {
-      if((id==='stSpSheets'||id==='stPreSheets') && $('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
+      if(id==='stPreTopic') syncPreMazeSubUI();
+      if((id==='stSpSheets'||id==='stPreSheets'||id==='stPreTopic') && $('stPreviewSheetSel')) $('stPreviewSheetSel').value = '0';
       scheduleStorePreview();
     };
     if(el.tagName === 'INPUT') el.oninput = scheduleStorePreview;

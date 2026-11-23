@@ -95,9 +95,9 @@ function drawCell(ch,opts,size){
   const g=cv.getContext('2d');
   g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
   const m=Math.max(2,size*.012);
-  // 田字格
-  g.strokeStyle='#d33';g.lineWidth=m*1.2;g.strokeRect(m,m,size-2*m,size-2*m);
-  g.lineWidth=Math.max(1,size*.005);g.setLineDash([size*.025,size*.02]);g.strokeStyle='#e88';
+  // 田字格（純黑白省墨）
+  g.strokeStyle='#333';g.lineWidth=m*1.2;g.strokeRect(m,m,size-2*m,size-2*m);
+  g.lineWidth=Math.max(1,size*.005);g.setLineDash([size*.025,size*.02]);g.strokeStyle='#bbb';
   g.beginPath();g.moveTo(size/2,m);g.lineTo(size/2,size-m);g.moveTo(m,size/2);g.lineTo(size-m,size/2);
   g.stroke();g.setLineDash([]);
   if(zy){ // 注音空格（直式，格子右側）
@@ -111,13 +111,13 @@ function drawCell(ch,opts,size){
   const pad=size*.07, sc=(size-2*pad)/1024, k=opts.k??0;
   g.setTransform(sc,0,0,-sc,pad,pad+900*sc);
   if(opts.ghost){g.fillStyle='#e2e2e2';strokes.forEach(s=>g.fill(P(s)));}
-  for(let i=0;i<Math.min(k,n);i++){g.fillStyle=(opts.hi&&i===k-1)?'#e02020':'#222';g.fill(P(strokes[i]));}
+  for(let i=0;i<Math.min(k,n);i++){g.fillStyle=(opts.hi&&i===k-1)?'#111':'#666';g.fill(P(strokes[i]));}
   g.setTransform(1,0,0,1,0,0);
   if(opts.numbers){
     g.font=`bold ${size*.075}px sans-serif`;g.textAlign='center';g.textBaseline='middle';
     for(let i=0;i<Math.min(k,n);i++){
       const x=pad+starts[i][0]*sc, y=pad+(900-starts[i][1])*sc;
-      g.fillStyle='#1976d2';g.beginPath();g.arc(x,y,size*.04,0,7);g.fill();
+      g.fillStyle='#222';g.beginPath();g.arc(x,y,size*.04,0,7);g.fill();
       g.fillStyle='#fff';g.fillText(i+1,x,y+size*.003);
     }
   }
@@ -174,7 +174,7 @@ function drawStrip(ch,W,H,base){
   for(let i=0;i<n;i++){
     const x=(i%c)*t, y=Math.floor(i/c)*t;
     g.setTransform(sc,0,0,-sc,x+off,y+off+900*sc);
-    for(let j=0;j<=i;j++){g.fillStyle=j===i?'#e02020':'#444';g.fill(P(strokes[j]));}
+    for(let j=0;j<=i;j++){g.fillStyle=j===i?'#111':'#777';g.fill(P(strokes[j]));}
     g.setTransform(1,0,0,1,0,0);
   }
   return cv;

@@ -26,27 +26,27 @@
   const LEVELS = {
     baby: {
       id: 'baby', name: '幼幼迷宮（3～5歲）', short: '幼幼迷宮',
-      cols: 5, rows: 5, cell: 42, wall: 4, icon: '🐥', goal: '🏠',
-      story: '小雞找回家', hint: '幫小雞找到回家的路！', age: '3～5 歲',
-      color: '#fef3c7', accent: '#d97706', bg: '#fffbeb'
+      cols: 6, rows: 8, cell: 106, wall: 6.5, icon: '🐥', goal: '🏠',
+      story: '小雞找回家', hint: '從「起點」出發，幫小雞走到「終點」！', age: '3～5 歲',
+      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
     },
     brain: {
       id: 'brain', name: '動腦迷宮（5～7歲）', short: '動腦迷宮',
-      cols: 8, rows: 8, cell: 30, wall: 3.5, icon: '🐟', goal: '🧒',
-      story: '小魚找朋友', hint: '帶小魚游到朋友身邊！', age: '5～7 歲',
-      color: '#dbeafe', accent: '#1d4ed8', bg: '#eff6ff'
+      cols: 9, rows: 12, cell: 72, wall: 5, icon: '🐟', goal: '🧒',
+      story: '小魚找朋友', hint: '從「起點」出發，帶小魚游到「終點」！', age: '5～7 歲',
+      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
     },
     creative: {
       id: 'creative', name: '創意迷宮（7～9歲）', short: '創意迷宮',
-      cols: 11, rows: 11, cell: 23, wall: 3, icon: '🐝', goal: '🌻',
-      story: '蜜蜂採花蜜', hint: '幫蜜蜂找到最美的花！', age: '7～9 歲',
-      color: '#dcfce7', accent: '#15803d', bg: '#f0fdf4'
+      cols: 12, rows: 16, cell: 54, wall: 4, icon: '🐝', goal: '🌻',
+      story: '蜜蜂採花蜜', hint: '從「起點」出發，幫蜜蜂飛到花朵！', age: '7～9 歲',
+      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
     },
     challenge: {
       id: 'challenge', name: '進階迷宮（9～12歲）', short: '進階迷宮',
-      cols: 14, rows: 14, cell: 19, wall: 2.6, icon: '🦁', goal: '💎',
-      story: '勇士尋寶藏', hint: '跟著勇士找到寶藏！', age: '9～12 歲',
-      color: '#ede9fe', accent: '#6d28d9', bg: '#f5f3ff'
+      cols: 15, rows: 20, cell: 43, wall: 3.2, icon: '🦁', goal: '💎',
+      story: '勇士尋寶藏', hint: '從「起點」出發，跟著線索找到寶藏！', age: '9～12 歲',
+      color: '#f3f4f6', accent: '#111111', bg: '#ffffff'
     }
   };
 
@@ -106,46 +106,79 @@
     return { levelId, mazeIdx, cols, rows, walls, path, solved: dist[total - 1] >= 0, seed };
   }
 
-  // 畫單座迷宮的 SVG 字串；showPath=true 時疊上解答路線
+  // 取得第 mazeIdx 題隨機配對的純黑白起點／終點向量圖（與 PRESCHOOL_ART 109 種黑白圖庫連動）
+  function getMazePair(lv, mazeIdx){
+    const A = window.PRESCHOOL_ART;
+    if(A && A.SUB && A.SUB_KEYS && A.SUB_KEYS.length >= 20){
+      const k1 = A.pickShuffled ? A.pickShuffled(A.SUB_KEYS, mazeIdx * 2, 911) : A.SUB_KEYS[(mazeIdx * 7) % A.SUB_KEYS.length];
+      let k2 = A.pickShuffled ? A.pickShuffled(A.SUB_KEYS, mazeIdx * 2 + 1, 997) : A.SUB_KEYS[(mazeIdx * 13 + 5) % A.SUB_KEYS.length];
+      if(k2 === k1) k2 = A.SUB_KEYS[(A.SUB_KEYS.indexOf(k1) + 1) % A.SUB_KEYS.length];
+      const c = A.mkCtx ? A.mkCtx(false, 'small') : { sw: 8, detail: 1, p: 'stroke="#222" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"', f: () => '#fff' };
+      return {
+        startName: A.SUB[k1].name,
+        goalName: A.SUB[k2].name,
+        startSvg: A.SUB[k1].draw(c),
+        goalSvg: A.SUB[k2].draw(c)
+      };
+    }
+    return {
+      startName: '起點',
+      goalName: '終點',
+      startSvg: '<circle cx="300" cy="300" r="200" fill="#fff" stroke="#111" stroke-width="24"/><circle cx="240" cy="260" r="24" fill="#111"/><circle cx="360" cy="260" r="24" fill="#111"/><path d="M220 340 Q300 410 380 340" fill="none" stroke="#111" stroke-width="22" stroke-linecap="round"/>',
+      goalSvg: '<polygon points="300,70 365,215 525,230 405,335 440,490 300,410 160,490 195,335 75,230 235,215" fill="#fff" stroke="#111" stroke-width="24" stroke-linejoin="round"/>'
+    };
+  }
+
+  // 畫單座迷宮的 SVG 字串（黑白省墨、市售評量級粗線大格）；showPath=true 時疊上黑白虛線解答路線
   function mazeSvg(maze, lv, showPath, opt){
     opt = opt || {};
     const cell = opt.cell || lv.cell;
     const wall = opt.wall || lv.wall;
-    const pad = Math.max(10, Math.round(cell * 0.45));
-    const W = maze.cols * cell + pad * 2;
-    const H = maze.rows * cell + pad * 2;
-    const ox = pad, oy = pad;
-    const parts = [`<rect x="0" y="0" width="${W}" height="${H}" rx="12" fill="${lv.bg}" stroke="${lv.accent}" stroke-width="2.5"/>`];
+    const padX = Math.max(14, Math.round(cell * 0.32));
+    const padTop = Math.max(20, Math.round(cell * 0.42));
+    const padBot = Math.max(20, Math.round(cell * 0.42));
+    const W = maze.cols * cell + padX * 2;
+    const H = maze.rows * cell + padTop + padBot;
+    const ox = padX, oy = padTop;
+    const parts = [
+      `<rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="14" fill="#ffffff" stroke="#111111" stroke-width="${Math.max(2, wall * 0.6)}"/>`
+    ];
 
-    // 通道底色（起點淡綠、終點淡紅）
+    // 起點／終點柔和灰階底紋（純黑白省墨、幼兒一眼辨識）
     if(!showPath){
-      parts.push(`<rect x="${ox}" y="${oy}" width="${cell}" height="${cell}" fill="#bbf7d0"/>`);
-      parts.push(`<rect x="${ox + (maze.cols - 1) * cell}" y="${oy + (maze.rows - 1) * cell}" width="${cell}" height="${cell}" fill="#fecaca"/>`);
+      parts.push(`<rect x="${ox + 2}" y="${oy + 2}" width="${cell - 4}" height="${cell - 4}" rx="6" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+      parts.push(`<rect x="${ox + (maze.cols - 1) * cell + 2}" y="${oy + (maze.rows - 1) * cell + 2}" width="${cell - 4}" height="${cell - 4}" rx="6" fill="#f3f4f6" stroke="#111111" stroke-width="1.8" stroke-dasharray="4 3"/>`);
     }
 
-    // 解答路徑（橙色半透明折線 + 圓點）
+    // 解答路徑（純黑白深灰虛線＋起終圓點）
     if(showPath && maze.path.length > 1){
       const pts = maze.path.map(i => `${ox + (i % maze.cols + 0.5) * cell},${oy + (Math.floor(i / maze.cols) + 0.5) * cell}`).join(' ');
-      parts.push(`<polyline points="${pts}" fill="none" stroke="#f97316" stroke-opacity="0.30" stroke-width="${cell * 0.55}" stroke-linecap="round" stroke-linejoin="round"/>`);
-      parts.push(`<polyline points="${pts}" fill="none" stroke="#ea580c" stroke-width="${Math.max(2, wall)}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      parts.push(`<polyline points="${pts}" fill="none" stroke="#555555" stroke-width="${Math.max(2.4, wall * 0.85)}" stroke-dasharray="${Math.max(5, cell * 0.22)} ${Math.max(3, cell * 0.14)}" stroke-linecap="round" stroke-linejoin="round"/>`);
     }
 
-    // 牆：每格畫北、西墙，最後補南、東外牆
-    const seg = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${lv.accent}" stroke-width="${wall}" stroke-linecap="round"/>`;
+    // 牆：起點頂牆／終點底牆留出入口缺口，其餘每格畫北、西牆與南、東外牆
+    const seg = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#111111" stroke-width="${wall}" stroke-linecap="round"/>`;
     for(let i = 0; i < maze.cols * maze.rows; i++){
       const x = i % maze.cols, y = Math.floor(i / maze.cols);
       const px = ox + x * cell, py = oy + y * cell;
-      if(maze.walls[i][0]) parts.push(seg(px, py, px + cell, py));
+      if(maze.walls[i][0] && i !== 0) parts.push(seg(px, py, px + cell, py));
       if(maze.walls[i][3]) parts.push(seg(px, py, px, py + cell));
-      if(y === maze.rows - 1 && maze.walls[i][2]) parts.push(seg(px, py + cell, px + cell, py + cell));
+      if(y === maze.rows - 1 && maze.walls[i][2] && i !== maze.cols * maze.rows - 1) parts.push(seg(px, py + cell, px + cell, py + cell));
       if(x === maze.cols - 1 && maze.walls[i][1]) parts.push(seg(px + cell, py, px + cell, py + cell));
     }
 
-    // 起點／終點圖示
-    const fsz = Math.max(13, Math.round(cell * 0.62));
-    parts.push(`<text x="${ox + cell / 2}" y="${oy + cell / 2 + fsz * 0.35}" font-size="${fsz}" text-anchor="middle">${lv.icon}</text>`);
-    parts.push(`<text x="${ox + (maze.cols - 0.5) * cell}" y="${oy + (maze.rows - 0.5) * cell + fsz * 0.35}" font-size="${fsz}" text-anchor="middle">${lv.goal}</text>`);
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">${parts.join('')}</svg>`;
+    // 起點／終點標籤與純黑白向量插圖（零彩色 Emoji）
+    const lblFs = Math.max(11, Math.min(18, Math.round(padTop * 0.38)));
+    const pair = getMazePair(lv, maze.mazeIdx || 0);
+    if(!showPath){
+      parts.push(`<text x="${ox + cell * 0.5}" y="${oy - 8}" font-size="${lblFs}" font-weight="800" font-family="Noto Sans TC,sans-serif" text-anchor="middle" fill="#111111">▼ 起點：${pair.startName}</text>`);
+      parts.push(`<text x="${ox + (maze.cols - 0.5) * cell}" y="${oy + maze.rows * cell + lblFs + 6}" font-size="${lblFs}" font-weight="800" font-family="Noto Sans TC,sans-serif" text-anchor="middle" fill="#111111">▲ 終點：${pair.goalName}</text>`);
+    }
+    const sc = (cell * 0.76) / 600;
+    const off = (cell - 600 * sc) / 2;
+    parts.push(`<g transform="translate(${(ox + off).toFixed(1)} ${(oy + off).toFixed(1)}) scale(${sc.toFixed(4)})">${pair.startSvg}</g>`);
+    parts.push(`<g transform="translate(${(ox + (maze.cols - 1) * cell + off).toFixed(1)} ${(oy + (maze.rows - 1) * cell + off).toFixed(1)}) scale(${sc.toFixed(4)})">${pair.goalSvg}</g>`);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;display:block">${parts.join('')}</svg>`;
   }
 
   function buildPages(cfg){
@@ -157,10 +190,10 @@
     const wmText = cfg.wmText || '';
     const cpr = window.COPYRIGHT_STATEMENT || '🌻 向日葵國小伴學誌・專屬訂製請勿轉售';
 
-    // 每張正反兩面，每面 2 座迷宮 → 共 sheets*2 面、sheets*4 題
+    // 每張正反兩面，每面 1 座滿版大迷宮 → 共 sheets*2 面、sheets*2 題（閱讀友善、無浪費留白）
     const faceCount = sheets * 2;
     const mazes = [];
-    for(let i = 0; i < faceCount * 2; i++) mazes.push(generateMaze(levelId, i));
+    for(let i = 0; i < faceCount; i++) mazes.push(generateMaze(levelId, i));
 
     // 解答頁：每頁 4 座縮圖；解答頁數補成偶數維持雙面裝訂
     const ansFaces = withAns ? Math.ceil(mazes.length / 4) : 0;
@@ -187,24 +220,22 @@
       pg.className = 'a4 maze-a4';
       pg.appendChild(Object.assign(document.createElement('div'), {className: 'edge'}));
       const isAns = pIdx >= faceCount;
+      const pair = !isAns ? getMazePair(lv, pIdx) : null;
       const hd = document.createElement('div');
       hd.className = 'maze-hd';
       hd.innerHTML = isAns
-        ? `<div class="maze-hd-title"><b>🗝️ ${lv.short}｜解答頁</b><span>${lv.story}・正確路線</span></div><div class="maze-hd-meta">向日葵國小伴學誌　｜　家長／老師批改對照用</div>`
-        : `<div class="maze-hd-title"><b>🌀 ${lv.name}</b><span>${lv.story}・${lv.age}</span></div><div class="maze-hd-meta">姓名：____________　日期：____ 月 ____ 日　｜　${lv.hint}</div>`;
+        ? `<div class="maze-hd-title"><b>${lv.short}｜解答頁</b><span>正確路線對照</span></div><div class="maze-hd-meta">向日葵國小伴學誌　｜　家長／老師批改對照用</div>`
+        : `<div class="maze-hd-title"><b>第 ${pIdx + 1} 關｜${lv.name}</b><span>任務：從起點出發，幫「${pair.startName}」穿過迷宮找到「${pair.goalName}」！</span></div><div class="maze-hd-meta">姓名：____________　日期：____月____日　☆☆☆</div>`;
       pg.appendChild(hd);
 
       if(!isAns){
         const box = document.createElement('div');
-        box.className = 'maze-body maze-body-2';
-        for(let k = 0; k < 2; k++){
-          const mi = pIdx * 2 + k;
-          if(mi >= mazes.length) break;
-          const card = document.createElement('div');
-          card.className = 'maze-card';
-          card.innerHTML = `<div class="maze-card-t">第 ${mi + 1} 題</div>` + mazeSvg(mazes[mi], lv, false);
-          box.appendChild(card);
-        }
+        box.className = 'maze-body maze-body-1';
+        const card = document.createElement('div');
+        card.className = 'maze-card maze-card-full';
+        card.innerHTML = mazeSvg(mazes[pIdx], lv, false)
+          + `<div class="maze-foot-tip">小提醒：先用手指走走看，找到不會碰壁的路，再用鉛筆畫出路線喔！</div>`;
+        box.appendChild(card);
         pg.appendChild(box);
       }else{
         const aIdx = pIdx - faceCount;
@@ -215,9 +246,9 @@
           if(mi >= mazes.length) break;
           const card = document.createElement('div');
           card.className = 'maze-ans-card';
-          const scale = Math.min(1, 170 / (mazes[mi].cols * lv.cell + 2 * Math.max(10, Math.round(lv.cell * 0.45))));
+          const scale = Math.min(1, 210 / (mazes[mi].rows * lv.cell + 40));
           const inner = mazeSvg(mazes[mi], lv, true, {cell: Math.max(10, Math.round(lv.cell * scale)), wall: Math.max(1.6, lv.wall * scale)});
-          card.innerHTML = `<div class="maze-ans-t">第 ${mi + 1} 題</div>${inner}`;
+          card.innerHTML = `<div class="maze-ans-t">第 ${mi + 1} 關</div>${inner}`;
           box.appendChild(card);
         }
         pg.appendChild(box);

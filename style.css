@@ -33,6 +33,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .a4 .cap{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10.5px;color:#777;letter-spacing:.02em;z-index:10;pointer-events:none}
 .a4 .wm-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:8;overflow:hidden}
 .a4 img{position:absolute;display:block}
+.a4 svg,.a4 img,.a4 canvas{filter:grayscale(100%)}
 .a4 .edge{position:absolute;inset:0;border:1px dashed #ccc;pointer-events:none;z-index:11}
 .pcap{font-weight:700;color:#b35a00;margin-bottom:-14px;font-size:.95rem}
 @media(max-width:700px){.modes{grid-template-columns:1fr}}
@@ -131,7 +132,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-col-r{padding-left:14px;min-height:100%}
 .ex-col-1{flex:1}
 .ex-col-l.ex-col-stretch,.ex-col-r.ex-col-stretch,.ex-col-1.ex-col-stretch{display:flex;flex-direction:column;justify-content:space-between}
-.ex-sec{font-weight:700;font-size:1em;background:#fff3df;color:#7a3b00;padding:3px 8px;border-left:4px solid #ff7a1a;margin:6px 0 6px}
+.ex-sec{font-weight:700;font-size:1em;background:#f4f4f5;color:#111;padding:3px 8px;border-left:4px solid #111;margin:6px 0 6px}
 .ex-q{display:grid;grid-template-columns:auto 1fr;column-gap:6px;margin-bottom:var(--ex-gap,8px);break-inside:avoid;align-items:baseline}
 .ex-q .qno{font-weight:700;white-space:nowrap;padding-right:2px}
 .ex-q .qbody{min-width:0}
@@ -164,7 +165,7 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-hd h3{margin:0;font-size:.96rem;letter-spacing:.04em;line-height:1.3}
 .ex-zh-hd .ex-sub{font-size:.74rem;color:#444;margin-right:3px;line-height:1.3}
 .ex-zh-hd .ex-zh-info{display:flex;justify-content:space-between;gap:4px;font-size:.78rem;font-weight:600;padding-bottom:2px}
-.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#fff3df;color:#7a3b00;padding:5px 4px;border-top:4px solid #ff7a1a;margin:0 3px;height:100%;flex:none;font-size:.86em;line-height:1.25;letter-spacing:.01em;white-space:nowrap;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
+.ex-zh-sec{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;background:#f4f4f5;color:#111;padding:5px 4px;border-top:4px solid #111;margin:0 3px;height:100%;flex:none;font-size:.86em;line-height:1.25;letter-spacing:.01em;white-space:nowrap;font-family:"BiauKai","DFKai-SB","標楷體","Noto Sans TC",serif}
 .ex-zh-q{display:flex;flex-direction:row-reverse;align-items:flex-start;height:100%;margin:0 var(--zh-q-gap,3px);flex:none;gap:2px}
 .ex-zh-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:none;width:1.85em}
 /* 無注音國語卷：字距與行距等比例再壓緊（約 0.87 倍），爭取的空位用來多容納一題 */
@@ -176,12 +177,12 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .ex-zh-compact .ex-zh-col{width:1.62em}
 .ex-zh-q .qbox{border:1px dashed #aaa;border-radius:4px;width:var(--zh-box-calc,2.2em);height:92%;margin:0 2px;flex:none}
 .ex-zh-q .qbox.word{width:var(--zh-box-word,3.2em)}
-.preschool-a4 .pre-a4-hd{position:absolute;left:24px;right:24px;top:14px;height:64px;border-bottom:2px solid #f59e0b;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
+.preschool-a4 .pre-a4-hd{position:absolute;left:24px;right:24px;top:14px;height:64px;border-bottom:2px solid #222;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
 .preschool-a4 .pre-a4-title{min-width:0;flex:1}
-.preschool-a4 .pre-a4-title b{display:block;font-size:1.05rem;color:#7a3b00;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.preschool-a4 .pre-a4-title span{display:block;font-size:.75rem;color:#555;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.preschool-a4 .pre-a4-info{display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
-.preschool-a4 .pre-name-box{display:inline-block;width:232px;height:36px;border:2px solid #d97706;border-radius:8px;background:#fffdf7;vertical-align:middle;margin-left:3px}
+.preschool-a4 .pre-a4-title b{display:block;font-size:1.05rem;color:#111;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preschool-a4 .pre-a4-title span{display:block;font-size:.75rem;color:#444;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preschool-a4 .pre-a4-info{display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:700;color:#222;white-space:nowrap;flex:none}
+.preschool-a4 .pre-name-box{display:inline-block;width:232px;height:36px;border:2px solid #222;border-radius:8px;background:#fff;vertical-align:middle;margin-left:3px}
 .tcy{text-combine-upright:all;-webkit-text-combine:horizontal;display:inline-block;min-width:1em;text-align:center;line-height:1;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-variant-numeric:tabular-nums;font-weight:inherit}
 .v-arrow{display:inline-flex;align-items:center;justify-content:center;width:1em;height:1.1em;text-align:center;line-height:1;font-family:"Noto Sans TC",sans-serif;vertical-align:middle}
 .qend-glue{white-space:nowrap;display:inline}
@@ -320,14 +321,15 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .flow-step{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;background:#fff;border:1px solid #e6d3b5;color:#7a542e}
 .flow-step.active{background:#fff0d4;border-color:#ff9d3b;color:#b34700}
 .flow-arrow{color:#d97706;font-weight:900}
-.pack-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:4px 0 10px;align-items:stretch}
-@media(max-width:720px){.pack-tabs{grid-template-columns:1fr}}
-.pack-tab{display:flex;flex-direction:column;justify-content:flex-start;gap:2px;border:1.8px solid #e2d4be;border-radius:11px;padding:8px 10px;cursor:pointer;background:#fff;transition:.15s;min-width:0;position:relative;height:100%}
+.pack-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:8px;margin:4px 0 10px;align-items:stretch}
+@media(max-width:720px){.pack-tabs{grid-template-columns:1fr;grid-auto-rows:auto}}
+.pack-tab{display:flex;flex-direction:column;justify-content:flex-start;gap:3px;border:1.8px solid #e2d4be;border-radius:11px;padding:9px 11px;cursor:pointer;background:#fff;transition:.15s;min-width:0;position:relative;height:100%;min-height:92px}
 .pack-tab:hover{border-color:#fb923c;background:#fffaf3;transform:translateY(-1px);box-shadow:0 3px 10px rgba(234,88,12,.09)}
-.pack-tab input{position:absolute;top:8px;left:8px;margin:0;width:13px;height:13px;accent-color:#ea580c}
+.pack-tab input{position:absolute;top:9px;left:9px;margin:0;width:13px;height:13px;accent-color:#ea580c}
 .pack-tab b{display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:nowrap;margin:0 0 0 19px;font-size:.9rem;line-height:1.25;color:#4a2b00;min-width:0}
 .pack-tab b em{margin-left:auto}
-.pack-tab span{display:block;margin:2px 0 0 19px;font-size:.76rem;line-height:1.38;color:#6b6259}
+.pack-tab span{display:block;margin:2px 0 0 19px;font-size:.76rem;line-height:1.42;color:#6b6259;line-break:strict;text-wrap:pretty;overflow-wrap:break-word}
+.hint,.rule-box,.legal-notice{line-break:strict;text-wrap:pretty;overflow-wrap:break-word}
 .pack-tab:has(input:checked),.pack-tab.active{border-color:#ea580c;border-width:2.5px;background:linear-gradient(180deg,#fff7ed,#ffedd5);box-shadow:0 4px 14px rgba(234,88,12,.18)}
 .pack-tab:has(input:checked) b{color:#9a3412}
 .pack-badge{font-style:normal;font-size:.7rem;font-weight:800;padding:1px 7px;border-radius:99px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;white-space:nowrap}
@@ -336,20 +338,21 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .pack-badge.cus{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
 .pack-badge.mz{background:#fdf4ff;color:#86198f;border-color:#f5d0fe}
 
-/* ===== 迷宮遊戲本 A4 版面（幼幼／動腦／創意／進階；每面 2 題、解答頁 4 題） ===== */
-.maze-a4 .maze-hd{position:absolute;left:24px;right:24px;top:14px;height:62px;border-bottom:2px solid #a855f7;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
+/* ===== 迷宮遊戲本 A4 版面（黑白省墨、市售評量級滿版大迷宮；每面 1 大題、解答頁 4 題） ===== */
+.maze-a4 .maze-hd{position:absolute;left:24px;right:24px;top:14px;height:62px;border-bottom:2.5px solid #111;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;gap:12px}
 .maze-a4 .maze-hd-title{min-width:0;flex:1}
-.maze-a4 .maze-hd-title b{display:block;font-size:1.06rem;color:#6b21a8;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.maze-a4 .maze-hd-title span{display:block;font-size:.78rem;color:#555;margin-top:2px}
-.maze-a4 .maze-hd-meta{font-size:.86rem;font-weight:700;color:#333;white-space:nowrap;flex:none}
-.maze-a4 .maze-body{position:absolute;left:24px;right:24px;top:88px;bottom:34px;display:flex;align-items:center;justify-content:center;gap:12px}
-.maze-a4 .maze-body-2{flex-direction:column}
-.maze-a4 .maze-card{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fffdfb;border:1.5px dashed #e9d5ff;border-radius:12px}
-.maze-a4 .maze-card-t,.maze-a4 .maze-ans-t{font-size:.85rem;font-weight:800;color:#7e22ce;background:#faf5ff;border:1px solid #e9d5ff;border-radius:99px;padding:1px 10px}
-.maze-a4 .maze-card svg{max-width:100%;max-height:calc(100% - 24px);width:auto;height:auto}
+.maze-a4 .maze-hd-title b{display:block;font-size:1.08rem;color:#111;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.maze-a4 .maze-hd-title span{display:block;font-size:.78rem;color:#444;margin-top:2px}
+.maze-a4 .maze-hd-meta{font-size:.86rem;font-weight:700;color:#222;white-space:nowrap;flex:none}
+.maze-a4 .maze-body{position:absolute;left:24px;right:24px;top:86px;bottom:32px;display:flex;align-items:center;justify-content:center;gap:12px}
+.maze-a4 .maze-body-1{flex-direction:column}
+.maze-a4 .maze-card,.maze-a4 .maze-card-full{flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#ffffff}
+.maze-a4 .maze-card-full svg{width:100%;height:100%;max-width:746px;max-height:calc(100% - 26px)}
+.maze-a4 .maze-foot-tip{font-size:.78rem;font-weight:700;color:#222;background:#f4f4f5;border:1px solid #d4d4d8;border-radius:99px;padding:2px 14px;text-align:center}
+.maze-a4 .maze-ans-t{font-size:.85rem;font-weight:800;color:#111;background:#f3f4f6;border:1.5px solid #222;border-radius:99px;padding:1px 10px}
 .maze-a4 .maze-body-ans{flex-wrap:wrap;align-content:center;gap:10px}
-.maze-a4 .maze-ans-card{flex:0 0 calc(50% - 5px);height:calc(50% - 5px);min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fffdfb;border:1.5px dashed #e9d5ff;border-radius:12px}
-.maze-a4 .maze-ans-card svg{max-width:100%;max-height:calc(100% - 22px);width:auto;height:auto}
+.maze-a4 .maze-ans-card{flex:0 0 calc(50% - 5px);height:calc(50% - 5px);min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#ffffff;border:1.5px dashed #9ca3af;border-radius:10px;padding:4px}
+.maze-a4 .maze-ans-card svg{max-width:100%;max-height:calc(100% - 26px);width:auto;height:auto}
 .uchk{padding:3px 6px;border-radius:7px;border:1px solid transparent;transition:.12s}
 .uchk:hover{background:#fff6e8;border-color:#fed7aa}
 .uchk:has(input:checked){background:#fff3de;border-color:#f59e0b;font-weight:700;color:#7c2d12;box-shadow:inset 0 0 0 1px rgba(245,158,11,.25)}
@@ -628,17 +631,23 @@ input[type=checkbox],input[type=radio]{width:1rem;height:1rem;accent-color:#ff7a
 .test-order-chk{margin-top:6px;padding:6px 9px;background:#f4f7ff;border:1px dashed #b9c6e6;border-radius:8px;font-size:.8rem;line-height:1.4;color:#33456b;width:100%}
 .test-order-chk input{margin-top:2px;flex:none}
 
-/* 每週營收統計儀表板（深色工作室風格） */
-.wk-panel{margin:12px 0;padding:16px 18px;border-radius:16px;background:radial-gradient(1200px 400px at 10% -20%,#312e81 0,#0f172a 55%,#020617 100%);color:#e2e8f0;box-shadow:0 8px 28px rgba(15,23,42,.35)}
-.wk-title{font-size:1.1rem;font-weight:800;margin-bottom:10px;color:#f8fafc}.wk-title small{font-weight:500;color:#94a3b8;font-size:.76rem}
-.wk-empty{color:#94a3b8;font-size:.9rem;padding:8px 0}
+/* 每週營收統計儀表板（預設收合＋白底彩色清新風格） */
+.wk-collapse{margin:10px 0;border:1.5px solid #cbd5e1;border-radius:12px;background:#ffffff;box-shadow:0 2px 8px rgba(15,23,42,.05);overflow:hidden}
+.wk-sum{cursor:pointer;padding:10px 14px;font-weight:800;font-size:.95rem;color:#1e293b;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f8fafc;user-select:none;list-style:none}
+.wk-sum::-webkit-details-marker{display:none}
+.wk-sum:hover{background:#f1f5f9}
+.wk-sum-pill{font-size:.78rem;font-weight:700;color:#4f46e5;background:#eef2ff;border:1px solid #c7d2fe;border-radius:99px;padding:2px 10px}
+.wk-panel{padding:14px 18px;background:#ffffff;color:#1e293b;border-top:1px solid #e2e8f0}
+.wk-title{font-size:1.08rem;font-weight:800;margin-bottom:10px;color:#0f172a}.wk-title small{font-weight:500;color:#64748b;font-size:.76rem}
+.wk-empty{color:#64748b;font-size:.9rem;padding:8px 0}
 .wk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
-.wk-k{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 12px}
-.wk-k span{display:block;font-size:.74rem;color:#94a3b8}.wk-k b{display:block;font-size:1.5rem;margin:2px 0;background:linear-gradient(90deg,#22d3ee,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}.wk-k small{color:#94a3b8;font-size:.72rem}
-.wk-chart{overflow-x:auto}.wk-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.76rem;color:#cbd5e1;margin:4px 0 10px}
+.wk-k{background:#f8fafc;border:1px solid #e2e8f0;border-top:3px solid #6366f1;border-radius:12px;padding:10px 12px}
+.wk-k:nth-child(2){border-top-color:#ec4899}.wk-k:nth-child(3){border-top-color:#06b6d4}.wk-k:nth-child(4){border-top-color:#f59e0b}.wk-k:nth-child(5){border-top-color:#10b981}
+.wk-k span{display:block;font-size:.74rem;color:#64748b}.wk-k b{display:block;font-size:1.45rem;margin:2px 0;background:linear-gradient(90deg,#6366f1,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}.wk-k small{color:#64748b;font-size:.72rem}
+.wk-chart{overflow-x:auto}.wk-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.76rem;color:#475569;margin:4px 0 10px}
 .wk-legend i,.wk-plans i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .wk-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.wk-grid2{grid-template-columns:1fr}}
-.wk-sub{font-size:.8rem;color:#94a3b8;margin-bottom:6px}.wk-plans{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.76rem;margin-top:8px;color:#cbd5e1}
-.wk-days{display:flex;gap:8px;align-items:flex-end;height:90px}.wk-day{flex:1;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:.72rem;color:#94a3b8}.wk-day div{width:70%;background:linear-gradient(#f472b6,#6366f1);border-radius:5px 5px 0 0}.wk-day b{color:#e2e8f0}
-.wk-det{margin-top:12px;font-size:.82rem}.wk-det summary{cursor:pointer;color:#7dd3fc}.wk-det table{width:100%;border-collapse:collapse;margin-top:8px}.wk-det th,.wk-det td{padding:5px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08)}.wk-det th:first-child,.wk-det td:first-child{text-align:left}
+.wk-sub{font-size:.8rem;color:#475569;font-weight:700;margin-bottom:6px}.wk-plans{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.76rem;margin-top:8px;color:#334155}
+.wk-days{display:flex;gap:8px;align-items:flex-end;height:90px}.wk-day{flex:1;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:.72rem;color:#64748b}.wk-day div{width:70%;background:linear-gradient(#ec4899,#6366f1);border-radius:5px 5px 0 0}.wk-day b{color:#1e293b}
+.wk-det{margin-top:12px;font-size:.82rem}.wk-det summary{cursor:pointer;color:#4f46e5;font-weight:700}.wk-det table{width:100%;border-collapse:collapse;margin-top:8px}.wk-det th,.wk-det td{padding:5px 8px;text-align:right;border-bottom:1px solid #e2e8f0;color:#334155}.wk-det th:first-child,.wk-det td:first-child{text-align:left}
 @media print{#weeklyStatsPanel{display:none!important}}

@@ -609,7 +609,118 @@
     }
   }
 
-  function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId){
+  // 100+ 種純黑白幾何／生活／自然小圖示 Canvas 繪製器（取代彩色 Emoji，省墨且隨機搭配不重複）
+  function drawBwCanvasIcon(g, idx, cx, cy, r){
+    const k = ((idx % 108) + 108) % 108;
+    const sub = k % 18;
+    const variant = Math.floor(k / 18); // 0..5 共 6 組變化（18×6＝108 種黑白圖形）
+    g.save();
+    g.translate(cx, cy);
+    if(variant % 2 === 1) g.rotate((variant * 15) * Math.PI / 180);
+    g.strokeStyle = '#222222';
+    g.fillStyle = '#ffffff';
+    g.lineWidth = Math.max(1.3, r * 0.14);
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+    const R = r * (0.92 + (variant % 3) * 0.05);
+    g.beginPath();
+    if(sub === 0){ // 星星（5~8角）
+      const pts = 5 + (variant % 4);
+      for(let i=0;i<pts*2;i++){
+        const a = -Math.PI/2 + i*Math.PI/pts, rad = (i%2) ? R*0.45 : R;
+        if(i===0) g.moveTo(Math.cos(a)*rad, Math.sin(a)*rad);
+        else g.lineTo(Math.cos(a)*rad, Math.sin(a)*rad);
+      }
+      g.closePath(); g.fill(); g.stroke();
+    } else if(sub === 1){ // 花朵
+      const pet = 5 + (variant % 4);
+      for(let i=0;i<pet;i++){
+        const a = i*2*Math.PI/pet;
+        g.moveTo(Math.cos(a)*R*0.55 + R*0.36, Math.sin(a)*R*0.55);
+        g.arc(Math.cos(a)*R*0.55, Math.sin(a)*R*0.55, R*0.36, 0, Math.PI*2);
+      }
+      g.fill(); g.stroke();
+      g.beginPath(); g.arc(0,0,R*0.32,0,Math.PI*2); g.fill(); g.stroke();
+    } else if(sub === 2){ // 愛心
+      g.moveTo(0, R*0.85);
+      g.bezierCurveTo(-R*1.2, R*0.1, -R*0.95, -R*0.85, 0, -R*0.25);
+      g.bezierCurveTo(R*0.95, -R*0.85, R*1.2, R*0.1, 0, R*0.85);
+      g.closePath(); g.fill(); g.stroke();
+    } else if(sub === 3){ // 小魚
+      g.ellipse(-R*0.15, 0, R*0.72, R*0.48, 0, 0, Math.PI*2); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(R*0.52, 0); g.lineTo(R*0.98, -R*0.45); g.lineTo(R*0.98, R*0.45); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.arc(-R*0.42, -R*0.1, R*0.09, 0, Math.PI*2); g.fillStyle='#222'; g.fill();
+    } else if(sub === 4){ // 蘋果／水果
+      g.arc(0, R*0.12, R*0.75, 0, Math.PI*2); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(0, -R*0.62); g.quadraticCurveTo(R*0.2, -R*0.98, R*0.45, -R*0.82); g.stroke();
+    } else if(sub === 5){ // 房子
+      g.rect(-R*0.65, -R*0.1, R*1.3, R*0.9); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(-R*0.85, -R*0.1); g.lineTo(0, -R*0.9); g.lineTo(R*0.85, -R*0.1); g.closePath(); g.fill(); g.stroke();
+    } else if(sub === 6){ // 太陽
+      g.arc(0, 0, R*0.55, 0, Math.PI*2); g.fill(); g.stroke();
+      const rays = 8 + (variant % 4)*2;
+      g.beginPath();
+      for(let i=0;i<rays;i++){
+        const a = i*2*Math.PI/rays;
+        g.moveTo(Math.cos(a)*R*0.68, Math.sin(a)*R*0.68);
+        g.lineTo(Math.cos(a)*R*0.96, Math.sin(a)*R*0.96);
+      }
+      g.stroke();
+    } else if(sub === 7){ // 月亮
+      g.arc(0, 0, R*0.82, 0.4, Math.PI*2 - 0.4);
+      g.arc(R*0.35, 0, R*0.62, Math.PI*2 - 0.55, 0.55, true);
+      g.closePath(); g.fill(); g.stroke();
+    } else if(sub === 8){ // 雲朵
+      g.arc(-R*0.38, R*0.15, R*0.38, 0, Math.PI*2);
+      g.arc(0, -R*0.12, R*0.48, 0, Math.PI*2);
+      g.arc(R*0.42, R*0.15, R*0.36, 0, Math.PI*2);
+      g.fill(); g.stroke();
+    } else if(sub === 9){ // 蝴蝶
+      g.ellipse(-R*0.42, -R*0.25, R*0.45, R*0.32, -0.4, 0, Math.PI*2);
+      g.ellipse(R*0.42, -R*0.25, R*0.45, R*0.32, 0.4, 0, Math.PI*2);
+      g.ellipse(-R*0.35, R*0.32, R*0.35, R*0.25, 0.4, 0, Math.PI*2);
+      g.ellipse(R*0.35, R*0.32, R*0.35, R*0.25, -0.4, 0, Math.PI*2);
+      g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(0, -R*0.65); g.lineTo(0, R*0.65); g.stroke();
+    } else if(sub === 10){ // 小熊／動物臉
+      g.arc(-R*0.55, -R*0.55, R*0.28, 0, Math.PI*2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(R*0.55, -R*0.55, R*0.28, 0, Math.PI*2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(0, R*0.05, R*0.72, 0, Math.PI*2); g.fill(); g.stroke();
+      g.fillStyle='#222';
+      g.beginPath(); g.arc(-R*0.25, -R*0.05, R*0.09, 0, Math.PI*2); g.arc(R*0.25, -R*0.05, R*0.09, 0, Math.PI*2); g.fill();
+    } else if(sub === 11){ // 皇冠
+      g.moveTo(-R*0.75, R*0.55); g.lineTo(-R*0.85, -R*0.45); g.lineTo(-R*0.35, R*0.05);
+      g.lineTo(0, -R*0.65); g.lineTo(R*0.35, R*0.05); g.lineTo(R*0.85, -R*0.45); g.lineTo(R*0.75, R*0.55);
+      g.closePath(); g.fill(); g.stroke();
+    } else if(sub === 12){ // 帆船
+      g.moveTo(-R*0.8, R*0.25); g.lineTo(R*0.8, R*0.25); g.lineTo(R*0.55, R*0.75); g.lineTo(-R*0.55, R*0.75); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(0, R*0.25); g.lineTo(0, -R*0.85); g.lineTo(R*0.65, R*0.1); g.closePath(); g.fill(); g.stroke();
+    } else if(sub === 13){ // 大樹
+      g.rect(-R*0.18, R*0.2, R*0.36, R*0.65); g.fill(); g.stroke();
+      g.beginPath(); g.arc(0, -R*0.22, R*0.62, 0, Math.PI*2); g.fill(); g.stroke();
+    } else if(sub === 14){ // 雨傘
+      g.arc(0, 0, R*0.82, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(0, R*0.68); g.arc(-R*0.15, R*0.68, R*0.15, 0, Math.PI); g.stroke();
+    } else if(sub === 15){ // 氣球
+      g.ellipse(0, -R*0.18, R*0.62, R*0.72, 0, 0, Math.PI*2); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(0, R*0.54); g.lineTo(0, R*0.95); g.stroke();
+    } else if(sub === 16){ // 多邊形寶石（3~8邊）
+      const sides = 3 + (variant % 6);
+      for(let i=0;i<sides;i++){
+        const a = -Math.PI/2 + i*2*Math.PI/sides;
+        if(i===0) g.moveTo(Math.cos(a)*R*0.88, Math.sin(a)*R*0.88);
+        else g.lineTo(Math.cos(a)*R*0.88, Math.sin(a)*R*0.88);
+      }
+      g.closePath(); g.fill(); g.stroke();
+    } else { // 小汽車
+      g.rect(-R*0.82, -R*0.05, R*1.64, R*0.52); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(-R*0.52, -R*0.05); g.lineTo(-R*0.32, -R*0.55); g.lineTo(R*0.32, -R*0.55); g.lineTo(R*0.52, -R*0.05); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.arc(-R*0.45, R*0.52, R*0.22, 0, Math.PI*2); g.arc(R*0.45, R*0.52, R*0.22, 0, Math.PI*2); g.fill(); g.stroke();
+    }
+    g.restore();
+  }
+
+  function drawPreschoolCell(item, rowIdx, totalRows, cw, chh, showIllust, levelId, slotIdx){
     const SCALE = 2;
     const cv = document.createElement('canvas');
     cv.width = cw * SCALE;
@@ -658,17 +769,17 @@
         const iconCx = bx + 6 + circleR;
         const iconCy = by + 2 + topH * 0.50;
         g.save();
-        g.fillStyle = item.kind === 'zy' ? '#ffedd5' : (item.kind === 'num' ? '#dcfce7' : '#dbeafe');
+        g.fillStyle = '#f1f5f9';
+        g.strokeStyle = '#cbd5e1';
+        g.lineWidth = 1;
         g.beginPath();
         g.arc(iconCx, iconCy, circleR, 0, Math.PI * 2);
         g.fill();
+        g.stroke();
         g.restore();
 
-        const iconFs = Math.max(18, Math.round(topH * 0.68));
-        g.font = `${iconFs}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-        g.textBaseline = 'middle';
-        g.textAlign = 'center';
-        g.fillText(item.icon || '🌟', iconCx, iconCy + 1);
+        const iconIdx = ((slotIdx || 0) * 37 + (item.sym ? item.sym.charCodeAt(0) : 0) * 13 + (levelId ? levelId.charCodeAt(0) : 0)) % 108;
+        drawBwCanvasIcon(g, iconIdx, iconCx, iconCy, circleR * 0.72);
 
         if(item.kind === 'num' && item.dots > 0 && item.dots <= 10){
           const cnt = item.dots;
@@ -684,7 +795,7 @@
           const totalH = (rowsD - 1) * stepY;
           const baseCy = by + 2 + topH * 0.50 - totalH / 2;
           g.save();
-          g.fillStyle = '#15803d';
+          g.fillStyle = '#222222';
           for(let dIdx = 0; dIdx < cnt; dIdx++){
             const rI = Math.floor(dIdx / 5);
             const cI = dIdx % 5;
@@ -705,7 +816,7 @@
           const areaCy = by + 2 + topH * 0.50;
           g.save();
           const drawTenPill = (px, py, pw, ph) => {
-            g.fillStyle = '#f59e0b';
+            g.fillStyle = '#222222';
             g.beginPath();
             g.roundRect(px, py, pw, ph, 4);
             g.fill();
@@ -732,7 +843,7 @@
             const stepX = dotR * 2.45;
             const stepY = dotR * 2.55;
             const baseCy = areaCy - ((rowsD - 1) * stepY) / 2;
-            g.fillStyle = '#15803d';
+            g.fillStyle = '#222222';
             for(let dIdx = 0; dIdx < ones; dIdx++){
               const rI = Math.floor(dIdx / 5);
               const cI = dIdx % 5;
@@ -755,21 +866,21 @@
           const badgeW = Math.min(44, Math.max(28, areaRight - areaLeft));
           const badgeH = Math.min(18, Math.max(13, topH * 0.58));
           g.save();
-          g.fillStyle = '#dcfce7';
-          g.strokeStyle = '#16a34a';
+          g.fillStyle = '#f3f4f6';
+          g.strokeStyle = '#222222';
           g.lineWidth = 1.2;
           g.beginPath();
           g.roundRect(areaRight - badgeW, areaCy - badgeH / 2, badgeW, badgeH, 5);
           g.fill();
           g.stroke();
-          g.fillStyle = '#14532d';
+          g.fillStyle = '#111111';
           g.font = `800 ${Math.max(8, Math.round(badgeH * 0.62))}px "Noto Sans TC",sans-serif`;
           g.textAlign = 'center';
           g.textBaseline = 'middle';
           g.fillText(`10×${tens}`, areaRight - badgeW / 2, areaCy + 0.5);
           g.restore();
         } else {
-          g.fillStyle = '#5a2d00';
+          g.fillStyle = '#222222';
           const hintFs = Math.max(10, Math.min(13.5, Math.round(bw * 0.12)));
           g.font = `700 ${hintFs}px "Noto Sans TC","PingFang TC",sans-serif`;
           g.textAlign = 'right';
@@ -826,10 +937,11 @@
   }
 
   const _preschoolUrlCache = new Map();
-  function drawPreschoolCellCached(item, rowIdx, totalRows, w, h, showIllust, levelId){
-    const key = `${levelId}|${item.kind}|${item.sym}|${item.ex}|${rowIdx}|${totalRows}|${w}x${h}|${showIllust?1:0}`;
+  function drawPreschoolCellCached(item, rowIdx, totalRows, w, h, showIllust, levelId, slotIdx){
+    const sKey = rowIdx === 0 ? (slotIdx || 0) : 0;
+    const key = `${levelId}|${item.kind}|${item.sym}|${item.ex}|${rowIdx}|${totalRows}|${w}x${h}|${showIllust?1:0}|${sKey}`;
     if(_preschoolUrlCache.has(key)) return _preschoolUrlCache.get(key);
-    const cv = drawPreschoolCell(item, rowIdx, totalRows, w, h, showIllust, levelId);
+    const cv = drawPreschoolCell(item, rowIdx, totalRows, w, h, showIllust, levelId, sKey);
     const url = cv.toDataURL();
     if(_preschoolUrlCache.size > 600){
       const first = _preschoolUrlCache.keys().next().value;
@@ -889,13 +1001,13 @@
       hd.className = 'pre-a4-hd';
       hd.innerHTML = `
         <div class="pre-a4-title">
-          <b>🐣 向日葵幼兒園寫字帖｜${lvl.name}</b>
+          <b>向日葵幼兒園寫字帖｜${lvl.name}</b>
           <span>${lvl.stageTitle}・${topicLabel}</span>
         </div>
         <div class="pre-a4-info">
           <span>寶貝姓名：<span class="pre-name-box"></span></span>
           <span>日期：　 月　 日</span>
-          <span>⭐🌟</span>
+          <span>☆☆☆</span>
         </div>`;
       pg.appendChild(hd);
 
@@ -904,9 +1016,10 @@
       const slice = expanded.slice(pIdx * cols, (pIdx + 1) * cols);
 
       slice.forEach((item, c) => {
+        const slotIdx = pIdx * cols + c;
         for(let r = 0; r < rows; r++){
           const im = document.createElement('img');
-          im.src = drawPreschoolCellCached(item, r, rows, cwMax, chh, showIllust, levelId);
+          im.src = drawPreschoolCellCached(item, r, rows, cwMax, chh, showIllust, levelId, slotIdx);
           im.style.cssText = `position:absolute;left:${leftOff + c * cwMax}px;top:${topOff + r * chh}px;width:${cwMax}px;height:${chh}px;display:block`;
           pg.appendChild(im);
         }
