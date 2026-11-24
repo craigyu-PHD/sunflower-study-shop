@@ -24,6 +24,7 @@ function uniqueOpts(ans, cand){
 // 格式：詞語 -> 以空白分隔之各字注音；若某字用 '_' 代表沿用 ZY_DATA 單字預設音
 const POLY_PHRASE_RAW = {
   // 0b. 本輪補強（家長試用回饋＋自動審查發現的錯讀）
+  '皇冠':'_ ㄍㄨㄢ','花冠':'_ ㄍㄨㄢ','雞冠':'_ ㄍㄨㄢ','葡萄':'_ ˙ㄊㄠ','蘿蔔':'_ ˙ㄅㄛ','鑰匙':'_ ˙ㄕ',
   '相機':'ㄒㄧㄤˋ ㄐㄧ',
   '調色盤':'ㄊㄧㄠˊ ㄙㄜˋ ㄆㄢˊ',
   '調色':'ㄊㄧㄠˊ ㄙㄜˋ',
@@ -706,7 +707,7 @@ function gCellPunc(p,mainX=14){
   }else{
     inner=`<text x="${mainX}" y="11" dominant-baseline="central" text-anchor="middle" font-size="20" font-family="Noto Sans TC,PingFang TC,Microsoft JhengHei,sans-serif" fill="#111">${esc(vp)}</text>`;
   }
-  return {h:22, isPunc:true, isClosePunc, svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`};
+  return {h:22, isPunc:true, isClosePunc, isOpenPunc:/^[「『（(【〔《〈]$/.test(p), svg:`<svg class="gcell g-punc" viewBox="0 0 42 22" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`};
 }
 function gCellBlank(h=64,mainX=14){
   return {h, isBlank:true, svg:`<svg class="gcell g-blank" style="height:${(h/22).toFixed(2)}em" viewBox="0 0 42 ${h}" xmlns="http://www.w3.org/2000/svg"><path d="M${mainX-7.2},10.5 Q${mainX},2.5 ${mainX+7.2},10.5" fill="none" stroke="#111" stroke-width="1.65" stroke-linecap="round"/><path d="M${mainX-7.2},${h-10.5} Q${mainX},${h-2.5} ${mainX+7.2},${h-10.5}" fill="none" stroke="#111" stroke-width="1.65" stroke-linecap="round"/></svg>`};
@@ -5349,298 +5350,231 @@ function renderExam(measureOnly=false){
   };
 
   if(isZh){
-    // 國語科：改採真實國小考卷「上下雙排直書」欄流（由大至小嘗試字級，讓 2 頁剛好填滿無半欄留白）
+    // 國語科：「上下雙排直書」欄流。所有字高、欄寬都用與 CSS 相同的 em 值精算，不再用估計值（估計值會讓還有空位就換欄）
     const useZy=$('exRuby')&&$('exRuby').checked&&window.ZY_DATA;
     const mainX=useZy?14:21;
-    const zhCompact=!useZy; // 無注音才套用更緊的字距／行距，有注音維持原注音軸間距
-    // 國語字級：有注音／無注音共用同一組候選，避免無注音（三年級以上）被縮成小字；
-    // 兩者差異只表現在字距——無注音字距更小，維持原設計「有注音／無注音字距不同」
-    const zhCandFs=[16.8, 16.0, 15.2, 14.4, 13.6];
-    let zhFs=zhCandFs[0], zhPages=[], zhPageFills=[], maxW=860;
-    for(const _candFs of zhCandFs){
-      zhFs=_candFs;
-      const tierMaxH = 376; // 上下排可用高度往兩端伸展，減少留白
-      const maxColUnits=Math.floor((tierMaxH/zhFs)*22*(zhCompact?1.2:1.02)); // 無注音字高較矮，可提高單欄容量以減少每題欄數
+    const zhCompact=!useZy; // 無注音：欄距貼近字寬，省下的空間用來放更多題
+    const ZH=zhCompact
+      ? {fs:[15.2,14.8,14.4], colEm:1.24, colGap:0, qGap:10, qGapMax:17, han:1.02, zy:1.14, punc:.78}
+      : {fs:[16.8,16.0,15.2,14.4,13.6], colEm:1.85, colGap:2, qGap:7, qGapMax:15, han:1.16, zy:1.3, punc:.87};
+    const ZH_W=1080, ZH_H=370; // 單排可用寬高（px）：取螢幕與列印（296.5×209.5mm、邊距 2/5/7mm）較小者
+    const ANS_COL=36;          // 作答虛線格單行寬 36px ≈ 9.5mm，小學生寫得下
+    const cellEm=c=>c.eh||(c.eh=/class="gcell g-han"/.test(c.svg)?ZH.han:(/class="gcell g-zy"/.test(c.svg)?ZH.zy:(/class="gcell g-punc"/.test(c.svg)?ZH.punc:c.h/22)));
+    const sumEm=cs=>cs.reduce((t,c)=>t+cellEm(c),0);
+    const realCnt=cs=>cs.filter(c=>!c.isSpace&&!c.isPunc&&!c.isScore).length;
+    const sp=em=>{const c=gCellSpace(em*22); c.isSpace=true; return c;};
 
-    const packCols=(cells, indentUnits=0)=>{
-      const cols=[]; let cur=[], h=0;
-      const startCol=(withIndent)=>{
-        cur=[]; h=0;
-        if(withIndent&&indentUnits>0){cur.push(gCellSpace(indentUnits));h+=indentUnits;}
-      };
-      const isPunc=c=>!!(c&&(c.isPunc||c.isClosePunc));
-      // 標點與配分標籤絕不單獨成行：換欄時把相鄰的字一併帶走
-      const breakWithCarry=(c)=>{
-        const carry=[];
-        while(cur.length && isPunc(cur[cur.length-1])) carry.unshift(cur.pop());
-        if(cur.length) carry.unshift(cur.pop());
-        if((isPunc(c)||c.isScore) && cur.length && carry.length<2) carry.unshift(cur.pop());
-        if(cur.length) cols.push(cur);
-        startCol(true);
-        carry.forEach(x=>{cur.push(x);h+=x.h;});
-        cur.push(c);h+=c.h;
-      };
-      startCol(false);
+    // 把一段字排進欄：標點、配分不落欄首；上引號不落欄尾
+    const flow=(cells, cap, indent, startH=0)=>{
+      const cols=[[]]; let h=startH;
+      const next=()=>{ const ind=sp(indent); cols.push(indent>0?[ind]:[]); h=indent; };
       cells.forEach(c=>{
-        if(c.newline){if(cur.length)cols.push(cur);startCol(true);return;}
-        if(c.isScore || isPunc(c)){
-          if(h+c.h <= maxColUnits+36 || cur.length <= (indentUnits>0?2:1)){
-            cur.push(c);h+=c.h;return;
-          }
-          breakWithCarry(c);return;
+        const cur=cols[cols.length-1], e=cellEm(c);
+        if(h+e>cap+1e-6 && cur.some(x=>!x.isSpace)){
+          const carry=[];
+          const noStart=x=>x&&(x.isClosePunc||x.isScore);
+          let head=c;
+          while(cur.length>1 && (noStart(head) || (cur[cur.length-1]&&cur[cur.length-1].isOpenPunc))){ head=cur.pop(); carry.unshift(head); }
+          next(); const nc=cols[cols.length-1];
+          carry.forEach(x=>{nc.push(x);h+=cellEm(x);});
+          nc.push(c); h+=e; return;
         }
-        if(h+c.h>maxColUnits && cur.length>(indentUnits>0?1:0)){
-          if(isPunc(cur[cur.length-1])) breakWithCarry(c);
-          else { cols.push(cur);startCol(true);cur.push(c);h+=c.h; }
-          return;
-        }
-        cur.push(c);h+=c.h;
+        cur.push(c); h+=e;
       });
-      if(cur.length)cols.push(cur);
-      // 收尾清零：任何只剩單一標點的欄，併回相鄰欄，杜絕孤標點獨占一行
-      for(let i=cols.length-1;i>=0;i--){
-        if(cols[i].length===1 && isPunc(cols[i][0]) && cols.length>1){
-          if(i>0) cols[i-1].push(cols[i][0]);
-          else cols[1].unshift(cols[i][0]);
-          cols.splice(i,1);
-        }
-      }
       return cols;
     };
-
-    const buildZhQ=b=>{
-      const kind=b.kind, q=b.item;
-      const NZP=computeNoZy(q); NZ_CHARS=NZP.chars.size?NZP.chars:null; NZ_ALL=false;
-      const wrap=document.createElement('div');wrap.className='ex-zh-q';
-      const headCells=[gCellLabel(`${b.num}.`,true,'#111',15,mainX)];
-      if(kind==='mc'||kind==='tf'){
-        headCells.push(gCellBlank(52,mainX));
+    // 一段文字：若末欄只剩 1～3 個字，先微縮整段（≤6%）收回一欄；收不回就從前一欄勻字，杜絕單字成行
+    const flowTidy=(cells, cap, indent, lead=0)=>{
+      const base=flow(cells,cap,indent,lead);
+      const last=base[base.length-1];
+      if(base.length<2 || realCnt(last)>=4) return {cols:base, sq:1};
+      for(const k of [1.03,1.06]){
+        const t=flow(cells,cap*k,indent,lead);
+        if(t.length<base.length) return {cols:t, sq:1/k};
       }
-      const indentH=headCells.reduce((a,c)=>a+c.h,0);
-
-      if(kind==='match'){
-        const stemCells=[...headCells,...tokenizeZhCells(normSubNums(q.q),useZy,mainX),gCellScore(q.pts,mainX)];
-        const allCols=[...packCols(stemCells,indentH)];
-        q.pairs.forEach((pr,i)=>{
-          const pCells=[
-            gCellSpace(12),
-            gCellLabel(`(${i+1})`,true,'#111',13.5,mainX),
-            gCellBlank(50,mainX),
-            ...nzWith(NZP.left,()=>tokenizeZhCells(pr[0],useZy,mainX)),
-            gCellSpace(14),
-            gCellLabel(matchLabels[i],true,'#7a3b00',15,mainX),
-            ...nzWith(NZP.right,()=>tokenizeZhCells(q.right[i],useZy,mainX))
-          ];
-          allCols.push(pCells);
-        });
-        allCols.forEach(col=>{
-          const cd=document.createElement('div');cd.className='ex-zh-col';
-          cd.innerHTML=col.map(c=>c.svg).join('');
-          wrap.appendChild(cd);
-        });
-        return {el:wrap, colCount:allCols.length};
+      const prev=base[base.length-2];
+      while(realCnt(last)<4 && realCnt(prev)>6){
+        let x=prev.pop(); const mv=[x];
+        while(prev.length && (mv[0].isClosePunc||mv[0].isScore||prev[prev.length-1].isOpenPunc)) mv.unshift(prev.pop());
+        if(sumEm(last)+sumEm(mv)>cap){ prev.push(...mv); break; }
+        let at=0; while(at<last.length&&last[at].isSpace) at++;
+        last.splice(at,0,...mv);
       }
-
-      const bodyCells=[...headCells,...tokenizeZhCells(normSubNums(q.q),useZy,mainX),gCellScore(q.pts,mainX)];
-      const qCols=packCols(bodyCells, indentH);
-
-      if(kind==='mc'){
-        const optCells=[gCellSpace(indentH)];
-        q.opts.forEach((o,i)=>{
-          optCells.push(gCellLabel(optLabels[i],true,'#111',15,mainX));
-          optCells.push(...nzWith(NZP.opts,()=>tokenizeZhCells(o,useZy,mainX)));
-          if(i<q.opts.length-1)optCells.push(gCellSpace(10));
-        });
-        qCols.push(...packCols(optCells,indentH));
-      }
-
-      qCols.forEach(col=>{
-        const cd=document.createElement('div');cd.className='ex-zh-col';
-        cd.innerHTML=col.map(c=>c.svg).join('');
-        wrap.appendChild(cd);
-      });
-      let extraCols=0;
-      if(kind==='calc'||kind==='word'){
-        const ansLen = String(q.a || '').replace(/\s+/g,'').length;
-        const isLong = kind==='word' && (ansLen > 10 || /造句|仿寫|短文|改寫|心得|為什麼|請寫出|舉例|說明|理由/.test(q.q||''));
-        const qb=document.createElement('div');
-        qb.className='qbox '+kind+(isLong?' wide':'');
-        wrap.appendChild(qb);
-        extraCols = isLong ? 2.8 : (kind==='word' ? 2.0 : 1.5);
-      }
-      return {el:wrap, colCount:qCols.length+extraCols};
+      return {cols:base, sq:1};
     };
 
-    const flat=[];
-    sections.forEach(sec=>{
-      flat.push({type:'sec',text:sec.heading,cols:1.3});
-      sec.qs.forEach((q,idx)=>{
-        const b={type:'q',num:idx+1,kind:sec.kind,item:q};
-        const zMap=__qHeightMap(q);
-        const zKey='zh:'+zhFs+'|'+b.num+'|'+(useZy?1:0);
-        let built=zMap[zKey];
-        if(!built){ built=buildZhQ(b); zMap[zKey]=built; }
-        b.el=built.el; b.cols=built.colCount;
-        flat.push(b);
+    const buildZhQ=(kind,q,fs)=>{
+      const NZP=computeNoZy(q); NZ_CHARS=NZP.chars.size?NZP.chars:null; NZ_ALL=false;
+      const cap=ZH_H/fs;
+      const numCell={h:22,eh:ZH.punc,isNum:true,svg:'<!--NUM-->'};
+      const head=[numCell]; if(kind==='mc'||kind==='tf') head.push(gCellBlank(52,mainX));
+      const indent=sumEm(head);
+      const stem=tokenizeZhCells(normSubNums(q.q),useZy,mainX);
+      // 填空括號依答案字數加長，確保寫得下
+      if(kind==='fill'){
+        const bl=stem.map((c,k)=>c.isBlank?k:-1).filter(k=>k>=0);
+        const ps=String(q.a||'').replace(/[（(][^）)]*[）)]/g,'').split(/[；、;]/).map(x=>x.replace(/[\s。]/g,'').length);
+        bl.forEach((k,n)=>{ const len=ps.length===bl.length?ps[n]:(bl.length===1?Math.max(...ps):1); if(len>1) stem[k]=gCellBlank(Math.min(250,24+40*len),mainX); });
+      }
+      const score={h:46,eh:46/22,isScore:true,svg:'<!--PTS-->'};
+      const paras=[[]]; stem.forEach(c=>{ if(c.newline) paras.push([]); else paras[paras.length-1].push(c); });
+      paras[paras.length-1].push(score);
+      const out=[]; // {cells,sq}
+      const put=(t)=>t.cols.forEach(c=>out.push({cells:c,sq:t.sq}));
+      paras.filter(x=>x.length).forEach((pc,i)=>{
+        if(i===0) put(flowTidy([...head,...pc],cap,indent));
+        else put(flowTidy([sp(indent),...pc],cap,indent));
       });
-    });
+      if(kind==='mc'){
+        // 選項規則（全卷一致）：選項一律緊接題幹往下排、整項不拆開；題幹欄剩餘空間至少放得下兩項才接，否則整組另起一欄
+        const gap=.5, optInd=1.7, opts=q.opts.map((o,i)=>[gCellLabel(optLabels[i],true,'#111',15,mainX),...nzWith(NZP.opts,()=>tokenizeZhCells(o,useZy,mainX)).filter(c=>!c.newline)]);
+        const len=os=>os.reduce((t,o)=>t+sumEm(o),0)+gap*Math.max(0,os.length-1);
+        const join=os=>os.reduce((r,o,i)=>r.concat(i?[sp(gap)]:[],o),[]);
+        const tail=out[out.length-1], rem=cap-sumEm(tail.cells)-.7, fresh=(cap-optInd)*1.05;
+        const split=os=>{ // 每欄放最多整項；4 項若要兩欄就固定 2＋2
+          if(os.length===4&&len(os)>fresh&&len(os.slice(0,2))<=fresh&&len(os.slice(2))<=fresh) return [os.slice(0,2),os.slice(2)];
+          const g=[]; os.forEach(o=>{const c=g[g.length-1]; if(c&&len([...c,o])<=fresh) c.push(o); else g.push([o]);}); return g;
+        };
+        const addFresh=os=>split(os).forEach(x=>{
+          if(len(x)<=fresh) out.push({cells:[sp(optInd),...join(x)],sq:Math.min(1,cap/(optInd+len(x)))});
+          else put(flowTidy([sp(optInd),...join(x)],cap,optInd+ZH.punc));
+        });
+        const on=tail.sq===1?[4,2].find(n=>len(opts.slice(0,n))<=rem):0;
+        if(on===4 || (on===2 && split(opts).length>split(opts.slice(2)).length)){ tail.cells.push(sp(.7),...join(opts.slice(0,on))); if(on===2) addFresh(opts.slice(2)); }
+        else addFresh(opts);
+      }
+      if(kind==='match'){
+        // 左右兩欄對齊：右欄代號都從同一高度開始
+        const L=q.pairs.map((pr,i)=>[sp(indent*.5),gCellLabel(`(${i+1})`,true,'#111',13.5,mainX),gCellBlank(50,mainX),...nzWith(NZP.left,()=>tokenizeZhCells(pr[0],useZy,mainX))]);
+        const R=q.right.map((r,i)=>[gCellLabel(matchLabels[i],true,'#7a3b00',15,mainX),...nzWith(NZP.right,()=>tokenizeZhCells(r,useZy,mainX))]);
+        const mL=Math.max(...L.map(sumEm)), mR=Math.max(...R.map(sumEm)), both=mL+1+mR<=cap*1.08;
+        const sq=Math.min(1,cap/(mL+1+mR));
+        if(both) L.forEach((l,i)=>out.push({cells:[...l,sp(mL-sumEm(l)+1),...R[i]],sq,wide:1}));
+        else [...L,...R].forEach(x=>out.push({cells:[sp(indent*.5),...x.filter(c=>!c.isSpace)],sq:Math.min(1,cap/(sumEm(x)+indent*.5)),wide:1}));
+      }
+      let ansCols=0;
+      if(kind==='calc'||kind==='word'){
+        const al=String(q.a||'').replace(/^例[：:]?/,'').replace(/[\s（）()；;]/g,'').length;
+        ansCols=kind==='word'?Math.max(2,Math.min(4,Math.ceil(al/10))):Math.max(1,Math.min(2,Math.ceil(al/9)));
+      }
+      return {cols:out.map(c=>({html:c.cells.map(x=>x.svg).join(''),sq:c.sq,wide:c.wide||0})), ansCols};
+    };
+    const colsW=(cols,fs)=>cols.length?cols.reduce((t,c)=>t+(c.wide?Math.max(ZH.colEm,1.7):ZH.colEm)*fs,0)+(cols.length-1)*ZH.colGap:0;
+    const boxW=n=>n?n*ANS_COL+8:0;
+    const partW=(b,fs)=>colsW(b.cols,fs)+(b.ansCols?boxW(b.ansCols)+4+ZH.colGap:0);
 
-    // 以隱藏之真實「上下雙排」單排容器量測每一大題與每一題實際像素寬度
-    const meas=document.createElement('div');
-    meas.className='a4 exam-a4 ex-land';
-    meas.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden';
-    const mwOuter=document.createElement('div');mwOuter.className='ex-zh-tiers';
-    const mw=document.createElement('div');mw.className='ex-zh-tier'+(zhCompact?' ex-zh-compact':'');
-    mw.style.setProperty('--ex-fs',zhFs+'px');
     const zhGrade=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
-    const hdM=document.createElement('div');hdM.className='ex-zh-hd';
-    hdM.innerHTML=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
+    const hdHtml=zhFormat(`<div><h3>國小${zhGrade}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
       <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
-    mw.appendChild(hdM);mwOuter.appendChild(mw);meas.appendChild(mwOuter);document.body.appendChild(meas);
-    maxW=mw.clientWidth-22; // 與 .ex-zh-tiers 左右各 10px padding 對應，釋放更多水平空間
-    const hdW=hdM.getBoundingClientRect().width+12;
+    // 標頭與大題條寬度只需量一次
+    const measHd=fs=>{
+      const meas=document.createElement('div');meas.className='a4 exam-a4 ex-land';
+      meas.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden';
+      meas.innerHTML=`<div class="ex-zh-tiers" style="--ex-fs:${fs}px"><div class="ex-zh-tier"><div class="ex-zh-hd">${hdHtml}</div><div class="ex-zh-sec">${zhFormat('一、測試')}</div></div></div>`;
+      document.body.appendChild(meas);
+      const w=c=>{const e=meas.querySelector(c),m=getComputedStyle(e);return e.getBoundingClientRect().width+parseFloat(m.marginLeft)+parseFloat(m.marginRight);};
+      const r=[w('.ex-zh-hd'),w('.ex-zh-sec')];
+      document.body.removeChild(meas); return r;
+    };
 
-    const pendZh=[];
-    flat.forEach(b=>{
-      if(b.type==='sec'){
-        const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));
-        mw.appendChild(d); pendZh.push([b,d,null,null]);
-      }else{
-        const wMap=__qHeightMap(b.item);
-        const wKey='w:'+zhFs+'|'+b.num;
-        if(wMap[wKey]!=null){ b.pxW=wMap[wKey]; return; }
-        mw.appendChild(b.el); pendZh.push([b,b.el,wMap,wKey]);
-      }
-    });
-    // 一次性讀取寬度：先全部寫入 DOM，再統一讀取，避免每題觸發強制重排
-    for(let pi=0; pi<pendZh.length; pi++){
-      const pz=pendZh[pi];
-      const w=pz[1].getBoundingClientRect().width+7;
-      pz[0].pxW=w;
-      if(pz[2]) pz[2][pz[3]]=w;
+    let zhFs=ZH.fs[0], tiers=[];
+    for(const fs of ZH.fs){
+      zhFs=fs;
+      const mk='zh'+fs; const [hdW,secW]=(window.__zhHdCache=window.__zhHdCache||{})[mk]||(window.__zhHdCache[mk]=measHd(fs));
+      const queues=sections.map(sec=>({sec,qs:sec.qs.map(q=>{
+        const m=__qHeightMap(q), k='zb:'+fs+'|'+(useZy?1:0)+'|'+sec.kind;
+        const bt=m[k]||(m[k]=buildZhQ(sec.kind,q,fs));
+        const b={type:'q',kind:sec.kind,item:q,cols:bt.cols,ansCols:bt.ansCols}; b.w=partW(b,fs); return b;
+      })}));
+      tiers=[]; let cur=[], used=0;
+      const close=()=>{tiers.push({items:cur,used});cur=[];used=0;};
+      const add=(b,w)=>{used+=(cur.length?ZH.qGap:0)+w;cur.push(b);};
+      const room=()=>ZH_W-used-(cur.length?ZH.qGap:0);
+      add({type:'hd'},hdW);
+      queues.forEach(({sec,qs})=>{
+        const rest=qs.slice(); let opened=false;
+        while(rest.length){
+          const need=opened?0:secW+ZH.qGap;
+          // 放得下就照順序放；放不下時，從同一大題後面找「放得下的最寬一題」補位，不留整塊空白
+          let pick=rest[0].w+need<=room()?0:-1;
+          if(pick<0) rest.forEach((b,k)=>{ if(b.w+need<=room() && (pick<0||b.w>rest[pick].w)) pick=k; });
+          if(pick>=0){
+            if(!opened){add({type:'sec',sec},secW);opened=true;}
+            add(rest[pick],rest[pick].w); rest.splice(pick,1); continue;
+          }
+          // 同頁上排剩餘空間夠大時，長題（閱讀短文）可從欄與欄之間接到下排
+          const b=rest[0], pitch=ZH.colEm*fs+ZH.colGap, k=Math.floor((room()-need)/pitch);
+          if(b.kind==='word' && tiers.length%2===0 && b.cols.length>=5 && k>=3 && room()-need>90){
+            const cut=Math.min(k,b.cols.length-2);
+            if(!opened){add({type:'sec',sec},secW);opened=true;}
+            const p1={...b,cols:b.cols.slice(0,cut),ansCols:0}; p1.w=partW(p1,fs); add(p1,p1.w);
+            const p2={...b,cols:b.cols.slice(cut),cont:true}; p2.w=partW(p2,fs);
+            rest[0]=p2; close(); continue;
+          }
+          if(!cur.length||(cur.length===1&&cur[0].type==='hd')){ if(!opened){add({type:'sec',sec},secW);opened=true;} add(b,b.w); rest.shift(); continue; } // 單題超寬保底
+          close();
+        }
+      });
+      if(cur.length) close();
+      if(tiers.length<=4) break;
     }
-    document.body.removeChild(meas);
-
-    // 依「第1頁上排 → 第1頁下排 → 第2頁上排 → 第2頁下排...」順序拆排
-    const tiers=[]; let cur=[], wUsed=hdW;
-    const tierUsedW=[];
-    flat.forEach((b,bi)=>{
-      const nextW=(b.type==='sec'&&flat[bi+1])?flat[bi+1].pxW:0;
-      if(wUsed+b.pxW+nextW > maxW && cur.length){
-        tiers.push(cur); tierUsedW.push(wUsed);
-        cur=[]; wUsed=0;
-      }
-      cur.push(b);wUsed+=b.pxW;
-    });
-    if(cur.length){tiers.push(cur); tierUsedW.push(wUsed);}
-
-    // 將雙排組成 A4 頁（每頁 2 排：上排＋下排）
-    zhPages=[];
-    zhPageFills=[];
-    for(let tIdx=0; tIdx<tiers.length; tIdx+=2){
-      const topItems = tiers[tIdx] || [];
-      const botItems = tiers[tIdx+1] || [];
-      const topW = tierUsedW[tIdx] || 0;
-      const botW = tierUsedW[tIdx+1] || 0;
-      zhPages.push({top:topItems, bot:botItems, topW, botW});
-      zhPageFills.push(maxW>0 ? Math.min(1, (topW+botW)/(2*maxW)) : 1);
-    }
-    if(zhPages.length<=2) break;
-    } // end zhCandFs loop
-    curExam._zhPages=zhPages;
-    curExam._lastPageFill = zhPageFills[zhPageFills.length-1] || 0;
-    const lastZhPg = zhPages[zhPages.length-1];
-    curExam._lastTailFill = (lastZhPg && maxW>0) ? Math.min(1, lastZhPg.botW / maxW) : 0;
-    curExam._pageFills = zhPageFills;
-    curExam._lastPageCount = zhPages.length;
+    const pageCnt=Math.ceil(tiers.length/2)||1;
+    const pageFills=Array.from({length:pageCnt},(_,i)=>Math.min(1,((tiers[i*2]?tiers[i*2].used:0)+(tiers[i*2+1]?tiers[i*2+1].used:0))/(2*ZH_W)));
+    curExam._pageFills=pageFills;
+    curExam._lastPageFill=pageFills[pageCnt-1]||0;
+    curExam._lastTailFill=tiers.length%2===0&&tiers.length?Math.min(1,tiers[tiers.length-1].used/ZH_W):0;
+    curExam._lastPageCount=pageCnt;
     if(measureOnly) return;
-    const totZ=zhPages.length+(meta.withAns?1:0);
-    updateCapInfo(zhPages.length);
+    updateCapInfo(pageCnt);
+    // 依實際排放順序回寫題序，確保題號、解答頁、Excel 三者一致
+    sections.forEach(sec=>{ const ord=[]; tiers.forEach(t=>t.items.forEach(b=>{ if(b.type==='q'&&!b.cont&&sec.qs.includes(b.item)) ord.push(b.item); })); if(ord.length===sec.qs.length) sec.qs=ord; });
 
-    zhPages.forEach((pgObj,p)=>{
+    const buildQEl=b=>{
+      const wrap=document.createElement('div');wrap.className='ex-zh-q';
+      const num=sections.find(x=>x.qs.includes(b.item)).qs.indexOf(b.item)+1;
+      b.cols.forEach(c=>{
+        const cd=document.createElement('div');cd.className='ex-zh-col'+(c.wide?' wide':'');
+        if(c.sq<1){cd.style.fontSize=c.sq.toFixed(4)+'em';cd.style.width=((c.wide?Math.max(ZH.colEm,1.7):ZH.colEm)/c.sq).toFixed(4)+'em';}
+        cd.innerHTML=c.html.replace('<!--NUM-->',()=>gCellLabel(`${num}.`,true,'#111',15,mainX).svg).replace('<!--PTS-->',()=>gCellScore(b.item.pts,mainX).svg);
+        wrap.appendChild(cd);
+      });
+      if(b.ansCols){
+        const bx=document.createElement('div');bx.className='qbox '+b.kind;
+        bx.style.width=boxW(b.ansCols)+'px'; bx.innerHTML='<i></i>'.repeat(b.ansCols);
+        wrap.appendChild(bx);
+      }
+      return wrap;
+    };
+    for(let p=0;p<pageCnt;p++){
       const cap=document.createElement('div');cap.className='pcap';
       cap.textContent=`A4 橫式上下雙排直書（由右至左）　${zhPageNo(p)}`;box.appendChild(cap);
       const pg=document.createElement('div');pg.className='a4 exam-a4 ex-land';
       pg.appendChild(Object.assign(document.createElement('div'),{className:'edge'}));
       const outer=document.createElement('div');outer.className='ex-zh-tiers';
       outer.style.setProperty('--ex-fs',zhFs+'px');
-
-      const buildTierEl=(items, usedW, isFirstTop)=>{
-        const tierEl=document.createElement('div');
-        tierEl.className='ex-zh-tier '+(isFirstTop?'top':'bot')+(zhCompact?' ex-zh-compact':'');
-        const spareW=Math.max(0,(maxW-14)-usedW);
-        const qCount=Math.max(1,items.filter(b=>b.type==='q').length);
-        const itemCnt=Math.max(1,items.length+(isFirstTop?1:0));
-        if(spareW>14 && items.length>=2){
-          // 有注音需要較寬字距容納注音軸；無注音字距更小，但字級完全相同
-          const maxQGap = useZy ? 4.5 : 2.2;
-          const maxCGap = useZy ? 2.8 : 1.4;
-          const qGap=Math.min(maxQGap, 0.6+(spareW*0.09)/qCount);
-          const colGap=Math.min(maxCGap, 0.4+(spareW*0.05)/itemCnt);
-          tierEl.style.setProperty('--zh-col-gap',colGap.toFixed(1)+'px');
-          tierEl.style.setProperty('--zh-q-gap',qGap.toFixed(1)+'px');
-          if(items.some(b=>b.kind==='calc'||b.kind==='word') && spareW>45){
-            tierEl.style.setProperty('--zh-box-calc','2.9em');
-            tierEl.style.setProperty('--zh-box-word','4.2em');
-            tierEl.style.setProperty('--zh-box-word-wide','5.8em');
-          }
-        }
-        if(isFirstTop){
-          const zhGradeTop=['','一','二','三','四','五','六'][+meta.grade]||meta.grade;
-          const hd=document.createElement('div');hd.className='ex-zh-hd';
-          hd.innerHTML=zhFormat(`<div><h3>國小${zhGradeTop}年級${meta.sem}學期　國語科評量試卷</h3><div class="ex-sub">總分100分｜${pubName}｜${diffName}</div></div>
-            <div class="ex-zh-info"><span>班級：　　年　　班</span><span>座號：　　</span><span>姓名：　　　　</span><span>得分：　　</span></div>`);
-          tierEl.appendChild(hd);
-        }
-        items.forEach(b=>{
-          if(b.type==='sec'){const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.text));tierEl.appendChild(d);}
-          else tierEl.appendChild(b.el);
+      [0,1].forEach(side=>{
+        const t=tiers[p*2+side]||{items:[],used:0};
+        const el=document.createElement('div');
+        el.className='ex-zh-tier '+(side?'tier-bot':'tier-top')+(zhCompact?' ex-zh-compact':'');
+        // 剩餘寬度平均分給題與題之間（題目之間分得清楚），再有剩就加寬作答格
+        let spare=Math.max(0,ZH_W-t.used); const gaps=Math.max(1,t.items.length-1);
+        const add=Math.min(ZH.qGapMax-ZH.qGap,spare/gaps); spare-=add*gaps;
+        el.style.setProperty('--zh-gap',(ZH.qGap+add).toFixed(2)+'px');
+        const boxes=[];
+        t.items.forEach(b=>{
+          if(b.type==='hd'){const d=document.createElement('div');d.className='ex-zh-hd';d.innerHTML=hdHtml;el.appendChild(d);}
+          else if(b.type==='sec'){const d=document.createElement('div');d.className='ex-zh-sec';d.innerHTML=zhFormat(esc(b.sec.heading));el.appendChild(d);}
+          else{const d=buildQEl(b);el.appendChild(d);const bx=d.querySelector('.qbox');if(bx)boxes.push(bx);}
         });
-        return tierEl;
-      };
-
-      const topEl=buildTierEl(pgObj.top, pgObj.topW, p===0);
-      topEl.classList.add('tier-top');
-      const botEl=buildTierEl(pgObj.bot, pgObj.botW, false);
-      botEl.classList.add('tier-bot');
-      outer.appendChild(topEl);
-      outer.appendChild(botEl);
+        if(boxes.length&&spare>8) boxes.forEach(bx=>{bx.style.width=(parseFloat(bx.style.width)+Math.min(30,spare/boxes.length))+'px';});
+        outer.appendChild(el);
+      });
       pg.appendChild(outer);
-      // 嚴格防吃邊／防消失校準：實測水平與垂直不溢位，若緊貼邊緣則自動微縮間距與字級
-      {
-        const fitHost=document.createElement('div');
-        fitHost.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;z-index:-1';
-        fitHost.appendChild(pg);
-        document.body.appendChild(fitHost);
-        let curZFs=zhFs;
-        for(let step=0; step<6; step++){
-          const overW = topEl.scrollWidth > topEl.clientWidth || botEl.scrollWidth > botEl.clientWidth;
-          const overH = [...topEl.querySelectorAll('.ex-zh-col'), ...botEl.querySelectorAll('.ex-zh-col')].some(c => c.scrollHeight > c.clientHeight + 4);
-          if(!overW && !overH) break;
-          // 先壓縮字距，不急著縮字（無注音最容易因預留注音軸而誤縮成小字）
-          [topEl, botEl].forEach(t=>{
-            const cg = parseFloat(t.style.getPropertyValue('--zh-col-gap') || (useZy ? '2.8' : '1.4'));
-            const qg = parseFloat(t.style.getPropertyValue('--zh-q-gap') || (useZy ? '4.5' : '2.2'));
-            t.style.setProperty('--zh-col-gap', Math.max(0.5, cg * 0.6).toFixed(1)+'px');
-            t.style.setProperty('--zh-q-gap', Math.max(0.5, qg * 0.6).toFixed(1)+'px');
-          });
-          // 真的裝不下才微降字級，且 floors 與有注音版本一致，不再掉到 10.2px
-          if(step >= 3){
-            const again = topEl.scrollWidth > topEl.clientWidth || botEl.scrollWidth > botEl.clientWidth
-              || [...topEl.querySelectorAll('.ex-zh-col'), ...botEl.querySelectorAll('.ex-zh-col')].some(c => c.scrollHeight > c.clientHeight + 4);
-            if(again){
-              curZFs = +(Math.max(zhCandFs[zhCandFs.length-1], curZFs - 0.4)).toFixed(1);
-              outer.style.setProperty('--ex-fs', curZFs+'px');
-            }
-          }
-        }
-        document.body.removeChild(fitHost);
-      }
       if(window.createWatermarkLayer)pg.appendChild(window.createWatermarkLayer(1122,794,meta.wmText||''));
       const cpr=window.COPYRIGHT_STATEMENT||'🌻 向日葵國小伴學誌｜108課綱原創練習・專屬訂製請勿轉售';
       pg.appendChild(Object.assign(document.createElement('div'),{className:'cap',textContent:`${cpr}　｜　${zhPageNo(p)}`}));
       box.appendChild(pg);
-    });
+    }
   }else{
     // 直式科目：依序嘗試各密度實際 DOM 量測，確保「兩頁一張」時優先縮入兩頁且 100% 不會被切掉
     const candDs=(meta.layout==='1col'||!$('exTwoPage').checked)?[DENSITIES[0]]:DENSITIES;
@@ -6413,7 +6347,8 @@ async function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=fa
   }
 
   // 2. 第一優先已由 renderExam() 伸展行距；僅在仍不足目標頁數或第2頁／末欄仍留白時，啟動第二優先補題（先批次快速逼近，再微調，最後一次完整繪製）
-  const limits={mc:32,tf:26,fill:28,match:3,calc:16,word:9};
+  // 國語作答格很占版面：改錯造句、閱讀設上限，多出來的空間優先補選擇／填空／是非
+  const limits=baseCfg.subject==='國語'?{mc:32,tf:26,fill:28,match:3,calc:4,word:3}:{mc:32,tf:26,fill:28,match:3,calc:16,word:9};
   const enabledSet=new Set(['mc','tf','fill','match','calc','word']);
   [['mc','Mc'],['tf','Tf'],['fill','Fill'],['match','Match'],['calc','Calc'],['word','Word']].forEach(([k,u])=>{
     if(syncUi){
@@ -6422,7 +6357,7 @@ async function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=fa
       enabledSet.delete(k);
     }
   });
-  const growCycle=['mc','fill','tf','calc','word','match'].filter(k=>enabledSet.has(k));
+  const growCycle=(baseCfg.subject==='國語'?['mc','fill','tf','mc','fill','tf','calc','match','word']:['mc','fill','tf','calc','word','match']).filter(k=>enabledSet.has(k));
   const blockedKinds=new Set();
   const needsMore=()=> !!curExam && (curExam._lastPageCount<targetPages || (curExam._lastPageCount===targetPages && ((curExam._lastPageFill||0)<0.955 || (curExam._lastTailFill||0)<0.95 || (curExam._pageFills||[]).some(f=>f<0.95))));
   let gStep=0, stalled=0;
@@ -6468,7 +6403,11 @@ async function autoBalanceExamToTarget(targetPages, maxTotal, baseCfg, syncUi=fa
     if(onStep) onStep(`微調版面與題距…（第 ${gStep} 步）`);
     await __batchYieldToUI();
     if(shouldStop && shouldStop()) return;
+  }  // 最後防線：補位排序後若仍超出目標頁數，逐題收回，絕不多出第三頁
+  for(let z=0; z<12 && curExam && curExam._lastPageCount>targetPages; z++){
+    if(!['tf','fill','mc'].some(k=>{const c=curExam.sections.find(x=>x.kind===k);return c&&c.qs.length>2&&removeOneFromKind(k,true);})) break;
   }
+
 
   renderExam(false);
   if(syncUi){
