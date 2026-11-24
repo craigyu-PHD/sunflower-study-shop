@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>向日葵國小伴學誌｜客製化生字練習本 ＆ 評量測驗卷線上訂購</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css?v=20261124a">
+<link rel="stylesheet" href="style.css?v=20261124b">
 </head><body>
 <header class="noprint">
   <div class="wrap hd-top">
@@ -77,7 +77,7 @@
         <span class="batch-pill">📅 目前開放預購梯次：<b id="stBatchLabel">本週最新批次</b></span>
         <h2 style="margin:6px 0 2px;font-size:1.3rem;color:#7a3b00">🌻 國小 1～6 年級客製化生字練習本 ＆ 評量測驗卷訂購單</h2>
       </div>
-      <div class="price-highlight">每張 <b>NT$ 5 元</b> <small>｜累計滿 <b>20 張（NT$ 100 元）</b>出貨（評量卷免費附贈解答）</small></div>
+      <div class="price-highlight">每份 <b>NT$ 5 元</b> <small>｜累計滿 <b>20 張（NT$ 100 元）</b>出貨（評量卷免費附贈解答）</small></div>
     </div>
 
     <div class="rules-four-grid">
@@ -129,7 +129,7 @@
     <div class="store-builder">
       <!-- 左欄：由大到小選單 -->
       <div class="store-controls">
-        <div class="sub" style="margin-top:0">🧺 ① 選擇教材與購買方案（每張 5 元，累計滿 20 張＝100 元出貨）</div>
+        <div class="sub" style="margin-top:0">🧺 ① 選擇教材與購買方案（每份 5 元，累計滿 20 張＝100 元出貨）</div>
         <div class="pack-tabs">
           <label class="pack-tab active" id="lblPackLazy">
             <input type="radio" name="stPackMode" value="lazy" checked>
@@ -148,8 +148,8 @@
           </label>
           <label class="pack-tab" id="lblPackCustom">
             <input type="radio" name="stPackMode" value="custom">
-            <b>🎨 客製自由配 <em class="pack-badge cus">單張$5起</em></b>
-            <span>單張挑選字詞、科目單元與難度（$5／張），多筆混搭加入購物車累計滿 20 張即可出貨。</span>
+            <b>🎨 客製自由配 <em class="pack-badge cus">每份$5起</em></b>
+            <span>單張挑選字詞、科目單元與難度（$5／份），多筆混搭加入購物車累計滿 20 張即可出貨。</span>
           </label>
         </div>
 
@@ -295,13 +295,13 @@
 
         <!-- 客製包專屬設定 -->
         <div id="stCustomPanel" class="cfg-panel" style="display:none">
-          <div class="sub">③ 選擇單項客製教材類型（每張 NT$ 5 元，可分批加入購物車湊滿 20 張）</div>
+          <div class="sub">③ 選擇單項客製教材類型（每份 NT$ 5 元，可分批加入購物車湊滿 20 張）</div>
           <div class="row">
             <label class="mode" style="flex:1;min-width:180px"><input type="radio" name="stCustomType" value="stroke" checked>
-              <b>✍️ 客製生字練習單（$5/張）</b><span>自由挑課次、筆順模式與每頁字數（多筆畫自動雙欄）</span>
+              <b>✍️ 客製生字練習單（$5/份）</b><span>自由挑課次、筆順模式與每頁字數（多筆畫自動雙欄）</span>
             </label>
             <label class="mode" style="flex:1;min-width:180px"><input type="radio" name="stCustomType" value="exam">
-              <b>📝 客製評量測驗卷（$5/張・附解答）</b><span>自由挑課綱單元、難度與單雙欄版面</span>
+              <b>📝 客製評量測驗卷（$5/份・附解答）</b><span>自由挑課綱單元、難度與單雙欄版面</span>
             </label>
           </div>
 
@@ -380,7 +380,7 @@
             <label style="font-weight:700"><span id="stQtyLabel">本項張數／組數：</span>
               <input type="number" id="stQty" value="1" min="1" max="60" style="width:4.4em;text-align:center;font-weight:700"> <span id="stQtyUnit">組（20張）</span>
             </label>
-            <span id="stItemPriceHint" style="font-weight:700;color:#b34700">（每張 5 元 × 20 張 ＝ 小計 NT$ 100 元）</span>
+            <span id="stItemPriceHint" style="font-weight:700;color:#b34700">（每份 5 元 × 20 張 ＝ 小計 NT$ 100 元）</span>
             <button id="btnAddToCart" type="button" class="btn pri big">➕ 加入購物車</button>
           </div>
         </div>
@@ -868,17 +868,18 @@
 
 <div id="storeLessonPopover" class="lesson-float-pop" aria-hidden="true"></div>
 <script src="lib/exceljs.min.js"></script>
-<script src="lib/qaudit.js?v=20261124a"></script>
-<script src="data/textbook.js?v=20261124a"></script>
-<script src="data/zy.js?v=20261124a"></script>
-<script src="data/curriculum.js?v=20261124a"></script>
-<script src="data/exam_bank.js?v=20261124a"></script>
-<script src="data/proc_bank.js?v=20261124a"></script>
-<script src="data/preschool.js?v=20261124a"></script>
-<script src="data/preschool_dots.js?v=20261124a"></script>
-<script src="data/preschool_art.js?v=20261124a"></script>
-<script src="data/maze_bank.js?v=20261124a"></script>
-<script src="app.js?v=20261124a"></script>
-<script src="exam.js?v=20261124a"></script>
-<script src="store.js?v=20261124a"></script>
+<script src="lib/qaudit.js?v=20261124b"></script>
+<script src="data/textbook.js?v=20261124b"></script>
+<script src="data/zy.js?v=20261124b"></script>
+<script src="data/zy_moe.js?v=20261124b"></script>
+<script src="data/curriculum.js?v=20261124b"></script>
+<script src="data/exam_bank.js?v=20261124b"></script>
+<script src="data/proc_bank.js?v=20261124b"></script>
+<script src="data/preschool.js?v=20261124b"></script>
+<script src="data/preschool_dots.js?v=20261124b"></script>
+<script src="data/preschool_art.js?v=20261124b"></script>
+<script src="data/maze_bank.js?v=20261124b"></script>
+<script src="app.js?v=20261124b"></script>
+<script src="exam.js?v=20261124b"></script>
+<script src="store.js?v=20261124b"></script>
 </body></html>

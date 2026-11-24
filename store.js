@@ -546,7 +546,7 @@ function updateItemPriceHint(){
       const uCnt = document.querySelectorAll('#stUnitList input:checked').length;
       pickSummary = `<b>🎨 客製評量卷</b>｜國小 ${g} 年級${sem}・${pubName}｜<b>${subj}</b>・已選 ${uCnt} 單元｜${sheets} 張（$${price}）`;
     }
-    if($('stQtyUnit')) $('stQtyUnit').textContent = '張（5元/張）';
+    if($('stQtyUnit')) $('stQtyUnit').textContent = '張（每份 5 元）';
     if($('stItemPriceHint')){
       $('stItemPriceHint').textContent = `（客製 ${qty} 張 × $5 ＝ 小計 NT$ ${price} 元；購物車累計滿 20 張出貨）`;
     }
@@ -971,7 +971,7 @@ async function updateStorePreview(){
   }
 }
 
-// ---------- 3. 購物車管理與自動結算（每張 $5｜累計滿 20 張＝$100 出貨）----------
+// ---------- 3. 購物車管理與自動結算（每份 $5｜累計滿 20 張＝$100 出貨）----------
 function buildCurrentSelectionsAsCartItems(){
   const packMode = document.querySelector('input[name=stPackMode]:checked')?.value || 'lazy';
   const g = $('stGrade').value, sem = $('stSem').value, pub = $('stPub').value;
@@ -1243,8 +1243,8 @@ function renderStoreCart(){
   </table>`;
 
   const packStr = totalSheets >= 20
-    ? `${Math.floor(totalSheets/20)} 份${totalSheets%20?`又 ${totalSheets%20} 張`:''}`
-    : `未滿 1 份（${totalSheets}/20 張）`;
+    ? `${Math.floor(totalSheets/20)} 組${totalSheets%20?`又 ${totalSheets%20} 張`:''}`
+    : `未滿 1 組（${totalSheets}/20 張）`;
   sumEl.innerHTML = `
     <span>📦 選購合計：共 <b>${totalSheets}</b> 張 A4（${packStr}｜評量卷免費附贈解答）</span>
     <span style="font-size:1.25rem;color:#0d5220">💰 應匯款總金額：NT$ ${totalAmount} 元</span>
@@ -1257,7 +1257,7 @@ function renderStoreCart(){
     threshEl.className = 'cap-banner ' + (meetMin ? 'ok' : 'warn');
     threshEl.textContent = meetMin
       ? `✅ 已達成最低出貨門檻（20 張／NT$ 100 元以上）！目前共 ${totalSheets} 張（NT$ ${totalAmount} 元），可繼續加購或直接填寫下方匯款資料送出訂單。`
-      : `⚠️ 最低出貨門檻為 20 張（1 份＝NT$ 100 元）：目前購物車共 ${totalSheets} 張（NT$ ${totalAmount} 元），還差 ${20 - totalSheets} 張（NT$ ${(20 - totalSheets)*5} 元）才可送出出貨！請在上方繼續客製加購。`;
+      : `⚠️ 最低出貨門檻為 20 張（1 組＝NT$ 100 元）：目前購物車共 ${totalSheets} 張（NT$ ${totalAmount} 元），還差 ${20 - totalSheets} 張（NT$ ${(20 - totalSheets)*5} 元）才可送出出貨！請在上方繼續客製加購。`;
   }
   if(submitBtn){
     submitBtn.disabled = !meetMin;
@@ -1297,7 +1297,7 @@ async function submitStoreOrder(){
   const totalSheets = storeCart.reduce((acc, it) => acc + (+it.sheets || 0), 0);
   const totalAmt = storeCart.reduce((acc, it) => acc + (+it.amount || 0), 0);
   if(totalSheets < 20){
-    msgEl.textContent = `⚠️ 本系統每張 5 元、累計滿 20 張（NT$ 100 元）才出貨；目前僅 ${totalSheets} 張（NT$ ${totalAmt} 元），請還差 ${20 - totalSheets} 張！`;
+    msgEl.textContent = `⚠️ 本系統每份 5 元、累計滿 20 張（NT$ 100 元）才出貨；目前僅 ${totalSheets} 張（NT$ ${totalAmt} 元），請還差 ${20 - totalSheets} 張！`;
     return;
   }
   const parentName = ($('stParentName')?.value || '').trim();
